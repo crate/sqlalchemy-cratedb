@@ -1,6 +1,6 @@
 # SQLAlchemy dialect for CrateDB
 
-[![Build status](https://github.com/crate-workbench/sqlalchemy-cratedb/workflows/Tests/badge.svg)](https://github.com/crate-workbench/sqlalchemy-cratedb/actions?workflow=Tests)
+[![Tests](https://github.com/crate-workbench/sqlalchemy-cratedb/actions/workflows/tests.yml/badge.svg)](https://github.com/crate-workbench/sqlalchemy-cratedb/actions/workflows/tests.yml)
 [![Coverage](https://codecov.io/gh/crate-workbench/sqlalchemy-cratedb/branch/main/graph/badge.svg)](https://app.codecov.io/gh/crate-workbench/sqlalchemy-cratedb)
 [![Build status (documentation)](https://readthedocs.org/projects/sqlalchemy-cratedb/badge/)](https://crate.io/docs/python/)
 [![PyPI Version](https://img.shields.io/pypi/v/sqlalchemy-cratedb.svg)](https://pypi.org/project/sqlalchemy-cratedb/)
