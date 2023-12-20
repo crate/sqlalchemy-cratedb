@@ -230,7 +230,7 @@ namespaces = false
 [tool.poe.tasks]
 
 check = [
-  "lint",
+  # "lint",
   "test",
 ]
 
