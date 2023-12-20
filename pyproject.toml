@@ -138,17 +138,20 @@ exclude_lines = [
 ]
 
 [tool.mypy]
-#packages = ["sqlalchemy_cratedb"]
+mypy_path = "src"
+packages = ["sqlalchemy_cratedb"]
 exclude = [
 ]
 check_untyped_defs = true
+explicit_package_bases = true
 ignore_missing_imports = true
 implicit_optional = true
 install_types = true
+namespace_packages = true
 non_interactive = true
 # Needed until `mypy-0.990` for `ConverterDefinition` in `converter.py`.
 # https://github.com/python/mypy/issues/731#issuecomment-1260976955
-enable_recursive_aliases = true
+# enable_recursive_aliases = true
 
 [tool.pytest.ini_options]
 addopts = """
