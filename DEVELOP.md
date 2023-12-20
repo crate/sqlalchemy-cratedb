@@ -21,12 +21,16 @@ Some examples how to invoke the test runner are outlined below.
 
 Run all tests:
 
-    pytest
+    poe check
 
 Run specific tests:
 
     pytest -k SqlAlchemyCompilerTest
     pytest -k test_score
+
+Format code:
+
+    poe format
 
 
 ## Preparing a release
