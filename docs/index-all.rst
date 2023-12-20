@@ -13,10 +13,6 @@ CrateDB Python Client -- all pages
     :maxdepth: 2
 
     getting-started
-    connect
-    query
-    blobs
     sqlalchemy
     data-types
     by-example/index
-    other-options
