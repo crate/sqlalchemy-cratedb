@@ -19,36 +19,35 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 
-from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Union
-
 import sqlalchemy as sa
-from sqlalchemy import ColumnClause, ValuesBase, cast, exc
-from sqlalchemy.sql import dml
-from sqlalchemy.sql.base import _from_objects
-from sqlalchemy.sql.compiler import SQLCompiler
-from sqlalchemy.sql.crud import (REQUIRED, _as_dml_column, _create_bind_param,
-                                 _CrudParamElement, _CrudParams,
+from sqlalchemy.dialects.postgresql.base import PGCompiler
+from sqlalchemy.sql import selectable
+from sqlalchemy.sql.crud import (REQUIRED, _create_bind_param,
                                  _extend_values_for_multiparams,
                                  _get_stmt_parameter_tuples_params,
                                  _get_update_multitable_params,
                                  _key_getters_for_crud_column, _scan_cols,
-                                 _scan_insert_from_select_cols,
-                                 _setup_delete_return_defaults)
-from sqlalchemy.sql.dml import DMLState, _DMLColumnElement
-from sqlalchemy.sql.dml import isinsert as _compile_state_isinsert
+                                 _scan_insert_from_select_cols)
 
-from crate.client.sqlalchemy.compiler import CrateCompiler
+from sqlalchemy_cratedb.compiler import CrateCompiler
 
 
-class CrateCompilerSA20(CrateCompiler):
+class CrateCompilerSA14(CrateCompiler):
+
+    def returning_clause(self, stmt, returning_cols):
+        """
+        Generate RETURNING clause, PostgreSQL-compatible.
+        """
+        return PGCompiler.returning_clause(self, stmt, returning_cols)
 
     def visit_update(self, update_stmt, **kw):
+
         compile_state = update_stmt._compile_state_factory(
             update_stmt, self, **kw
         )
         update_stmt = compile_state.statement
 
-        # [20] CrateDB patch.
+        # [14] CrateDB patch.
         if not compile_state._dict_parameters and \
                 not hasattr(update_stmt, '_crate_specific'):
             return super().visit_update(update_stmt, **kw)
@@ -56,8 +55,6 @@ class CrateCompilerSA20(CrateCompiler):
         toplevel = not self.stack
         if toplevel:
             self.isupdate = True
-            if not self.dml_compile_state:
-                self.dml_compile_state = compile_state
             if not self.compile_state:
                 self.compile_state = compile_state
 
@@ -66,7 +63,7 @@ class CrateCompilerSA20(CrateCompiler):
 
         if is_multitable:
             # main table might be a JOIN
-            main_froms = set(_from_objects(update_stmt.table))
+            main_froms = set(selectable._from_objects(update_stmt.table))
             render_extra_froms = [
                 f for f in extra_froms if f not in main_froms
             ]
@@ -93,11 +90,11 @@ class CrateCompilerSA20(CrateCompiler):
         table_text = self.update_tables_clause(
             update_stmt, update_stmt.table, render_extra_froms, **kw
         )
-        # [20] CrateDB patch.
-        crud_params_struct = _get_crud_params(
-            self, update_stmt, compile_state, toplevel, **kw
+
+        # [14] CrateDB patch.
+        crud_params = _get_crud_params(
+            self, update_stmt, compile_state, **kw
         )
-        crud_params = crud_params_struct.single_params
 
         if update_stmt._hints:
             dialect_hints, table_text = self._setup_crud_hints(
@@ -107,19 +104,20 @@ class CrateCompilerSA20(CrateCompiler):
             dialect_hints = None
 
         if update_stmt._independent_ctes:
-            self._dispatch_independent_ctes(update_stmt, kw)
+            for cte in update_stmt._independent_ctes:
+                cte._compiler_dispatch(self, **kw)
 
         text += table_text
 
         text += " SET "
 
-        # [20] CrateDB patch begin.
-        include_table = extra_froms and \
-            self.render_table_with_column_in_update_from
+        # [14] CrateDB patch begin.
+        include_table = \
+            extra_froms and self.render_table_with_column_in_update_from
 
         set_clauses = []
 
-        for c, expr, value, _ in crud_params:
+        for c, expr, value in crud_params:
             key = c._compiler_dispatch(self, include_table=include_table)
             clause = key + ' = ' + value
             set_clauses.append(clause)
@@ -131,14 +129,12 @@ class CrateCompilerSA20(CrateCompiler):
                 set_clauses.append(clause)
 
         text += ', '.join(set_clauses)
-        # [20] CrateDB patch end.
+        # [14] CrateDB patch end.
 
-        if self.implicit_returning or update_stmt._returning:
+        if self.returning or update_stmt._returning:
             if self.returning_precedes_values:
                 text += " " + self.returning_clause(
-                    update_stmt,
-                    self.implicit_returning or update_stmt._returning,
-                    populate_result_map=toplevel,
+                    update_stmt, self.returning or update_stmt._returning
                 )
 
         if extra_froms:
@@ -147,7 +143,7 @@ class CrateCompilerSA20(CrateCompiler):
                 update_stmt.table,
                 render_extra_froms,
                 dialect_hints,
-                **kw,
+                **kw
             )
             if extra_from_text:
                 text += " " + extra_from_text
@@ -164,12 +160,10 @@ class CrateCompilerSA20(CrateCompiler):
             text += " " + limit_clause
 
         if (
-            self.implicit_returning or update_stmt._returning
+                self.returning or update_stmt._returning
         ) and not self.returning_precedes_values:
             text += " " + self.returning_clause(
-                update_stmt,
-                self.implicit_returning or update_stmt._returning,
-                populate_result_map=toplevel,
+                update_stmt, self.returning or update_stmt._returning
             )
 
         if self.ctes:
@@ -181,13 +175,7 @@ class CrateCompilerSA20(CrateCompiler):
         return text
 
 
-def _get_crud_params(
-    compiler: SQLCompiler,
-    stmt: ValuesBase,
-    compile_state: DMLState,
-    toplevel: bool,
-    **kw: Any,
-) -> _CrudParams:
+def _get_crud_params(compiler, stmt, compile_state, **kw):
     """create a set of tuples representing column/string pairs for use
     in an INSERT or UPDATE statement.
 
@@ -198,33 +186,10 @@ def _get_crud_params(
 
     """
 
-    # note: the _get_crud_params() system was written with the notion in mind
-    # that INSERT, UPDATE, DELETE are always the top level statement and
-    # that there is only one of them.  With the addition of CTEs that can
-    # make use of DML, this assumption is no longer accurate; the DML
-    # statement is not necessarily the top-level "row returning" thing
-    # and it is also theoretically possible (fortunately nobody has asked yet)
-    # to have a single statement with multiple DMLs inside of it via CTEs.
-
-    # the current _get_crud_params() design doesn't accommodate these cases
-    # right now.  It "just works" for a CTE that has a single DML inside of
-    # it, and for a CTE with multiple DML, it's not clear what would happen.
-
-    # overall, the "compiler.XYZ" collections here would need to be in a
-    # per-DML structure of some kind, and DefaultDialect would need to
-    # navigate these collections on a per-statement basis, with additional
-    # emphasis on the "toplevel returning data" statement.  However we
-    # still need to run through _get_crud_params() for all DML as we have
-    # Python / SQL generated column defaults that need to be rendered.
-
-    # if there is user need for this kind of thing, it's likely a post 2.0
-    # kind of change as it would require deep changes to DefaultDialect
-    # as well as here.
-
     compiler.postfetch = []
     compiler.insert_prefetch = []
     compiler.update_prefetch = []
-    compiler.implicit_returning = []
+    compiler.returning = []
 
     # getters - these are normally just column.key,
     # but in the case of mysql multi-table update, the rules for
@@ -233,60 +198,24 @@ def _get_crud_params(
         _column_as_key,
         _getattr_col_key,
         _col_bind_name,
-    ) = _key_getters_for_crud_column(compiler, stmt, compile_state)
+    ) = getters = _key_getters_for_crud_column(compiler, stmt, compile_state)
 
-    compiler._get_bind_name_for_col = _col_bind_name
-
-    if stmt._returning and stmt._return_defaults:
-        raise exc.CompileError(
-            "Can't compile statement that includes returning() and "
-            "return_defaults() simultaneously"
-        )
-
-    if compile_state.isdelete:
-        _setup_delete_return_defaults(
-            compiler,
-            stmt,
-            compile_state,
-            (),
-            _getattr_col_key,
-            _column_as_key,
-            _col_bind_name,
-            (),
-            (),
-            toplevel,
-            kw,
-        )
-        return _CrudParams([], [])
+    compiler._key_getters_for_crud_column = getters
 
     # no parameters in the statement, no parameters in the
     # compiled params - return binds for all columns
     if compiler.column_keys is None and compile_state._no_parameters:
-        return _CrudParams(
-            [
-                (
-                    c,
-                    compiler.preparer.format_column(c),
-                    _create_bind_param(compiler, c, None, required=True),
-                    (c.key,),
-                )
-                for c in stmt.table.columns
-            ],
-            [],
-        )
+        return [
+            (
+                c,
+                compiler.preparer.format_column(c),
+                _create_bind_param(compiler, c, None, required=True),
+            )
+            for c in stmt.table.columns
+        ]
 
-    stmt_parameter_tuples: Optional[
-        List[Tuple[Union[str, ColumnClause[Any]], Any]]
-    ]
-    spd: Optional[MutableMapping[_DMLColumnElement, Any]]
-
-    if (
-        _compile_state_isinsert(compile_state)
-        and compile_state._has_multi_parameters
-    ):
-        mp = compile_state._multi_parameters
-        assert mp is not None
-        spd = mp[0]
+    if compile_state._has_multi_parameters:
+        spd = compile_state._multi_parameters[0]
         stmt_parameter_tuples = list(spd.items())
     elif compile_state._ordered_values:
         spd = compile_state._dict_parameters
@@ -302,19 +231,18 @@ def _get_crud_params(
     if compiler.column_keys is None:
         parameters = {}
     elif stmt_parameter_tuples:
-        assert spd is not None
-        parameters = {
-            _column_as_key(key): REQUIRED
+        parameters = dict(
+            (_column_as_key(key), REQUIRED)
             for key in compiler.column_keys
             if key not in spd
-        }
+        )
     else:
-        parameters = {
-            _column_as_key(key): REQUIRED for key in compiler.column_keys
-        }
+        parameters = dict(
+            (_column_as_key(key), REQUIRED) for key in compiler.column_keys
+        )
 
     # create a list of column assignment clauses as tuples
-    values: List[_CrudParamElement] = []
+    values = []
 
     if stmt_parameter_tuples is not None:
         _get_stmt_parameter_tuples_params(
@@ -327,11 +255,11 @@ def _get_crud_params(
             kw,
         )
 
-    check_columns: Dict[str, ColumnClause[Any]] = {}
+    check_columns = {}
 
     # special logic that only occurs for multi-table UPDATE
     # statements
-    if dml.isupdate(compile_state) and compile_state.is_multitable:
+    if compile_state.isupdate and compile_state.is_multitable:
         _get_update_multitable_params(
             compiler,
             stmt,
@@ -344,11 +272,7 @@ def _get_crud_params(
             kw,
         )
 
-    if _compile_state_isinsert(compile_state) and stmt._select_names:
-        # is an insert from select, is not a multiparams
-
-        assert not compile_state._has_multi_parameters
-
+    if compile_state.isinsert and stmt._select_names:
         _scan_insert_from_select_cols(
             compiler,
             stmt,
@@ -359,7 +283,6 @@ def _get_crud_params(
             _col_bind_name,
             check_columns,
             values,
-            toplevel,
             kw,
         )
     else:
@@ -373,11 +296,10 @@ def _get_crud_params(
             _col_bind_name,
             check_columns,
             values,
-            toplevel,
             kw,
         )
 
-    # [20] CrateDB patch.
+    # [14] CrateDB patch.
     #
     # This sanity check performed by SQLAlchemy currently needs to be
     # deactivated in order to satisfy the rewriting logic of the CrateDB
@@ -390,7 +312,7 @@ def _get_crud_params(
     #
     # That croaks like::
     #
-    #   sqlalchemy.exc.CompileError: Unconsumed column names: characters_name
+    #   sqlalchemy.exc.CompileError: Unconsumed column names: characters_name, data['nested']
     #
     # TODO: Investigate why this is actually happening and eventually mitigate
     #       the root cause.
@@ -408,28 +330,19 @@ def _get_crud_params(
             )
     """
 
-    if (
-        _compile_state_isinsert(compile_state)
-        and compile_state._has_multi_parameters
-    ):
-        # is a multiparams, is not an insert from a select
-        assert not stmt._select_names
-        multi_extended_values = _extend_values_for_multiparams(
+    if compile_state._has_multi_parameters:
+        values = _extend_values_for_multiparams(
             compiler,
             stmt,
             compile_state,
-            cast(
-                "Sequence[_CrudParamElementStr]",
-                values,
-            ),
-            cast("Callable[..., str]", _column_as_key),
+            values,
+            _column_as_key,
             kw,
         )
-        return _CrudParams(values, multi_extended_values)
     elif (
-        not values
-        and compiler.for_executemany
-        and compiler.dialect.supports_default_metavalue
+            not values
+            and compiler.for_executemany  # noqa: W503
+            and compiler.dialect.supports_default_metavalue  # noqa: W503
     ):
         # convert an "INSERT DEFAULT VALUES"
         # into INSERT (firstcol) VALUES (DEFAULT) which can be turned
@@ -437,11 +350,10 @@ def _get_crud_params(
         # insert_executemany_returning mode :)
         values = [
             (
-                _as_dml_column(stmt.table.columns[0]),
+                stmt.table.columns[0],
                 compiler.preparer.format_column(stmt.table.columns[0]),
-                compiler.dialect.default_metavalue_token,
-                (),
+                "DEFAULT",
             )
         ]
 
-    return _CrudParams(values, [])
+    return values

@@ -23,7 +23,7 @@ from datetime import datetime
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
 
-from crate.client.sqlalchemy.types import ObjectType
+from sqlalchemy_cratedb import ObjectType
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session

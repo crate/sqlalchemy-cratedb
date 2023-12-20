@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from ..compat.api13 import monkeypatch_amend_select_sa14, monkeypatch_add_connectionfairy_driver_connection
-from ..sa_version import SA_1_4, SA_VERSION
-from ...test_util import ParametrizedTestCase
+from sqlalchemy_cratedb.compat.api13 import monkeypatch_amend_select_sa14, monkeypatch_add_connectionfairy_driver_connection
+from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
+from crate.client.test_util import ParametrizedTestCase
 
 # `sql.select()` of SQLAlchemy 1.3 uses old calling semantics,
 # but the test cases already need the modern ones.

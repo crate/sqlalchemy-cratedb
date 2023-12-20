@@ -26,7 +26,7 @@ from unittest.mock import patch, MagicMock
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from crate.client.sqlalchemy.sa_version import SA_VERSION, SA_2_0, SA_1_4
+from sqlalchemy_cratedb import SA_VERSION, SA_2_0, SA_1_4
 
 try:
     from sqlalchemy.orm import declarative_base
@@ -177,7 +177,7 @@ class SqlAlchemyBulkTest(TestCase):
         Verify bulk INSERT with pandas.
         """
         from pandas._testing import makeTimeDataFrame
-        from crate.client.sqlalchemy.support import insert_bulk
+        from sqlalchemy_cratedb import insert_bulk
 
         # 42 records / 8 chunksize = 5.25, which means 6 batches will be emitted.
         INSERT_RECORDS = 42
@@ -217,7 +217,7 @@ class SqlAlchemyBulkTest(TestCase):
         """
         import dask.dataframe as dd
         from pandas._testing import makeTimeDataFrame
-        from crate.client.sqlalchemy.support import insert_bulk
+        from sqlalchemy_cratedb import insert_bulk
 
         # 42 records / 4 partitions means each partition has a size of 10.5 elements.
         # Because the chunk size 8 is slightly smaller than 10, the partition will not

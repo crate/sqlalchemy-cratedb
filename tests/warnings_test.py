@@ -3,8 +3,8 @@ import sys
 import warnings
 from unittest import TestCase, skipIf
 
-from crate.client.sqlalchemy import SA_1_4, SA_VERSION
-from crate.testing.util import ExtraAssertions
+from sqlalchemy_cratedb import SA_1_4, SA_VERSION
+from tests.util import ExtraAssertions
 
 
 class SqlAlchemyWarningsTest(TestCase, ExtraAssertions):
@@ -27,8 +27,8 @@ class SqlAlchemyWarningsTest(TestCase, ExtraAssertions):
 
             # Trigger a warning by importing the SQLAlchemy dialect module.
             # Because it already has been loaded, unload it beforehand.
-            del sys.modules["crate.client.sqlalchemy"]
-            import crate.client.sqlalchemy  # noqa: F401
+            del sys.modules["sqlalchemy_cratedb"]
+            import sqlalchemy_cratedb  # noqa: F401
 
             # Verify details of the SA13 EOL/deprecation warning.
             self.assertEqual(len(w), 1)
@@ -44,7 +44,7 @@ class SqlAlchemyWarningsTest(TestCase, ExtraAssertions):
         with warnings.catch_warnings(record=True) as w:
 
             # Import the deprecated symbol.
-            from crate.client.sqlalchemy.types import Craty  # noqa: F401
+            from sqlalchemy_cratedb.types import Craty  # noqa: F401
 
             # Verify details of the deprecation warning.
             self.assertEqual(len(w), 1)
@@ -55,7 +55,7 @@ class SqlAlchemyWarningsTest(TestCase, ExtraAssertions):
         with warnings.catch_warnings(record=True) as w:
 
             # Import the deprecated symbol.
-            from crate.client.sqlalchemy.types import Object  # noqa: F401
+            from sqlalchemy_cratedb.types import Object  # noqa: F401
 
             # Verify details of the deprecation warning.
             self.assertEqual(len(w), 1)

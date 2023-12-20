@@ -21,47 +21,19 @@
 
 from __future__ import absolute_import
 
-import json
-import os
-import socket
 import sys
 import unittest
 import doctest
 from pprint import pprint
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import ssl
-import time
-import threading
 import logging
 
-import stopit
-
-from crate.testing.layer import CrateLayer
-from crate.testing.settings import \
-    crate_host, crate_path, crate_port, \
-    crate_transport_port, docs_path, localhost
+from crate.testing.settings import crate_host, docs_path
 from crate.client import connect
-from .sqlalchemy import SA_VERSION, SA_1_4
-
-from .test_cursor import CursorTest
-from .test_connection import ConnectionTest
-from .test_http import (
-    HttpClientTest,
-    ThreadSafeHttpClientTest,
-    KeepAliveClientTest,
-    ParamsTest,
-    RetryOnTimeoutServerTest,
-    RequestsCaBundleTest,
-    TestUsernameSentAsHeader,
-    TestCrateJsonEncoder,
-    TestDefaultSchemaHeader,
-)
-from .sqlalchemy.tests import test_suite_unit as sqlalchemy_test_suite_unit
-from .sqlalchemy.tests import test_suite_integration as sqlalchemy_test_suite_integration
+from sqlalchemy_cratedb import SA_VERSION, SA_1_4
 
 makeSuite = unittest.TestLoader().loadTestsFromTestCase
 
-log = logging.getLogger('crate.testing.layer')
+log = logging.getLogger()
 ch = logging.StreamHandler()
 ch.setLevel(logging.ERROR)
 log.addHandler(ch)
@@ -73,44 +45,7 @@ def cprint(s):
     print(s)
 
 
-settings = {
-    'udc.enabled': 'false',
-    'lang.js.enabled': 'true',
-    'auth.host_based.enabled': 'true',
-    'auth.host_based.config.0.user': 'crate',
-    'auth.host_based.config.0.method': 'trust',
-    'auth.host_based.config.98.user': 'trusted_me',
-    'auth.host_based.config.98.method': 'trust',
-    'auth.host_based.config.99.user': 'me',
-    'auth.host_based.config.99.method': 'password',
-}
 crate_layer = None
-
-
-def ensure_cratedb_layer():
-    """
-    In order to skip individual tests by manually disabling them within
-    `def test_suite()`, it is crucial make the test layer not run on each
-    and every occasion. So, things like this will be possible::
-
-        ./bin/test -vvvv --ignore_dir=testing
-
-    TODO: Through a subsequent patch, the possibility to individually
-          unselect specific tests might be added to `def test_suite()`
-          on behalf of environment variables.
-          A blueprint for this kind of logic can be found at
-          https://github.com/crate/crate/commit/414cd833.
-    """
-    global crate_layer
-
-    if crate_layer is None:
-        crate_layer = CrateLayer('crate',
-                                 crate_home=crate_path(),
-                                 port=crate_port,
-                                 host=localhost,
-                                 transport_port=crate_transport_port,
-                                 settings=settings)
-    return crate_layer
 
 
 def setUpCrateLayerBaseline(test):
@@ -202,115 +137,6 @@ def tearDownDropEntitiesSqlAlchemy(test):
     _execute_statements(ddl_statements)
 
 
-class HttpsTestServerLayer:
-    PORT = 65534
-    HOST = "localhost"
-    CERT_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                "pki/server_valid.pem"))
-    CACERT_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                  "pki/cacert_valid.pem"))
-
-    __name__ = "httpsserver"
-    __bases__ = tuple()
-
-    class HttpsServer(HTTPServer):
-        def get_request(self):
-
-            # Prepare SSL context.
-            context = ssl._create_unverified_context(
-                protocol=ssl.PROTOCOL_TLS_SERVER,
-                cert_reqs=ssl.CERT_OPTIONAL,
-                check_hostname=False,
-                purpose=ssl.Purpose.CLIENT_AUTH,
-                certfile=HttpsTestServerLayer.CERT_FILE,
-                keyfile=HttpsTestServerLayer.CERT_FILE,
-                cafile=HttpsTestServerLayer.CACERT_FILE)
-
-            # Set minimum protocol version, TLSv1 and TLSv1.1 are unsafe.
-            context.minimum_version = ssl.TLSVersion.TLSv1_2
-
-            # Wrap TLS encryption around socket.
-            socket, client_address = HTTPServer.get_request(self)
-            socket = context.wrap_socket(socket, server_side=True)
-
-            return socket, client_address
-
-    class HttpsHandler(BaseHTTPRequestHandler):
-
-        payload = json.dumps({"name": "test", "status": 200, })
-
-        def do_GET(self):
-            self.send_response(200)
-            payload = self.payload.encode('UTF-8')
-            self.send_header("Content-Length", len(payload))
-            self.send_header("Content-Type", "application/json; charset=UTF-8")
-            self.end_headers()
-            self.wfile.write(payload)
-
-    def setUp(self):
-        self.server = self.HttpsServer(
-            (self.HOST, self.PORT),
-            self.HttpsHandler
-        )
-        thread = threading.Thread(target=self.serve_forever)
-        thread.daemon = True  # quit interpreter when only thread exists
-        thread.start()
-        self.waitForServer()
-
-    def serve_forever(self):
-        print("listening on", self.HOST, self.PORT)
-        self.server.serve_forever()
-        print("server stopped.")
-
-    def tearDown(self):
-        self.server.shutdown()
-        self.server.server_close()
-
-    def isUp(self):
-        """
-        Test if a host is up.
-        """
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ex = s.connect_ex((self.HOST, self.PORT))
-        s.close()
-        return ex == 0
-
-    def waitForServer(self, timeout=5):
-        """
-        Wait for the host to be available.
-        """
-        with stopit.ThreadingTimeout(timeout) as to_ctx_mgr:
-            while True:
-                if self.isUp():
-                    break
-                time.sleep(0.001)
-
-        if not to_ctx_mgr:
-            raise TimeoutError("Could not properly start embedded webserver "
-                               "within {} seconds".format(timeout))
-
-
-def setUpWithHttps(test):
-    test.globs['crate_host'] = "https://{0}:{1}".format(
-        HttpsTestServerLayer.HOST, HttpsTestServerLayer.PORT
-    )
-    test.globs['pprint'] = pprint
-    test.globs['print'] = cprint
-
-    test.globs['cacert_valid'] = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "pki/cacert_valid.pem")
-    )
-    test.globs['cacert_invalid'] = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "pki/cacert_invalid.pem")
-    )
-    test.globs['clientcert_valid'] = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "pki/client_valid.pem")
-    )
-    test.globs['clientcert_invalid'] = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "pki/client_invalid.pem")
-    )
-
-
 def _execute_statements(statements, on_error="ignore"):
     with connect(crate_host) as conn:
         cursor = conn.cursor()
@@ -337,9 +163,6 @@ def test_suite():
     suite = unittest.TestSuite()
     flags = (doctest.NORMALIZE_WHITESPACE | doctest.ELLIPSIS)
 
-    # Unit tests.
-    suite.addTest(sqlalchemy_test_suite_unit())
-
     sqlalchemy_integration_tests = [
         'docs/by-example/sqlalchemy/getting-started.rst',
         'docs/by-example/sqlalchemy/crud.rst',
@@ -363,8 +186,6 @@ def test_suite():
         optionflags=flags,
         encoding='utf-8'
     )
-    s.layer = ensure_cratedb_layer()
-    s.addTest(sqlalchemy_test_suite_integration())
     suite.addTest(s)
 
     return suite

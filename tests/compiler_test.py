@@ -24,23 +24,23 @@ from unittest import mock, skipIf, TestCase
 from unittest.mock import MagicMock, patch
 
 from crate.client.cursor import Cursor
-from crate.client.sqlalchemy.compiler import crate_before_execute
+from sqlalchemy_cratedb.compiler import crate_before_execute
 
 import sqlalchemy as sa
 from sqlalchemy.sql import text, Update
 
-from crate.testing.util import ExtraAssertions
+from tests.settings import crate_host
+from tests.util import ExtraAssertions
 
 try:
     from sqlalchemy.orm import declarative_base
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
 
-from crate.client.sqlalchemy.sa_version import SA_VERSION, SA_1_4, SA_2_0
-from crate.client.sqlalchemy.types import ObjectType
+from sqlalchemy_cratedb import SA_VERSION, SA_1_4, SA_2_0
+from sqlalchemy_cratedb import ObjectType
 from crate.client.test_util import ParametrizedTestCase
 
-from crate.testing.settings import crate_host
 
 
 class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
