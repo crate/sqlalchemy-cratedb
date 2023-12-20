@@ -128,11 +128,14 @@ branch = false
 omit = [
   "tests/*",
 ]
-#source = ["sqlalchemy_cratedb"]
 
 [tool.coverage.report]
 fail_under = 0
 show_missing = true
+exclude_lines = [
+  "# pragma: no cover",
+  "raise NotImplemented"
+]
 
 [tool.mypy]
 #packages = ["sqlalchemy_cratedb"]
