@@ -225,9 +225,6 @@ extend-exclude = [
 ]
 "examples/*" = ["T201"]  # Allow `print`
 
-[tool.setuptools.packages.find]
-namespaces = false
-
 
 # ===================
 # Tasks configuration
