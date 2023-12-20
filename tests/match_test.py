@@ -30,8 +30,8 @@ try:
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
 
-from crate.client.sqlalchemy.types import ObjectType
-from crate.client.sqlalchemy.predicates import match
+from sqlalchemy_cratedb import ObjectType
+from sqlalchemy_cratedb.predicates import match
 from crate.client.cursor import Cursor
 
 

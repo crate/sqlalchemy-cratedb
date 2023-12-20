@@ -21,7 +21,7 @@ library [crate-python].
 The package is available from [PyPI] at [sqlalchemy-cratedb]. 
 To install the most recent version, run:
 ```shell
-pip install --upgrade cratedb-sqlalchemy
+pip install --upgrade sqlalchemy-cratedb
 ```
 
 ## Documentation and help

@@ -19,16 +19,10 @@
 # However, if you have executed another commercial license agreement
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
-
-import unittest
-from .test_layer import LayerUtilsTest, LayerTest
+from __future__ import absolute_import
 
 
-makeSuite = unittest.TestLoader().loadTestsFromTestCase
-
-
-def test_suite():
-    suite = unittest.TestSuite()
-    suite.addTest(makeSuite(LayerUtilsTest))
-    suite.addTest(makeSuite(LayerTest))
-    return suite
+crate_port = 4200
+localhost = '127.0.0.1'
+crate_host = "{host}:{port}".format(host=localhost, port=crate_port)
+crate_uri = "http://%s" % crate_host

@@ -28,7 +28,7 @@ from sqlalchemy.sql.crud import (REQUIRED, _create_bind_param,
                                  _key_getters_for_crud_column, _scan_cols,
                                  _scan_insert_from_select_cols)
 
-from crate.client.sqlalchemy.compiler import CrateCompiler
+from sqlalchemy_cratedb.compiler import CrateCompiler
 
 
 class CrateCompilerSA10(CrateCompiler):

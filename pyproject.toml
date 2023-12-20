@@ -119,6 +119,8 @@ changelog = "https://github.com/crate-workbench/sqlalchemy-cratedb/blob/main/CHA
 documentation = "https://github.com/crate-workbench/sqlalchemy-cratedb"
 homepage = "https://github.com/crate-workbench/sqlalchemy-cratedb"
 repository = "https://github.com/crate-workbench/sqlalchemy-cratedb"
+[project.entry-points."sqlalchemy.dialects"]
+crate = "sqlalchemy_cratedb:CrateDialect"
 
 [tool.black]
 line-length = 80

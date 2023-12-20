@@ -26,7 +26,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.operators import eq
 
-from crate.client.sqlalchemy import SA_VERSION, SA_1_4
+from sqlalchemy_cratedb import SA_VERSION, SA_1_4
 from crate.testing.settings import crate_host
 
 try:
@@ -34,7 +34,7 @@ try:
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
 
-from crate.client.sqlalchemy.types import ObjectType, ObjectArray
+from sqlalchemy_cratedb import ObjectType, ObjectArray
 
 
 class SqlAlchemyQueryCompilationCaching(TestCase):
