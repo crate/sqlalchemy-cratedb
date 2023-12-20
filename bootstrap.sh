@@ -54,9 +54,6 @@ function before_setup() {
     #
     pip install wheel
 
-    # Install Buildout with designated version, allowing pre-releases.
-    pip install --pre --requirement=requirements.txt
-
 }
 
 function setup_package() {
@@ -71,7 +68,7 @@ function setup_package() {
     fi
 
     # Install package in editable mode.
-    pip install ${PIP_OPTIONS} --editable='.[sqlalchemy,test]'
+    pip install ${PIP_OPTIONS} --editable='.[develop,test]'
 
     # Install designated SQLAlchemy version.
     if [ -n "${SQLALCHEMY_VERSION}" ]; then
@@ -82,10 +79,6 @@ function setup_package() {
       fi
     fi
 
-}
-
-function run_buildout() {
-    buildout -N
 }
 
 function finalize() {
@@ -104,12 +97,11 @@ function main() {
     activate_virtualenv
     before_setup
     setup_package
-    run_buildout
     finalize
 }
 
 function lint() {
-    flake8 "$@" src bin
+    poe lint
 }
 
 main
