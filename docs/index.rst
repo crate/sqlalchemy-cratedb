@@ -1,8 +1,8 @@
 .. _index:
 
-#####################
-CrateDB Python Client
-#####################
+##############################
+SQLAlchemy dialect for CrateDB
+##############################
 
 .. rubric:: Table of contents
 
@@ -15,26 +15,21 @@ CrateDB Python Client
 Introduction
 ************
 
-The Python client library for `CrateDB`_ implements the Python Database API
-Specification v2.0 (`PEP 249`_), and also includes the :ref:`CrateDB dialect
-<using-sqlalchemy>` for `SQLAlchemy`_.
+The :ref:`CrateDB dialect <using-sqlalchemy>` for `SQLAlchemy`_ provides adapters
+for `CrateDB`_ and SQLAlchemy. The supported versions are 1.3, 1.4, and 2.0.
 
-The Python driver can be used to connect to both `CrateDB`_ and `CrateDB
+The connector can be used to connect to both `CrateDB`_ and `CrateDB
 Cloud`_, and is verified to work on Linux, macOS, and Windows. It is used by
-the `Crash CLI`_, as well as other libraries and applications connecting to
+pandas, Dask, and many other libraries and applications connecting to
 CrateDB from the Python ecosystem. It is verified to work with CPython, but
 it has also been tested successfully with `PyPy`_.
-
-Please make sure to also visit the section about :ref:`other-options`, using
-the :ref:`crate-reference:interface-postgresql` interface of `CrateDB`_.
 
 
 *************
 Documentation
 *************
 
-For general help about the Python Database API, or SQLAlchemy, please consult
-`PEP 249`_, the `SQLAlchemy tutorial`_, and the general `SQLAlchemy
+Please consult the `SQLAlchemy tutorial`_, and the general `SQLAlchemy
 documentation`_.
 For more detailed information about how to install the client driver, how to
 connect to a CrateDB cluster, and how to run queries, consult the resources
@@ -44,50 +39,15 @@ referenced below.
     :titlesonly:
 
     getting-started
-    connect
-    query
-    blobs
 
-
-DB API
-======
+SQLAlchemy
+==========
 
 Install package from PyPI.
 
 .. code-block:: shell
 
-    pip install crate
-
-Connect to CrateDB instance running on ``localhost``.
-
-.. code-block:: python
-
-    # Connect using DB API.
-    from crate import client
-    from pprint import pp
-
-    query = "SELECT country, mountain, coordinates, height FROM sys.summits ORDER BY country;"
-    
-    with client.connect("localhost:4200", username="crate") as connection:
-        cursor = connection.cursor()
-        cursor.execute(query)
-        pp(cursor.fetchall())
-        cursor.close()
-
-Connect to `CrateDB Cloud`_.
-
-.. code-block:: python
-
-    # Connect using DB API.
-    from crate import client
-    connection = client.connect(
-        servers="https://example.aks1.westeurope.azure.cratedb.net:4200",
-        username="admin",
-        password="<PASSWORD>")
-
-
-SQLAlchemy
-==========
+    pip install sqlalchemy-cratedb
 
 The CrateDB dialect for `SQLAlchemy`_ offers convenient ORM access and supports
 CrateDB's ``OBJECT``, ``ARRAY``, and geospatial data types using `GeoJSON`_,
@@ -102,7 +62,7 @@ Install package from PyPI with DB API and SQLAlchemy support.
 
 .. code-block:: shell
 
-    pip install 'crate[sqlalchemy]' pandas
+    pip install sqlalchemy-cratedb pandas
 
 Connect to CrateDB instance running on ``localhost``.
 
