@@ -1,0 +1,14 @@
+# Docker Compose file for testing the SQLAlchemy dialect for CrateDB.
+---
+# docker compose -f tests/docker-compose.yml up
+version: "2.1"
+services:
+  cratedb:
+    image: crate/crate:${CRATEDB_VERSION}
+    environment:
+      CRATE_HEAP_SIZE: 2g
+    volumes:
+      - ./assets:/assets
+    ports:
+      - "4200:4200"
+      - "5432:5432"

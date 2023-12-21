@@ -1,8 +1,8 @@
-.. _sqlalchemy-inspection-reflection:
+.. _inspection-reflection:
 
-=====================================================
-SQLAlchemy: Database schema inspection and reflection
-=====================================================
+=========================================
+Database schema inspection and reflection
+=========================================
 
 This section shows you how to inspect the schema of a database using CrateDB's
 SQLAlchemy integration.

@@ -21,17 +21,16 @@
 
 from __future__ import absolute_import
 
+import os
 import sys
 import unittest
 import doctest
 from pprint import pprint
 import logging
 
-from crate.testing.settings import crate_host, docs_path
 from crate.client import connect
 from sqlalchemy_cratedb import SA_VERSION, SA_1_4
-
-makeSuite = unittest.TestLoader().loadTestsFromTestCase
+from tests.settings import crate_host
 
 log = logging.getLogger()
 ch = logging.StreamHandler()
@@ -45,46 +44,46 @@ def cprint(s):
     print(s)
 
 
-crate_layer = None
+def docs_path(*parts):
+    return os.path.abspath(
+        os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), *parts
+        )
+    )
 
 
-def setUpCrateLayerBaseline(test):
-    test.globs['crate_host'] = crate_host
-    test.globs['pprint'] = pprint
-    test.globs['print'] = cprint
+def provision_database():
+
+    drop_tables()
 
     with connect(crate_host) as conn:
         cursor = conn.cursor()
 
-        with open(docs_path('testing/testdata/mappings/locations.sql')) as s:
+        with open(docs_path('tests/assets/locations.sql')) as s:
             stmt = s.read()
             cursor.execute(stmt)
-            stmt = ("select count(*) from information_schema.tables "
-                    "where table_name = 'locations'")
+            stmt = ("SELECT COUNT(*) FROM information_schema.tables "
+                    "WHERE table_name = 'locations'")
             cursor.execute(stmt)
             assert cursor.fetchall()[0][0] == 1
 
-        data_path = docs_path('testing/testdata/data/test_a.json')
+        # `/assets` is located within the Docker container used for running CrateDB.
+        # docker compose -f tests/docker-compose.yml up
+        data_path = "/assets/locations.jsonl"
+
         # load testing data into crate
-        cursor.execute("copy locations from ?", (data_path,))
+        cursor.execute("COPY locations FROM ?", (data_path,))
         # refresh location table so imported data is visible immediately
-        cursor.execute("refresh table locations")
+        cursor.execute("REFRESH TABLE locations")
         # create blob table
-        cursor.execute("create blob table myfiles clustered into 1 shards " +
-                       "with (number_of_replicas=0)")
+        cursor.execute("CREATE BLOB TABLE myfiles CLUSTERED INTO 1 SHARDS " +
+                       "WITH (number_of_replicas=0)")
 
         # create users
         cursor.execute("CREATE USER me WITH (password = 'my_secret_pw')")
         cursor.execute("CREATE USER trusted_me")
 
         cursor.close()
-
-
-def setUpCrateLayerSqlAlchemy(test):
-    """
-    Setup tables and views needed for SQLAlchemy tests.
-    """
-    setUpCrateLayerBaseline(test)
 
     ddl_statements = [
         """
@@ -94,8 +93,8 @@ def setUpCrateLayerSqlAlchemy(test):
             quote STRING,
             details OBJECT,
             more_details ARRAY(OBJECT),
-            INDEX name_ft USING fulltext(name) WITH (analyzer = 'english'),
-            INDEX quote_ft USING fulltext(quote) WITH (analyzer = 'english')
+            INDEX name_ft USING FULLTEXT(name) WITH (analyzer = 'english'),
+            INDEX quote_ft USING FULLTEXT(quote) WITH (analyzer = 'english')
             )""",
         """
         CREATE VIEW characters_view
@@ -108,36 +107,30 @@ def setUpCrateLayerSqlAlchemy(test):
             area GEO_SHAPE
         )"""
     ]
-    _execute_statements(ddl_statements, on_error="raise")
+    _execute_statements(ddl_statements)
 
 
-def tearDownDropEntitiesBaseline(test):
+def drop_tables():
     """
-    Drop all tables, views, and users created by `setUpWithCrateLayer*`.
+    Drop all tables, views, and users created by the test suite.
     """
     ddl_statements = [
-        "DROP TABLE locations",
-        "DROP BLOB TABLE myfiles",
-        "DROP USER me",
-        "DROP USER trusted_me",
+        "DROP TABLE IF EXISTS archived_tasks",
+        "DROP TABLE IF EXISTS characters",
+        "DROP TABLE IF EXISTS cities",
+        "DROP TABLE IF EXISTS locations",
+        "DROP BLOB TABLE IF EXISTS myfiles",
+        'DROP TABLE IF EXISTS "test-testdrive"',
+        "DROP TABLE IF EXISTS todos",
+        'DROP TABLE IF EXISTS "user"',
+        "DROP VIEW IF EXISTS characters_view",
+        "DROP USER IF EXISTS me",
+        "DROP USER IF EXISTS trusted_me",
     ]
     _execute_statements(ddl_statements)
 
 
-def tearDownDropEntitiesSqlAlchemy(test):
-    """
-    Drop all tables, views, and users created by `setUpWithCrateLayer*`.
-    """
-    tearDownDropEntitiesBaseline(test)
-    ddl_statements = [
-        "DROP TABLE characters",
-        "DROP VIEW characters_view",
-        "DROP TABLE cities",
-    ]
-    _execute_statements(ddl_statements)
-
-
-def _execute_statements(statements, on_error="ignore"):
+def _execute_statements(statements, on_error="raise"):
     with connect(crate_host) as conn:
         cursor = conn.cursor()
         for stmt in statements:
@@ -145,7 +138,9 @@ def _execute_statements(statements, on_error="ignore"):
         cursor.close()
 
 
-def _execute_statement(cursor, stmt, on_error="ignore"):
+def _execute_statement(cursor, stmt, on_error="raise"):
+    if on_error not in ["ignore", "raise"]:
+        raise ValueError(f"Invalid value for `on_error` argument: {on_error}")
     try:
         cursor.execute(stmt)
     except Exception:  # pragma: no cover
@@ -159,33 +154,55 @@ def _execute_statement(cursor, stmt, on_error="ignore"):
             raise
 
 
-def test_suite():
+def setUp(test):
+
+    provision_database()
+
+    test.globs['crate_host'] = crate_host
+    test.globs['pprint'] = pprint
+    test.globs['print'] = cprint
+
+
+def tearDown(test):
+    pass
+
+
+def create_test_suite():
     suite = unittest.TestSuite()
     flags = (doctest.NORMALIZE_WHITESPACE | doctest.ELLIPSIS)
 
     sqlalchemy_integration_tests = [
-        'docs/by-example/sqlalchemy/getting-started.rst',
-        'docs/by-example/sqlalchemy/crud.rst',
-        'docs/by-example/sqlalchemy/working-with-types.rst',
-        'docs/by-example/sqlalchemy/advanced-querying.rst',
-        'docs/by-example/sqlalchemy/inspection-reflection.rst',
+        'docs/getting-started.rst',
+        'docs/crud.rst',
+        'docs/working-with-types.rst',
+        'docs/advanced-querying.rst',
+        'docs/inspection-reflection.rst',
     ]
 
     # Don't run DataFrame integration tests on SQLAlchemy 1.3 and Python 3.7.
     skip_dataframe = SA_VERSION < SA_1_4 or sys.version_info < (3, 8)
     if not skip_dataframe:
         sqlalchemy_integration_tests += [
-            'docs/by-example/sqlalchemy/dataframe.rst',
+            'docs/dataframe.rst',
         ]
 
     s = doctest.DocFileSuite(
         *sqlalchemy_integration_tests,
         module_relative=False,
-        setUp=setUpCrateLayerSqlAlchemy,
-        tearDown=tearDownDropEntitiesSqlAlchemy,
+        setUp=setUp,
+        tearDown=tearDown,
         optionflags=flags,
         encoding='utf-8'
     )
     suite.addTest(s)
 
     return suite
+
+
+def load_tests(loader, tests, pattern):
+    """
+    Provide test suite to test discovery.
+
+    https://docs.python.org/3/library/unittest.html#load-tests-protocol
+    """
+    return create_test_suite()

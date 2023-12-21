@@ -1,8 +1,8 @@
-.. _sqlalchemy-advanced-querying:
+.. _advanced-querying:
 
-=============================
-SQLAlchemy: Advanced querying
-=============================
+=================
+Advanced querying
+=================
 
 This section of the documentation demonstrates running queries using a fulltext
 index with an analyzer, queries using counting and aggregations, and support for

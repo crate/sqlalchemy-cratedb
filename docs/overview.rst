@@ -1,9 +1,9 @@
-.. _sqlalchemy-support:
+.. _overview:
 .. _using-sqlalchemy:
 
-==================
-SQLAlchemy support
-==================
+========
+Overview
+========
 
 .. rubric:: Table of contents
 

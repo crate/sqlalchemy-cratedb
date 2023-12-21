@@ -261,4 +261,5 @@ release = [
 
 test = [
   { cmd = "pytest" },
+  { cmd = "python -m unittest -vvv tests/integration.py" },
 ]

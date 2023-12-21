@@ -8,10 +8,11 @@ on:
 
 jobs:
   nightly:
-    name: "Python: ${{ matrix.python-version }}
-     SQLA: ${{ matrix.sqla-version }}
-     CrateDB: ${{ matrix.cratedb-version }}
-     on ${{ matrix.os }}"
+    name: "
+    Python: ${{ matrix.python-version }}
+    SQLAlchemy: ${{ matrix.sqla-version }}
+    CrateDB: ${{ matrix.cratedb-version }}
+    "
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -37,19 +38,34 @@ jobs:
       PIP_ALLOW_PRERELEASE: ${{ matrix.pip-allow-prerelease }}
 
     steps:
-      - uses: actions/checkout@v4
+
+      - name: Acquire sources
+        uses: actions/checkout@v4
+
+      - name: Run CrateDB
+        run: docker compose -f tests/docker-compose.yml up -d
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          architecture: x64
           cache: 'pip'
-          cache-dependency-path: 'setup.py'
+          cache-dependency-path:
+            pyproject.toml
+
+      - name: Set up project
+        run: |
+
+          # `setuptools 0.64.0` adds support for editable install hooks (PEP 660).
+          # https://github.com/pypa/setuptools/blob/main/CHANGES.rst#v6400
+          pip install "setuptools>=64" --upgrade
+
+          # Install package in editable mode.
+          pip install --use-pep517 --prefer-binary --editable='.[develop,test]'
 
       - name: Invoke tests
         run: |
-
-          # Propagate build matrix information.
-          ./devtools/setup_ci.sh
 
           # Bootstrap environment.
           source bootstrap.sh
@@ -57,9 +73,6 @@ jobs:
           # Report about the test matrix slot.
           echo "Invoking tests with CrateDB ${CRATEDB_VERSION} and SQLAlchemy ${SQLALCHEMY_VERSION}"
 
-          # Run linter.
-          flake8 src bin
-          
-          # Run tests.
+          # Run linters and software tests.
           export SQLALCHEMY_WARN_20=1
-          bin/test -vvv
+          poe check
