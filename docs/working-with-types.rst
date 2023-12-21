@@ -1,8 +1,8 @@
-.. _sqlalchemy-working-with-types:
+.. _working-with-types:
 
-==============================================
-SQLAlchemy: Working with special CrateDB types
-==============================================
+==================================
+Working with special CrateDB types
+==================================
 
 This section of the documentation shows how to work with special data types
 from the CrateDB SQLAlchemy dialect. Currently, these are:

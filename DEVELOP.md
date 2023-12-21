@@ -12,21 +12,20 @@ This command should automatically install all prerequisites for the
 development sandbox and drop you into the virtualenv, ready for invoking
 further commands.
 
-## Running tests
+## Running Tests
 
-All tests will be invoked using the Python interpreter that was used
-when creating the Python virtualenv.
+Verify code by running all linters and software tests:
 
-Some examples how to invoke the test runner are outlined below.
-
-Run all tests:
-
+    docker compose -f tests/docker-compose.yml up
     poe check
 
 Run specific tests:
 
     pytest -k SqlAlchemyCompilerTest
     pytest -k test_score
+
+    # Integration tests, written as doctests.
+    python -m unittest -vvv tests/integration.py
 
 Format code:
 

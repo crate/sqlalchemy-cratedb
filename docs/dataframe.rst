@@ -1,9 +1,9 @@
-.. _sqlalchemy-pandas:
-.. _sqlalchemy-dataframe:
+.. _use-pandas:
+.. _dataframe:
 
-================================
-SQLAlchemy: DataFrame operations
-================================
+====================
+DataFrame operations
+====================
 
 .. rubric:: Table of Contents
 

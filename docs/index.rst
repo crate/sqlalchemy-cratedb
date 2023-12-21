@@ -38,7 +38,7 @@ referenced below.
 .. toctree::
     :titlesonly:
 
-    getting-started
+    install
 
 SQLAlchemy
 ==========
@@ -56,7 +56,7 @@ supporting different kinds of `GeoJSON geometry objects`_.
 .. toctree::
     :maxdepth: 2
 
-    sqlalchemy
+    overview
 
 Install package from PyPI with DB API and SQLAlchemy support.
 
@@ -123,12 +123,30 @@ please consult the :ref:`data-types` and :ref:`SQLAlchemy extension types
 
     data-types
 
+
+.. _examples:
+.. _by-example:
+.. _sqlalchemy-by-example:
+
 Examples
 ========
 
-- The :ref:`by-example` section enumerates concise examples demonstrating the
-  different API interfaces of the CrateDB Python client library. Those are
-  DB API, HTTP, and BLOB interfaces, and the SQLAlchemy dialect.
+This section enumerates concise examples demonstrating the
+use of the SQLAlchemy dialect.
+
+.. toctree::
+    :maxdepth: 1
+
+    getting-started
+    crud
+    working-with-types
+    advanced-querying
+    inspection-reflection
+    dataframe
+
+
+See also
+--------
 - Executable code examples are maintained within the `cratedb-examples repository`_.
 - The `sample application`_ and the corresponding `sample application
   documentation`_ demonstrate the use of the driver on behalf of an example
@@ -137,10 +155,6 @@ Examples
   connect to CrateDB using `pandas`_, and how to load and export data.
 - The `Apache Superset`_ and `FIWARE QuantumLeap data historian`_ projects.
 
-.. toctree::
-    :maxdepth: 2
-
-    by-example/index
 
 
 *******************

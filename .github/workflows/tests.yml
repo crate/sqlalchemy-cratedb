@@ -12,33 +12,22 @@ concurrency:
 
 jobs:
   test:
-    name: "Python: ${{ matrix.python-version }}
-     SQLA: ${{ matrix.sqla-version }}
-     on ${{ matrix.os }}"
+    name: "
+    Python: ${{ matrix.python-version }}
+    SQLAlchemy: ${{ matrix.sqla-version }}
+    "
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ['ubuntu-latest', 'macos-latest']
+        os: ['ubuntu-latest']
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
-        cratedb-version: ['5.4.5']
+        cratedb-version: ['5.5.1']
         sqla-version: ['<1.4', '<1.5', '<2.1']
         pip-allow-prerelease: ['false']
 
         exclude:
-          # To save resources, only use the most recent Python versions on macOS.
-          - os: 'macos-latest'
-            python-version: '3.7'
-          - os: 'macos-latest'
-            python-version: '3.8'
-          - os: 'macos-latest'
-            python-version: '3.9'
-          - os: 'macos-latest'
-            python-version: '3.10'
           # SQLAlchemy 1.3 is not supported on Python 3.12 and higher.
           - os: 'ubuntu-latest'
-            python-version: '3.12'
-            sqla-version: '<1.4'
-          - os: 'macos-latest'
             python-version: '3.12'
             sqla-version: '<1.4'
 
@@ -46,7 +35,7 @@ jobs:
         include:
           - os: 'ubuntu-latest'
             python-version: '3.12'
-            cratedb-version: '5.4.5'
+            cratedb-version: '5.5.1'
             sqla-version: 'latest'
             pip-allow-prerelease: 'true'
 
@@ -59,7 +48,12 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v4
+
+      - name: Acquire sources
+        uses: actions/checkout@v4
+
+      - name: Run CrateDB
+        run: docker compose -f tests/docker-compose.yml up -d
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5

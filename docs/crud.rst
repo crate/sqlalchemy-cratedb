@@ -1,8 +1,8 @@
-.. _sqlalchemy-crud:
+.. _crud:
 
-================================================
-SQLAlchemy: Create, retrieve, update, and delete
-================================================
+====================================
+Create, retrieve, update, and delete
+====================================
 
 This section of the documentation shows how to query, insert, update and delete
 records using CrateDB's SQLAlchemy integration, it includes common scenarios
