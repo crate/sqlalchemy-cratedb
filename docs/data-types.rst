@@ -45,6 +45,7 @@ CrateDB           SQLAlchemy
 `integer`__       `Integer`__
 `long`__          `NUMERIC`__
 `float`__         `Float`__
+`float_vector`__  ``FloatVector``
 `double`__        `DECIMAL`__
 `timestamp`__     `TIMESTAMP`__
 `string`__        `String`__
@@ -68,6 +69,7 @@ __ https://crate.io/docs/crate/reference/en/latest/general/ddl/data-types.html#n
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.NUMERIC
 __ https://crate.io/docs/crate/reference/en/latest/general/ddl/data-types.html#numeric-data
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.Float
+__ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#float-vector
 __ https://crate.io/docs/crate/reference/en/latest/general/ddl/data-types.html#numeric-data
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.DECIMAL
 __ https://crate.io/docs/crate/reference/en/latest/general/ddl/data-types.html#dates-and-times
