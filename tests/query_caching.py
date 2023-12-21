@@ -26,15 +26,13 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.operators import eq
 
-from sqlalchemy_cratedb import SA_VERSION, SA_1_4
+from sqlalchemy_cratedb import SA_VERSION, SA_1_4, ObjectArray, ObjectType
 from crate.testing.settings import crate_host
 
 try:
     from sqlalchemy.orm import declarative_base
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
-
-from sqlalchemy_cratedb import ObjectType, ObjectArray
 
 
 class SqlAlchemyQueryCompilationCaching(TestCase):

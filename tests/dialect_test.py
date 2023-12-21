@@ -26,9 +26,8 @@ from unittest.mock import MagicMock, patch
 import sqlalchemy as sa
 
 from crate.client.cursor import Cursor
-from sqlalchemy_cratedb import SA_VERSION
+from sqlalchemy_cratedb import SA_VERSION, ObjectType
 from sqlalchemy_cratedb import SA_1_4, SA_2_0
-from sqlalchemy_cratedb import ObjectType
 from sqlalchemy import inspect
 from sqlalchemy.orm import Session
 try:
