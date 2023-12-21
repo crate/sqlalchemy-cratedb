@@ -27,6 +27,7 @@ from .support import insert_bulk
 from .type.array import ObjectArray
 from .type.geo import Geopoint, Geoshape
 from .type.object import ObjectType
+from .type.vector import FloatVector
 
 if SA_VERSION < SA_1_4:
     import textwrap
@@ -51,6 +52,7 @@ if SA_VERSION < SA_1_4:
 
 __all__ = [
     dialect,
+    FloatVector,
     Geopoint,
     Geoshape,
     ObjectArray,

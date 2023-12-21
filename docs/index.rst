@@ -50,8 +50,9 @@ Install package from PyPI.
     pip install sqlalchemy-cratedb
 
 The CrateDB dialect for `SQLAlchemy`_ offers convenient ORM access and supports
-CrateDB's ``OBJECT``, ``ARRAY``, and geospatial data types using `GeoJSON`_,
-supporting different kinds of `GeoJSON geometry objects`_.
+CrateDB's container data types ``OBJECT`` and ``ARRAY``, its vector data type
+``FLOAT_VECTOR``, and geospatial data types using `GeoJSON`_, supporting different
+kinds of `GeoJSON geometry objects`_.
 
 .. toctree::
     :maxdepth: 2
