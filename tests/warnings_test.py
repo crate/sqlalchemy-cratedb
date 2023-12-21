@@ -44,7 +44,7 @@ class SqlAlchemyWarningsTest(TestCase, ExtraAssertions):
         with warnings.catch_warnings(record=True) as w:
 
             # Import the deprecated symbol.
-            from sqlalchemy_cratedb.types import Craty  # noqa: F401
+            from sqlalchemy_cratedb.type.object import Craty  # noqa: F401
 
             # Verify details of the deprecation warning.
             self.assertEqual(len(w), 1)
@@ -55,7 +55,7 @@ class SqlAlchemyWarningsTest(TestCase, ExtraAssertions):
         with warnings.catch_warnings(record=True) as w:
 
             # Import the deprecated symbol.
-            from sqlalchemy_cratedb.types import Object  # noqa: F401
+            from sqlalchemy_cratedb.type.object import Object  # noqa: F401
 
             # Verify details of the deprecation warning.
             self.assertEqual(len(w), 1)

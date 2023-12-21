@@ -27,7 +27,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql.base import PGCompiler
 from sqlalchemy.sql import compiler
 from sqlalchemy.types import String
-from .types import MutableDict, ObjectTypeImpl, Geopoint, Geoshape
+from .type.geo import Geopoint, Geoshape
+from .type.object import MutableDict, ObjectTypeImpl
 from .sa_version import SA_VERSION, SA_1_4
 
 

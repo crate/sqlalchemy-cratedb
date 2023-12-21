@@ -23,8 +23,9 @@ from .compat.api13 import monkeypatch_add_exec_driver_sql
 from .dialect import CrateDialect
 from .sa_version import SA_1_4, SA_2_0, SA_VERSION
 from .support import insert_bulk
-from .types import Geopoint, Geoshape, ObjectArray, ObjectType
-
+from .type.array import ObjectArray
+from .type.geo import Geopoint, Geoshape
+from .type.object import ObjectType
 
 if SA_VERSION < SA_1_4:
     import textwrap
