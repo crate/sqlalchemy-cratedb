@@ -5,6 +5,8 @@
 - Added support for CrateDB's [FLOAT_VECTOR] data type and its accompanying
   [KNN_MATCH] function, for HNSW matches. For SQLAlchemy column definitions,
   you can use it like `FloatVector(dimensions=1536)`.
+- Fixed `get_table_names()` reflection method to respect the
+  `schema` query argument in SQLAlchemy connection URLs.
 
 [FLOAT_VECTOR]: https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#float-vector
 [KNN_MATCH]: https://cratedb.com/docs/crate/reference/en/latest/general/builtins/scalar-functions.html#scalar-knn-match
