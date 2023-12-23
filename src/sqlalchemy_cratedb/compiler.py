@@ -254,6 +254,9 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         """
         return "TIMESTAMP %s" % ((type_.timezone and "WITH" or "WITHOUT") + " TIME ZONE",)
 
+    def visit_BLOB(self, type_, **kw):
+        return "STRING"
+
 
 class CrateCompiler(compiler.SQLCompiler):
     def visit_getitem_binary(self, binary, operator, **kw):
