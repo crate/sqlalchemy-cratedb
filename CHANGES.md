@@ -1,4 +1,5 @@
 # Changelog
+- Types: Added support for BLOB type, per base64 encoding
 
 ## 2026/05/28 0.42.0
 - Added support for SQL Alchemy 2.1
