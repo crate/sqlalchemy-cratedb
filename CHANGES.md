@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Added support for `psycopg` and `asyncpg` drivers, by introducing the
+  `crate+psycopg://`, `crate+asyncpg://`, and `crate+urllib3://` dialect
+  identifiers. The asynchronous variant of `psycopg` is also supported.
 
 ## 2024/08/29 0.39.0
 Added `quote_relation_name` support utility function
