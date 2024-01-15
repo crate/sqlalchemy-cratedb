@@ -35,45 +35,58 @@ from .compiler import (
 from .sa_version import SA_1_4, SA_2_0, SA_VERSION
 from .type import FloatVector, ObjectArray, ObjectType
 
+# For SQLAlchemy >= 1.1.
 TYPES_MAP = {
-    "boolean": sqltypes.Boolean,
-    "short": sqltypes.SmallInteger,
-    "smallint": sqltypes.SmallInteger,
-    "timestamp": sqltypes.TIMESTAMP(timezone=False),
+    "boolean": sqltypes.BOOLEAN,
+    "short": sqltypes.SMALLINT,
+    "smallint": sqltypes.SMALLINT,
+    "timestamp": sqltypes.TIMESTAMP,
     "timestamp with time zone": sqltypes.TIMESTAMP(timezone=True),
+    "timestamp without time zone": sqltypes.TIMESTAMP(timezone=False),
     "object": ObjectType,
-    "integer": sqltypes.Integer,
-    "long": sqltypes.NUMERIC,
-    "bigint": sqltypes.NUMERIC,
+    "object_array": ObjectArray,  # TODO: Can this also be improved to use `sqltypes.ARRAY`?
+    "integer": sqltypes.INTEGER,
+    "long": sqltypes.BIGINT,
+    "bigint": sqltypes.BIGINT,
+    "float": sqltypes.FLOAT,
     "double": sqltypes.DECIMAL,
     "double precision": sqltypes.DECIMAL,
-    "object_array": ObjectArray,
-    "float": sqltypes.Float,
-    "real": sqltypes.Float,
-    "string": sqltypes.String,
-    "text": sqltypes.String,
+    "real": sqltypes.REAL,
+    "string": sqltypes.VARCHAR,
+    "text": sqltypes.VARCHAR,
     "float_vector": FloatVector,
 }
 
-# Needed for SQLAlchemy >= 1.1.
-# TODO: Dissolve.
+# For SQLAlchemy >= 1.4.
 try:
     from sqlalchemy.types import ARRAY
 
-    TYPES_MAP["integer_array"] = ARRAY(sqltypes.Integer)
-    TYPES_MAP["boolean_array"] = ARRAY(sqltypes.Boolean)
-    TYPES_MAP["short_array"] = ARRAY(sqltypes.SmallInteger)
-    TYPES_MAP["smallint_array"] = ARRAY(sqltypes.SmallInteger)
+    TYPES_MAP["integer_array"] = ARRAY(sqltypes.INTEGER)
+    TYPES_MAP["boolean_array"] = ARRAY(sqltypes.BOOLEAN)
+    TYPES_MAP["short_array"] = ARRAY(sqltypes.SMALLINT)
+    TYPES_MAP["smallint_array"] = ARRAY(sqltypes.SMALLINT)
+    TYPES_MAP["timestamp_array"] = ARRAY(sqltypes.TIMESTAMP)
     TYPES_MAP["timestamp_array"] = ARRAY(sqltypes.TIMESTAMP(timezone=False))
     TYPES_MAP["timestamp with time zone_array"] = ARRAY(sqltypes.TIMESTAMP(timezone=True))
-    TYPES_MAP["long_array"] = ARRAY(sqltypes.NUMERIC)
-    TYPES_MAP["bigint_array"] = ARRAY(sqltypes.NUMERIC)
-    TYPES_MAP["double_array"] = ARRAY(sqltypes.DECIMAL)
-    TYPES_MAP["double precision_array"] = ARRAY(sqltypes.DECIMAL)
-    TYPES_MAP["float_array"] = ARRAY(sqltypes.Float)
-    TYPES_MAP["real_array"] = ARRAY(sqltypes.Float)
-    TYPES_MAP["string_array"] = ARRAY(sqltypes.String)
-    TYPES_MAP["text_array"] = ARRAY(sqltypes.String)
+    TYPES_MAP["long_array"] = ARRAY(sqltypes.BIGINT)
+    TYPES_MAP["bigint_array"] = ARRAY(sqltypes.BIGINT)
+    TYPES_MAP["float_array"] = ARRAY(sqltypes.FLOAT)
+    TYPES_MAP["real_array"] = ARRAY(sqltypes.REAL)
+    TYPES_MAP["string_array"] = ARRAY(sqltypes.VARCHAR)
+    TYPES_MAP["text_array"] = ARRAY(sqltypes.VARCHAR)
+except Exception:  # noqa: S110
+    pass
+
+# For SQLAlchemy >= 2.0.
+try:
+    from sqlalchemy.types import DOUBLE, DOUBLE_PRECISION
+
+    TYPES_MAP["real"] = DOUBLE
+    TYPES_MAP["real_array"] = ARRAY(DOUBLE)
+    TYPES_MAP["double"] = DOUBLE
+    TYPES_MAP["double_array"] = ARRAY(DOUBLE)
+    TYPES_MAP["double precision"] = DOUBLE_PRECISION
+    TYPES_MAP["double precision_array"] = ARRAY(DOUBLE_PRECISION)
 except Exception:  # noqa: S110
     pass
 
