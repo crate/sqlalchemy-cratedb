@@ -32,7 +32,6 @@ from .compiler import (
     CrateDDLCompiler,
     CrateIdentifierPreparer,
 )
-from crate.client.exceptions import TimezoneUnawareException
 from .sa_version import SA_VERSION, SA_1_4, SA_2_0
 from .type import FloatVector, ObjectArray, ObjectType
 
@@ -114,14 +113,10 @@ class Date(sqltypes.Date):
 
 class DateTime(sqltypes.DateTime):
 
-    TZ_ERROR_MSG = "Timezone aware datetime objects are not supported"
-
     def bind_processor(self, dialect):
         def process(value):
             if value is not None:
                 assert isinstance(value, datetime)
-                if value.tzinfo is not None:
-                    raise TimezoneUnawareException(DateTime.TZ_ERROR_MSG)
                 return value.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
             return value
         return process
