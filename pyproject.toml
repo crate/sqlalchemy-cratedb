@@ -96,7 +96,7 @@ develop = [
   "mypy<1.9",
   "poethepoet<0.25",
   "pyproject-fmt<1.7",
-  "ruff==0.1.12",
+  "ruff==0.1.13",
   "validate-pyproject<0.16",
 ]
 doc = [
