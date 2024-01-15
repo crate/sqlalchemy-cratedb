@@ -1,4 +1,5 @@
 # Changelog
+- Types: Added method `ObjectArray.as_generic` for better reverse type lookups
 
 ## 2026/05/28 0.42.0
 - Added support for SQL Alchemy 2.1

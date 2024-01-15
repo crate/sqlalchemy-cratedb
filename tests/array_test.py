@@ -20,12 +20,14 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 
-from unittest import TestCase
+from unittest import TestCase, skipIf
 from unittest.mock import MagicMock, patch
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import operators
+
+from sqlalchemy_cratedb import SA_1_4, SA_VERSION
 
 try:
     from sqlalchemy.orm import declarative_base
@@ -58,6 +60,16 @@ class SqlAlchemyArrayTypeTest(TestCase):
 
     def assertSQL(self, expected_str, actual_expr):
         self.assertEqual(expected_str, str(actual_expr).replace("\n", ""))
+
+    @skipIf(SA_VERSION < SA_1_4, "`as_generic` not available with SQLAlchemy 1.3")
+    def test_as_generic(self):
+        t1 = sa.Table(
+            "t",
+            self.metadata,
+            sa.Column("int_array", sa.ARRAY(sa.Integer)),
+        )
+        array_type = t1.c.int_array.type.as_generic()
+        assert isinstance(array_type, sa.ARRAY)
 
     def test_create_with_array(self):
         t1 = sa.Table(
