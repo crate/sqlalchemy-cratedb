@@ -1,5 +1,10 @@
 # Changelog
 - Types: Added method `ObjectArray.as_generic` for better reverse type lookups
+- Types: Improved type mappings for better reverse type lookups / reflections
+  - Consequently used upper-case type definitions from `sqlalchemy.types`
+  - Added `timestamp without time zone` types (scalar and array)
+  - On SQLAlchemy 2, mapped `real` and `double{_precision}` types to the
+    newly introduced `sqltypes.{DOUBLE,DOUBLE_PRECISION}` types
 
 ## 2026/05/28 0.42.0
 - Added support for SQL Alchemy 2.1
