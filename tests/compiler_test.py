@@ -432,3 +432,31 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
         self.assertIsSubclass(w[-1].category, UserWarning)
         self.assertIn("CrateDB does not support unique constraints, "
                       "they will be omitted when generating DDL statements.", str(w[-1].message))
+
+    def test_ddl_with_reserved_words(self):
+        """
+        Verify CrateDB's reserved words like `object` are quoted properly.
+        """
+
+        Base = declarative_base(metadata=self.metadata)
+
+        class FooBar(Base):
+            """The entity."""
+
+            __tablename__ = "foobar"
+
+            index = sa.Column(sa.Integer, primary_key=True)
+            array = sa.Column(sa.String)
+            object = sa.Column(sa.String)
+
+        # Verify SQL DDL statement.
+        self.metadata.create_all(self.engine, tables=[FooBar.__table__], checkfirst=False)
+        self.assertEqual(self.executed_statement, dedent("""
+            CREATE TABLE testdrive.foobar (
+            \t"index" INT NOT NULL, 
+            \t"array" STRING, 
+            \t"object" STRING, 
+            \tPRIMARY KEY ("index")
+            )
+
+        """))  # noqa: W291, W293

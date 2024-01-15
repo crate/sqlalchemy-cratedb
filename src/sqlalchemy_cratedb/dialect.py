@@ -29,7 +29,8 @@ from sqlalchemy.util import asbool, to_list
 
 from .compiler import (
     CrateTypeCompiler,
-    CrateDDLCompiler
+    CrateDDLCompiler,
+    CrateIdentifierPreparer,
 )
 from crate.client.exceptions import TimezoneUnawareException
 from .sa_version import SA_VERSION, SA_1_4, SA_2_0
@@ -174,6 +175,7 @@ class CrateDialect(default.DefaultDialect):
     statement_compiler = statement_compiler
     ddl_compiler = CrateDDLCompiler
     type_compiler = CrateTypeCompiler
+    preparer = CrateIdentifierPreparer
     use_insertmanyvalues = True
     use_insertmanyvalues_wo_returning = True
     supports_multivalues_insert = True

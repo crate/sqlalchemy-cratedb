@@ -3,6 +3,8 @@
 
 ## Unreleased
 - Added/reactivated documentation as `sqlalchemy-cratedb`
+- Added `CrateIdentifierPreparer`, in order to quote reserved words
+  like `object` properly, for example when used as column names.
 
 ## 2024/06/13 0.37.0
 - Added support for CrateDB's [FLOAT_VECTOR] data type and its accompanying
