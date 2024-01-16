@@ -543,3 +543,16 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
             "they will be omitted when generating DDL statements.",
             str(w[-1].message),
         )
+
+    def test_ddl_with_json_columns(self):
+        mytable = sa.Table("json_table", self.metadata, sa.Column("json", sa.JSON))
+        self.metadata.create_all(self.engine, tables=[mytable], checkfirst=False)
+        self.assertEqual(
+            self.executed_statement,
+            dedent("""
+            CREATE TABLE testdrive.json_table (
+            \tjson OBJECT
+            )
+
+        """),
+        )  # noqa: W291, W293
