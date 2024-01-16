@@ -184,3 +184,33 @@ def test_datetime_tz(session):
     assert result["datetime_tz"].tzname() is None
     assert result["datetime_tz"].timetz() == OUTPUT_TIMETZ_TZ
     assert result["datetime_tz"].tzinfo is None
+
+
+@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
+def test_datetime_date(session):
+    """
+    Validate assigning a `date` object to a `datetime` column works.
+
+    It is needed by meltano-tap-cratedb.
+
+    The test suite of `meltano-tap-cratedb`, derived from the corresponding
+    PostgreSQL adapter, will supply `dt.date` objects. Without this improvement,
+    those will otherwise fail.
+    """
+
+    # Insert record.
+    foo_item = FooBar(
+        name="foo",
+        datetime_notz=dt.date(2009, 5, 13),
+        datetime_tz=dt.date(2009, 5, 13),
+    )
+    session.add(foo_item)
+    session.commit()
+    session.execute(sa.text("REFRESH TABLE foobar"))
+
+    # Query record.
+    result = session.execute(sa.select(FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)).mappings().first()
+
+    # Compare outcome.
+    assert result["datetime_notz"] == dt.datetime(2009, 5, 13, 0, 0, 0)
+    assert result["datetime_tz"] == dt.datetime(2009, 5, 13, 0, 0, 0)
