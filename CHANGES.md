@@ -14,6 +14,7 @@
 - Fixed SQL rendering of special DDL table options in `CrateDDLCompiler`.
   Before, configuring `crate_"translog.durability"` was not possible.
 - Unlocked supporting timezone-aware `DateTime` fields
+- Added support for marshalling Python `datetime.date` values on `sa.DateTime` fields
 
 ## 2024/06/13 0.37.0
 - Added support for CrateDB's [FLOAT_VECTOR] data type and its accompanying
