@@ -121,7 +121,7 @@ documentation = "https://github.com/crate-workbench/sqlalchemy-cratedb"
 homepage = "https://github.com/crate-workbench/sqlalchemy-cratedb"
 repository = "https://github.com/crate-workbench/sqlalchemy-cratedb"
 [project.entry-points."sqlalchemy.dialects"]
-crate = "sqlalchemy_cratedb:CrateDialect"
+crate = "sqlalchemy_cratedb:dialect"
 
 [tool.black]
 line-length = 100

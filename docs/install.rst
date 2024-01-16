@@ -28,7 +28,7 @@ After that is done, you can import the library, like so:
 
 .. code-block:: python
 
-    >>> from sqlalchemy_cratedb import CrateDialect
+    >>> from sqlalchemy_cratedb import dialect
 
 Set up as a dependency
 ======================
