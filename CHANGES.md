@@ -5,6 +5,7 @@
 - Added/reactivated documentation as `sqlalchemy-cratedb`
 - Added `CrateIdentifierPreparer`, in order to quote reserved words
   like `object` properly, for example when used as column names.
+- Fixed `CrateDialect.get_pk_constraint` to return `list` instead of `set` type
 
 ## 2024/06/13 0.37.0
 - Added support for CrateDB's [FLOAT_VECTOR] data type and its accompanying
