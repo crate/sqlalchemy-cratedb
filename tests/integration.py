@@ -124,6 +124,7 @@ def drop_tables():
         "DROP TABLE IF EXISTS archived_tasks",
         "DROP TABLE IF EXISTS characters",
         "DROP TABLE IF EXISTS cities",
+        "DROP TABLE IF EXISTS foobar",
         "DROP TABLE IF EXISTS locations",
         "DROP BLOB TABLE IF EXISTS myfiles",
         "DROP TABLE IF EXISTS search",
