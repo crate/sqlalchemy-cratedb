@@ -289,6 +289,12 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         else:
             return "DOUBLE"
 
+    def visit_JSON(self, type_, **kw):
+        return "OBJECT"
+
+    def visit_JSONB(self, type_, **kw):
+        return "OBJECT"
+
 
 class CrateCompiler(compiler.SQLCompiler):
     def visit_getitem_binary(self, binary, operator, **kw):
