@@ -97,7 +97,7 @@ develop = [
   "poethepoet<0.25",
   "pyproject-fmt<1.8",
   "ruff==0.1.14",
-  "validate-pyproject<0.16",
+  "validate-pyproject<0.17",
 ]
 doc = [
   "crate-docs-theme>=0.26.5",
