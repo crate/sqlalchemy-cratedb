@@ -29,7 +29,7 @@ from pprint import pprint
 import logging
 
 from crate.client import connect
-from sqlalchemy_cratedb import SA_VERSION, SA_1_4
+from sqlalchemy_cratedb import SA_VERSION, SA_2_0
 from tests.settings import crate_host
 
 log = logging.getLogger()
@@ -180,7 +180,7 @@ def create_test_suite():
     ]
 
     # Don't run DataFrame integration tests on SQLAlchemy 1.3 and Python 3.7.
-    skip_dataframe = SA_VERSION < SA_1_4 or sys.version_info < (3, 8)
+    skip_dataframe = SA_VERSION < SA_2_0 or sys.version_info < (3, 8)
     if not skip_dataframe:
         sqlalchemy_integration_tests += [
             'docs/dataframe.rst',
