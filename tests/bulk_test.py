@@ -176,7 +176,7 @@ class SqlAlchemyBulkTest(TestCase):
         """
         Verify bulk INSERT with pandas.
         """
-        from pandas._testing import makeTimeDataFrame
+        from pueblo.testing.pandas import makeTimeDataFrame
         from sqlalchemy_cratedb import insert_bulk
 
         # 42 records / 8 chunksize = 5.25, which means 6 batches will be emitted.
@@ -216,7 +216,7 @@ class SqlAlchemyBulkTest(TestCase):
         Verify bulk INSERT with Dask.
         """
         import dask.dataframe as dd
-        from pandas._testing import makeTimeDataFrame
+        from pueblo.testing.pandas import makeTimeDataFrame
         from sqlalchemy_cratedb import insert_bulk
 
         # 42 records / 4 partitions means each partition has a size of 10.5 elements.
