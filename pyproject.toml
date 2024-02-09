@@ -112,6 +112,7 @@ release = [
   "twine<6",
 ]
 test = [
+  "cratedb-toolkit[testing]",
   "dask[dataframe]",
   "pandas<2.3",
   "pueblo>=0.0.7",
