@@ -105,7 +105,7 @@ doc = [
 ]
 release = [
   "build<2",
-  "twine<5",
+  "twine<6",
 ]
 test = [
   "dask",
