@@ -105,7 +105,13 @@ def provision_database():
             name STRING PRIMARY KEY,
             coordinate GEO_POINT,
             area GEO_SHAPE
-        )"""
+        )""",
+        """
+        CREATE TABLE search (
+            name STRING PRIMARY KEY,
+            text STRING,
+            embedding FLOAT_VECTOR(3)
+        )""",
     ]
     _execute_statements(ddl_statements)
 
@@ -120,6 +126,7 @@ def drop_tables():
         "DROP TABLE IF EXISTS cities",
         "DROP TABLE IF EXISTS locations",
         "DROP BLOB TABLE IF EXISTS myfiles",
+        "DROP TABLE IF EXISTS search",
         'DROP TABLE IF EXISTS "test-testdrive"',
         "DROP TABLE IF EXISTS todos",
         'DROP TABLE IF EXISTS "user"',

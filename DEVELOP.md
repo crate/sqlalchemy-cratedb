@@ -16,6 +16,7 @@ further commands.
 
 Verify code by running all linters and software tests:
 
+    export CRATEDB_VERSION=latest
     docker compose -f tests/docker-compose.yml up
     poe check
 

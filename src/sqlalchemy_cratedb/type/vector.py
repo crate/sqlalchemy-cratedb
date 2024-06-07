@@ -3,8 +3,8 @@
 SQLAlchemy data type implementation for CrateDB's `FLOAT_VECTOR` type.
 
 ## References
-- https://crate.io/docs/crate/reference/en/master/general/ddl/data-types.html#float-vector
-- https://crate.io/docs/crate/reference/en/master/general/builtins/scalar-functions.html#scalar-knn-match
+- https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#float-vector
+- https://cratedb.com/docs/crate/reference/en/latest/general/builtins/scalar-functions.html#scalar-knn-match
 
 ## Details
 The implementation is based on SQLAlchemy's `TypeDecorator`, and also
@@ -14,8 +14,8 @@ offers compiler support.
 CrateDB currently only supports the similarity function `VectorSimilarityFunction.EUCLIDEAN`.
 -- https://github.com/crate/crate/blob/5.5.1/server/src/main/java/io/crate/types/FloatVectorType.java#L55
 
-On the other hand, pgvector use a comparator to apply different similarity
-functions as operators, see `pgvector.sqlalchemy.Vector.comparator_factory`.
+pgvector use a comparator to apply different similarity functions as operators,
+see `pgvector.sqlalchemy.Vector.comparator_factory`.
 
 <->: l2/euclidean_distance
 <#>: max_inner_product

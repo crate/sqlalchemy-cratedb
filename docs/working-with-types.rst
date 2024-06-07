@@ -9,6 +9,7 @@ from the CrateDB SQLAlchemy dialect. Currently, these are:
 
 - Container types ``ObjectType`` and ``ObjectArray``.
 - Geospatial types ``Geopoint`` and ``Geoshape``.
+- Vector data type ``FloatVector``.
 
 
 .. rubric:: Table of Contents
@@ -256,6 +257,33 @@ objects:
     >>> query.all()
      [('Tokyo', (139.75999999791384, 35.67999996710569), {"coordinates": [[[139.806, 35.515], [139.919, 35.703], [139.768, 35.817], [139.575, 35.76], [139.584, 35.619], [139.806, 35.515]]], "type": "Polygon"})]
 
+
+Vector type
+===========
+
+CrateDB's vector data type, :ref:`crate-reference:type-float_vector`,
+allows to store dense vectors of float values of fixed length.
+
+    >>> from sqlalchemy_cratedb.type.vector import FloatVector
+
+    >>> class SearchIndex(Base):
+    ...    __tablename__ = 'search'
+    ...    name = sa.Column(sa.String, primary_key=True)
+    ...    embedding = sa.Column(FloatVector(3))
+
+Create an entity and store it into the database. ``float_vector`` values
+can be defined by using arrays of floating point numbers.
+
+    >>> foo_item = SearchIndex(name="foo", embedding=[42.42, 43.43, 44.44])
+    >>> session.add(foo_item)
+    >>> session.commit()
+    >>> _ = connection.execute(sa.text("REFRESH TABLE search"))
+
+When reading it back, the ``FLOAT_VECTOR`` value will be returned as a NumPy array.
+
+    >>> query = session.query(SearchIndex.name, SearchIndex.embedding)
+    >>> query.all()
+    [('foo', array([42.42, 43.43, 44.44], dtype=float32))]
 
 .. hidden: Disconnect from database
 
