@@ -22,9 +22,6 @@ see `pgvector.sqlalchemy.Vector.comparator_factory`.
 <=>: cosine_distance
 
 ## Backlog
-- The type implementation might want to be accompanied by corresponding support
-  for the `KNN_MATCH` function, similar to what the dialect already offers for
-  fulltext search through its `Match` predicate.
 - After dropping support for SQLAlchemy 1.3, use
   `class FloatVector(sa.TypeDecorator[t.Sequence[float]]):`
 
@@ -42,10 +39,13 @@ if t.TYPE_CHECKING:
     import numpy.typing as npt  # pragma: no cover
 
 import sqlalchemy as sa
+from sqlalchemy.sql.expression import ColumnElement, literal
+from sqlalchemy.ext.compiler import compiles
 
 
 __all__ = [
     "from_db",
+    "knn_match",
     "to_db",
     "FloatVector",
 ]
@@ -131,7 +131,7 @@ class KnnMatch(ColumnElement):
     inherit_cache = True
 
     def __init__(self, column, term, k=None):
-        super(KnnMatch, self).__init__()
+        super().__init__()
         self.column = column
         self.term = term
         self.k = k
@@ -150,11 +150,10 @@ def knn_match(column, term, k):
     """
     Generate a match predicate for vector search.
 
-    :param column: A reference to a column or an index, or a subcolumn, or a
-     dictionary of subcolumns with boost values.
+    :param column: A reference to a column or an index.
 
     :param term: The term to match against. This is an array of floating point
-     values, which is compared to other vectors using a HNSW index.
+     values, which is compared to other vectors using a HNSW index search.
 
     :param k: The `k` argument determines the number of nearest neighbours to
     search in the index.
@@ -165,9 +164,9 @@ def knn_match(column, term, k):
 @compiles(KnnMatch)
 def compile_knn_match(knn_match, compiler, **kwargs):
     """
-    Clause compiler for `knn_match`.
+    Clause compiler for `KNN_MATCH`.
     """
-    return "knn_match(%s, %s, %s)" % (
+    return "KNN_MATCH(%s, %s, %s)" % (
         knn_match.compile_column(compiler),
         knn_match.compile_term(compiler),
         knn_match.compile_k(compiler),

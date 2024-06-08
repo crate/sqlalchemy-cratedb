@@ -28,14 +28,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.sql import select
 
-from sqlalchemy_cratedb import SA_VERSION, SA_1_4
-from sqlalchemy_cratedb.type import FloatVector
+try:
+    from sqlalchemy.orm import declarative_base
+except ImportError:
+    from sqlalchemy.ext.declarative import declarative_base
 
 from crate.client.cursor import Cursor
 
+from sqlalchemy_cratedb import SA_VERSION, SA_1_4
+from sqlalchemy_cratedb import FloatVector, knn_match
 from sqlalchemy_cratedb.type.vector import from_db, to_db
 
 fake_cursor = MagicMock(name="fake_cursor")
@@ -100,6 +104,14 @@ class SqlAlchemyVectorTypeTest(TestCase):
     def test_sql_select(self):
         self.assertSQL(
             "SELECT testdrive.data FROM testdrive", select(self.table.c.data)
+        )
+
+    def test_sql_match(self):
+        query = self.session.query(self.table.c.name) \
+                    .filter(knn_match(self.table.c.data, [42.42, 43.43], 3))
+        self.assertSQL(
+            "SELECT testdrive.name AS testdrive_name FROM testdrive WHERE KNN_MATCH(testdrive.data, ?, ?)",
+            query
         )
 
 
@@ -201,3 +213,37 @@ def test_float_vector_as_generic():
     fv = FloatVector(3)
     assert isinstance(fv.as_generic(), sa.ARRAY)
     assert fv.python_type is list
+
+
+def test_float_vector_integration():
+    """
+    An integration test for `FLOAT_VECTOR` and `KNN_SEARCH`.
+    """
+    np = pytest.importorskip("numpy")
+
+    engine = sa.create_engine(f"crate://")
+    session = sessionmaker(bind=engine)()
+    Base = declarative_base()
+
+    # Define DDL.
+    class SearchIndex(Base):
+        __tablename__ = 'search'
+        name = sa.Column(sa.String, primary_key=True)
+        embedding = sa.Column(FloatVector(3))
+
+    Base.metadata.drop_all(engine, checkfirst=True)
+    Base.metadata.create_all(engine, checkfirst=True)
+
+    # Insert record.
+    foo_item = SearchIndex(name="foo", embedding=[42.42, 43.43, 44.44])
+    session.add(foo_item)
+    session.commit()
+    session.execute(sa.text("REFRESH TABLE search"))
+
+    # Query record.
+    query = session.query(SearchIndex.embedding) \
+                   .filter(knn_match(SearchIndex.embedding, [42.42, 43.43, 41.41], 3))
+    result = query.first()
+
+    # Compare outcome.
+    assert np.array_equal(result.embedding, np.array([42.42, 43.43, 44.44], np.float32))

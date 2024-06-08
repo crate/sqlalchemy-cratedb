@@ -27,7 +27,7 @@ from .support import insert_bulk
 from .type.array import ObjectArray
 from .type.geo import Geopoint, Geoshape
 from .type.object import ObjectType
-from .type.vector import FloatVector
+from .type.vector import FloatVector, knn_match
 
 if SA_VERSION < SA_1_4:
     import textwrap
@@ -58,4 +58,5 @@ __all__ = [
     ObjectArray,
     ObjectType,
     match,
+    knn_match,
 ]

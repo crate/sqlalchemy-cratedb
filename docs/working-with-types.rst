@@ -264,7 +264,7 @@ Vector type
 CrateDB's vector data type, :ref:`crate-reference:type-float_vector`,
 allows to store dense vectors of float values of fixed length.
 
-    >>> from sqlalchemy_cratedb.type.vector import FloatVector
+    >>> from sqlalchemy_cratedb import FloatVector, knn_match
 
     >>> class SearchIndex(Base):
     ...    __tablename__ = 'search'
@@ -284,6 +284,14 @@ When reading it back, the ``FLOAT_VECTOR`` value will be returned as a NumPy arr
     >>> query = session.query(SearchIndex.name, SearchIndex.embedding)
     >>> query.all()
     [('foo', array([42.42, 43.43, 44.44], dtype=float32))]
+
+In order to apply search, i.e. to match embeddings against each other, use the
+:ref:`crate-reference:scalar_knn_match` function like this.
+
+    >>> query = session.query(SearchIndex.name) \
+    ...                .filter(knn_match(SearchIndex.embedding, [42.42, 43.43, 41.41], 3))
+    >>> query.all()
+    [('foo',)]
 
 .. hidden: Disconnect from database
 
