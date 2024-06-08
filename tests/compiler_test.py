@@ -18,6 +18,7 @@
 # However, if you have executed another commercial license agreement
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
+import sys
 import warnings
 from textwrap import dedent
 from unittest import mock, skipIf, TestCase
@@ -288,6 +289,8 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
 FakeCursor = MagicMock(name='FakeCursor', spec=Cursor)
 
 
+@skipIf(SA_VERSION < SA_1_4 and (3, 9) <= sys.version_info < (3, 10),
+        "SQLAlchemy 1.3 has problems with these test cases on Python 3.9")
 class CompilerTestCase(TestCase):
     """
     A base class for providing mocking infrastructure to validate the DDL compiler.
