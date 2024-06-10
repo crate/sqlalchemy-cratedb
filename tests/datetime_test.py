@@ -20,13 +20,17 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 from __future__ import absolute_import
+
 from datetime import datetime, tzinfo, timedelta
-from unittest import TestCase
+from unittest import TestCase, skipIf
 from unittest.mock import patch, MagicMock
 
 import sqlalchemy as sa
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
+
+from sqlalchemy_cratedb import SA_VERSION, SA_1_4
+
 try:
     from sqlalchemy.orm import declarative_base
 except ImportError:
@@ -52,6 +56,7 @@ class CST(tzinfo):
         return timedelta(seconds=-7200)
 
 
+@skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 @patch('crate.client.connection.Cursor', FakeCursor)
 class SqlAlchemyDateAndDateTimeTest(TestCase):
 

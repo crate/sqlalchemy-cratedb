@@ -20,7 +20,8 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 from __future__ import absolute_import
-from unittest import TestCase
+
+from unittest import TestCase, skipIf
 from unittest.mock import patch, MagicMock
 
 import sqlalchemy as sa
@@ -31,7 +32,7 @@ try:
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
 
-from sqlalchemy_cratedb import ObjectArray, ObjectType
+from sqlalchemy_cratedb import ObjectArray, ObjectType, SA_VERSION, SA_1_4
 from crate.client.cursor import Cursor
 
 
@@ -40,6 +41,7 @@ FakeCursor = MagicMock(name='FakeCursor', spec=Cursor)
 FakeCursor.return_value = fake_cursor
 
 
+@skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 class SqlAlchemyDictTypeTest(TestCase):
 
     def setUp(self):

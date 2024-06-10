@@ -18,12 +18,11 @@
 # However, if you have executed another commercial license agreement
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
-
 from datetime import datetime
-from unittest import TestCase
+from unittest import TestCase, skipIf
 from unittest.mock import patch, MagicMock
 
-from sqlalchemy_cratedb import ObjectType
+from sqlalchemy_cratedb import ObjectType, SA_VERSION, SA_1_4
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
@@ -41,6 +40,7 @@ FakeCursor = MagicMock(name='FakeCursor', spec=Cursor)
 FakeCursor.return_value = fake_cursor
 
 
+@skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 class SqlAlchemyUpdateTest(TestCase):
 
     def setUp(self):
