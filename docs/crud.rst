@@ -32,7 +32,7 @@ Import the relevant symbols:
     ...     from sqlalchemy.orm import declarative_base
     ... except ImportError:
     ...     from sqlalchemy.ext.declarative import declarative_base
-    >>> from crate.client.sqlalchemy.types import ObjectArray
+    >>> from sqlalchemy_cratedb import ObjectArray
 
 Establish a connection to the database, see also :ref:`sa:engines_toplevel`
 and :ref:`connect`:

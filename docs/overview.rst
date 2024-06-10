@@ -182,8 +182,8 @@ Here is an example SQLAlchemy table definition using the :ref:`declarative
 system <sa:orm_declarative_mapping>`:
 
     >>> from sqlalchemy.ext import declarative
-    >>> from crate.client.sqlalchemy import types
     >>> from uuid import uuid4
+    >>> from sqlalchemy_cratedb import ObjectType, ObjectArray
 
     >>> def gen_key():
     ...     return str(uuid4())
@@ -201,8 +201,8 @@ system <sa:orm_declarative_mapping>`:
     ...     name = sa.Column(sa.String, crate_index=False)
     ...     name_normalized = sa.Column(sa.String, sa.Computed("lower(name)"))
     ...     quote = sa.Column(sa.String, nullable=False)
-    ...     details = sa.Column(types.ObjectType)
-    ...     more_details = sa.Column(types.ObjectArray)
+    ...     details = sa.Column(ObjectType)
+    ...     more_details = sa.Column(ObjectArray)
     ...     name_ft = sa.Column(sa.String)
     ...     quote_ft = sa.Column(sa.String)
     ...     even_more_details = sa.Column(sa.String, crate_columnstore=False)
@@ -439,12 +439,14 @@ The CrateDB SQLAlchemy dialect provides two geospatial types:
 
 To use these types, you can create columns, like so:
 
+    >>> from sqlalchemy_cratedb import Geopoint, Geoshape
+
     >>> class City(Base):
     ...
     ...    __tablename__ = 'cities'
     ...    name = sa.Column(sa.String, primary_key=True)
-    ...    coordinate = sa.Column(types.Geopoint)
-    ...    area = sa.Column(types.Geoshape)
+    ...    coordinate = sa.Column(Geopoint)
+    ...    area = sa.Column(Geoshape)
 
 A geopoint can be created in multiple ways. Firstly, you can define it as a
 :py:class:`py:tuple` of ``(longitude, latitude)``:
@@ -591,7 +593,7 @@ The CrateDB SQLAlchemy dialect provides a ``match`` function in the
 
 Here's an example use of the ``match`` function:
 
-    >>> from crate.client.sqlalchemy.predicates import match
+    >>> from sqlalchemy_cratedb.predicates import match
 
     >>> session.query(Character.name) \
     ...     .filter(match(Character.name_ft, 'Arthur')) \

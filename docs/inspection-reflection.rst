@@ -98,7 +98,7 @@ CrateDialect
 
 After initializing the dialect instance with a connection instance,
 
-    >>> from crate.client.sqlalchemy.dialect import CrateDialect
+    >>> from sqlalchemy_cratedb.dialect import CrateDialect
     >>> dialect = CrateDialect()
 
     >>> connection = engine.connect()
