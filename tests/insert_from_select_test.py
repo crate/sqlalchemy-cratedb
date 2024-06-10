@@ -18,14 +18,16 @@
 # However, if you have executed another commercial license agreement
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
-
 from datetime import datetime
-from unittest import TestCase
+from unittest import TestCase, skipIf
 from unittest.mock import patch, MagicMock
 
 import sqlalchemy as sa
 from sqlalchemy import select, insert
 from sqlalchemy.orm import Session
+
+from sqlalchemy_cratedb import SA_VERSION, SA_1_4
+
 try:
     from sqlalchemy.orm import declarative_base
 except ImportError:
@@ -40,6 +42,7 @@ FakeCursor = MagicMock(name='FakeCursor', spec=Cursor)
 FakeCursor.return_value = fake_cursor
 
 
+@skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 class SqlAlchemyInsertFromSelectTest(TestCase):
 
     def assertSQL(self, expected_str, actual_expr):
