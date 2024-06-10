@@ -126,6 +126,11 @@ crate = "sqlalchemy_cratedb:CrateDialect"
 [tool.black]
 line-length = 100
 
+[tool.coverage.paths]
+source = [
+  "src/",
+]
+
 [tool.coverage.run]
 branch = false
 omit = [
@@ -165,10 +170,17 @@ minversion = "2.0"
 log_level = "DEBUG"
 log_cli_level = "DEBUG"
 log_format = "%(asctime)-15s [%(name)-36s] %(levelname)-8s: %(message)s"
+pythonpath = [
+  "src"
+]
 testpaths = [
   "examples",
   "sqlalchemy_cratedb",
   "tests",
+]
+python_files = [
+  "test_*.py",
+  "*_test.py",
 ]
 xfail_strict = true
 markers = [
