@@ -124,7 +124,7 @@ repository = "https://github.com/crate-workbench/sqlalchemy-cratedb"
 crate = "sqlalchemy_cratedb:CrateDialect"
 
 [tool.black]
-line-length = 80
+line-length = 100
 
 [tool.coverage.run]
 branch = false
@@ -175,7 +175,7 @@ markers = [
 ]
 
 [tool.ruff]
-line-length = 80
+line-length = 100
 
 select = [
   # Bandit
