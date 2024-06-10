@@ -588,12 +588,12 @@ Matching
 
 Fulltext Search in CrateDB is done with the :ref:`crate-reference:predicates_match`.
 
-The CrateDB SQLAlchemy dialect provides a ``match`` function in the
-``predicates`` module, which can be used to search one or multiple fields.
+The CrateDB SQLAlchemy dialect provides a ``match`` function, which can be used
+to search one or multiple fields.
 
 Here's an example use of the ``match`` function:
 
-    >>> from sqlalchemy_cratedb.predicates import match
+    >>> from sqlalchemy_cratedb import match
 
     >>> session.query(Character.name) \
     ...     .filter(match(Character.name_ft, 'Arthur')) \

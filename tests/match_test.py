@@ -31,7 +31,7 @@ except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy_cratedb import ObjectType
-from sqlalchemy_cratedb.predicates import match
+from sqlalchemy_cratedb.predicate import match
 from crate.client.cursor import Cursor
 
 
