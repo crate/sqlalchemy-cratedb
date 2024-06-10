@@ -113,7 +113,7 @@ Fulltext search in CrateDB is performed using :ref:`crate-reference:predicates_m
 The CrateDB SQLAlchemy dialect comes with a ``match`` function, which can be used to
 search on one or multiple fields.
 
-    >>> from crate.client.sqlalchemy.predicates import match
+    >>> from sqlalchemy_cratedb.predicates import match
 
     >>> session.query(Character.name) \
     ...     .filter(match(Character.name_ft, 'Arthur')) \

@@ -33,8 +33,6 @@ Import the relevant symbols:
     ... except ImportError:
     ...     from sqlalchemy.ext.declarative import declarative_base
     >>> from uuid import uuid4
-    >>> from crate.client.sqlalchemy.types import ObjectType, ObjectArray
-    >>> from crate.client.sqlalchemy.types import Geopoint, Geoshape
 
 Establish a connection to the database, see also :ref:`sa:engines_toplevel`
 and :ref:`connect`:
@@ -60,6 +58,8 @@ The ``ObjectType`` type effectively implements a dictionary- or map-like type. T
 
 For exercising those features, let's define a schema using SQLAlchemy's
 :ref:`sa:orm_declarative_mapping`:
+
+    >>> from sqlalchemy_cratedb import ObjectType, ObjectArray
 
     >>> def gen_key():
     ...     return str(uuid4())
@@ -215,6 +215,8 @@ Geospatial types
 CrateDB's geospatial types, such as :ref:`crate-reference:type-geo_point`
 and :ref:`crate-reference:type-geo_shape`, can also be used within an
 SQLAlchemy declarative schema:
+
+    >>> from sqlalchemy_cratedb import Geopoint, Geoshape
 
     >>> class City(Base):
     ...    __tablename__ = 'cities'

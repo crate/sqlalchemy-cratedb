@@ -76,7 +76,7 @@ The package provides a ``bulk_insert`` function to use the
 workload across multiple batches, using a defined chunk size.
 
     >>> import sqlalchemy as sa
-    >>> from crate.client.sqlalchemy.support import insert_bulk
+    >>> from sqlalchemy_cratedb.support import insert_bulk
     >>> from pueblo.testing.pandas import makeTimeDataFrame
     ...
     >>> # Define number of records, and chunk size.
@@ -159,7 +159,7 @@ in a batched/chunked manner, using a defined chunk size, effectively using the
 pandas implementation introduced in the previous section.
 
     >>> import dask.dataframe as dd
-    >>> from crate.client.sqlalchemy.support import insert_bulk
+    >>> from sqlalchemy_cratedb.support import insert_bulk
     >>> from pueblo.testing.pandas import makeTimeDataFrame
     ...
     >>> # Define the number of records, the number of computing partitions,
