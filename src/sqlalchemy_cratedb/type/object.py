@@ -89,4 +89,4 @@ def __getattr__(name):
     raise AttributeError(f"module {__name__} has no attribute {name}")
 
 
-__all__ = deprecated_names
+__all__ = deprecated_names + ["ObjectType"]
