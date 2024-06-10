@@ -38,7 +38,7 @@ except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy_cratedb import SA_VERSION, SA_1_4, SA_2_0, ObjectType
-from crate.client.test_util import ParametrizedTestCase
+from .util import ParametrizedTestCase
 
 
 
