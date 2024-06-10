@@ -16,13 +16,13 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
-          cache-dependency-path: 'setup.py'
+          cache-dependency-path: 'pyproject.toml'
 
       - name: Build package
         run: |
-          python -m pip install twine wheel
-          python setup.py sdist bdist_wheel
-          twine check dist/*.tar.gz
+          python -m pip install build twine
+          python -m build
+          twine check dist/{*.tar.gz,*.whl}
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
