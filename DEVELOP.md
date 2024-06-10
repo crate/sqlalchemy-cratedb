@@ -34,18 +34,26 @@ Format code:
 
 ## Preparing a release
 
-In the release branch:
-
--   Update `__version__` in `src/crate/client/__init__.py`
--   Add a section for the new version in the `CHANGES.txt` file
--   Commit your changes with a message like \"prepare release x.y.z\"
--   Push to origin/\<release_branch\>
--   Create a tag by running `./devtools/create_tag.sh`. This will
-    trigger a GitHub action which releases the new version to PyPi.
-
 On branch `main`:
 
--   Update the release notes to reflect the release
+-   Add a section for the new version in the `CHANGES.md` file
+-   Commit your changes with a message like \"Release x.y.z\"
+-   Push to origin/\<release_branch\>
+-   Create a tag, and push to remote.
+    ```shell
+    git tag v0.0.1
+    git push --tags
+    ```
+-   Build package, and upload to PyPI.
+    ```shell
+    poe release
+    ```
+
+On GitHub:
+
+-   Designate a new release on GitHub, copying in the relevant section
+    from the CHANGELOG.
+    https://github.com/crate-workbench/sqlalchemy-cratedb/releases
 
 
 ## Writing documentation
