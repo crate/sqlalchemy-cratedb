@@ -15,12 +15,13 @@ description = "SQLAlchemy dialect for CrateDB."
 readme = "README.md"
 keywords = [
   "CrateDB",
-  "data",
-  "io",
-  "load",
+  "dask",
+  "data io",
+  "orm",
+  "pandas",
   "PostgreSQL",
-  "RDBMS",
-  "SQL",
+  "rdbms",
+  "sql",
   "SQLAlchemy",
 ]
 license = { text = "Apache License 2.0" }
@@ -257,7 +258,7 @@ format = [
   # Configure Ruff not to auto-fix (remove!):
   # unused imports (F401), unused variables (F841), `print` statements (T201), and commented-out code (ERA001).
   { cmd = "ruff --fix --ignore=ERA --ignore=F401 --ignore=F841 --ignore=T20 --ignore=ERA001 ." },
-  { cmd = "pyproject-fmt pyproject.toml" },
+  { cmd = "pyproject-fmt --keep-full-version pyproject.toml" },
 ]
 
 lint = [
