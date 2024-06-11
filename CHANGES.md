@@ -2,6 +2,8 @@
 
 
 ## Unreleased
+
+## 2024/06/11 0.36.1
 - Dependencies: Use `crate==1.0.0dev0`
 
 ## 2024/06/11 0.36.0
