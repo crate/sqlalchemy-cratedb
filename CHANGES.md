@@ -2,6 +2,7 @@
 
 
 ## Unreleased
+- Dependencies: Use `crate==1.0.0dev0`
 
 ## 2024/06/11 0.36.0
 - Dependencies: Use `dask[dataframe]`
