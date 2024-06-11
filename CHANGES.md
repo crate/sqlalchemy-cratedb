@@ -3,10 +3,10 @@
 
 ## Unreleased
 
+## 2024/06/11 0.36.0
 - Dependencies: Use `dask[dataframe]`
 - Maintenance release after splitting packages `crate-python` vs.
   `sqlalchemy-cratedb`
-
 
 ## 2023/09/29 0.34.0
 
