@@ -5,7 +5,7 @@
 [![Build status (documentation)](https://readthedocs.org/projects/sqlalchemy-cratedb/badge/)](https://crate.io/docs/python/)
 [![PyPI Version](https://img.shields.io/pypi/v/sqlalchemy-cratedb.svg)](https://pypi.org/project/sqlalchemy-cratedb/)
 [![Python Version](https://img.shields.io/pypi/pyversions/sqlalchemy-cratedb.svg)](https://pypi.org/project/sqlalchemy-cratedb/)
-[![PyPI Downloads](https://img.shields.io/pypi/dw/sqlalchemy-cratedb.svg)](https://pypi.org/project/sqlalchemy-cratedb/)
+[![PyPI Downloads](https://pepy.tech/badge/sqlalchemy-cratedb/month)](https://pepy.tech/project/sqlalchemy-cratedb/)
 [![Wheel](https://img.shields.io/pypi/wheel/sqlalchemy-cratedb.svg)](https://pypi.org/project/sqlalchemy-cratedb/)
 [![Status](https://img.shields.io/pypi/status/sqlalchemy-cratedb.svg)](https://pypi.org/project/sqlalchemy-cratedb/)
 [![License](https://img.shields.io/pypi/l/sqlalchemy-cratedb.svg)](https://pypi.org/project/sqlalchemy-cratedb/)
