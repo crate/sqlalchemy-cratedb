@@ -23,7 +23,6 @@ from unittest import TestCase, skipIf
 from unittest.mock import patch, MagicMock
 
 import sqlalchemy as sa
-from sqlalchemy import select, insert
 from sqlalchemy.orm import Session
 
 from sqlalchemy_cratedb import SA_VERSION, SA_1_4
@@ -78,8 +77,8 @@ class SqlAlchemyInsertFromSelectTest(TestCase):
         self.session.add(char)
         self.session.commit()
 
-        sel = select(self.character.name, self.character.age).where(self.character.status == "Archived")
-        ins = insert(self.character_archived).from_select(['name', 'age'], sel)
+        sel = sa.select(self.character.name, self.character.age).where(self.character.status == "Archived")
+        ins = sa.insert(self.character_archived).from_select(['name', 'age'], sel)
         self.session.execute(ins)
         self.session.commit()
         self.assertSQL(
