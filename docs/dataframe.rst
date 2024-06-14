@@ -236,7 +236,7 @@ pandas implementation introduced in the previous section.
 
 .. _batching: https://en.wikipedia.org/wiki/Batch_processing#Common_batch_processing_usage
 .. _chunking: https://en.wikipedia.org/wiki/Chunking_(computing)
-.. _CrateDB bulk operations: https://crate.io/docs/crate/reference/en/latest/interfaces/http.html#bulk-operations
+.. _CrateDB bulk operations: https://cratedb.com/docs/crate/reference/en/latest/interfaces/http.html#bulk-operations
 .. _Dask: https://en.wikipedia.org/wiki/Dask_(software)
 .. _DataFrame computing: https://realpython.com/pandas-dataframe/
 .. _ETL: https://en.wikipedia.org/wiki/Extract,_transform,_load

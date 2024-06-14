@@ -167,7 +167,7 @@ Otherwise, SQLAlchemy will complain like:
     specificity
 
 
-[CrateDB system columns]: https://crate.io/docs/crate/reference/en/4.8/general/ddl/system-columns.html
+[CrateDB system columns]: https://cratedb.com/docs/crate/reference/en/4.8/general/ddl/system-columns.html
 [SQLAlchemy literal_column]: https://docs.sqlalchemy.org/en/14/core/sqlelement.html#sqlalchemy.sql.expression.literal_column
 [What’s New in SQLAlchemy 1.4?]: https://docs.sqlalchemy.org/en/14/changelog/migration_14.html
 
