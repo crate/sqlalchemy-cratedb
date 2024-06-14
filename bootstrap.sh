@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Bootstrap sandbox environment for crate-python
+# Bootstrap sandbox environment for sqlalchemy-cratedb
 #
 # - Create a Python virtualenv
 # - Install all dependency packages and modules

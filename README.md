@@ -26,11 +26,12 @@ pip install --upgrade sqlalchemy-cratedb
 
 ## Documentation and help
 
-- [CrateDB Python Client documentation](https://crate.io/docs/python/)
-- [CrateDB reference documentation](https://crate.io/docs/reference/)
+- [SQLAlchemy dialect for CrateDB](https://cratedb.com/docs/sqlalchemy-cratedb/)
+- [CrateDB Python Client documentation](https://cratedb.com/docs/python/)
+- [CrateDB reference documentation](https://cratedb.com/docs/reference/)
 - [Developer documentation](DEVELOP.md)
 - [Contributing](CONTRIBUTING.md)
-- Other [support channels](https://crate.io/support/)
+- Other [support channels](https://cratedb.com/support)
 
 ## Contributing
 

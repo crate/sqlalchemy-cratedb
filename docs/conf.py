@@ -1,8 +1,4 @@
-from crate.theme.rtd.conf.python import *
-
-
-if "sphinx.ext.intersphinx" not in extensions:
-    extensions += ["sphinx.ext.intersphinx"]
+from crate.theme.rtd.conf.sqlalchemy_cratedb import *
 
 
 if "intersphinx_mapping" not in globals():
@@ -12,7 +8,6 @@ if "intersphinx_mapping" not in globals():
 intersphinx_mapping.update({
     'py': ('https://docs.python.org/3/', None),
     'sa': ('https://docs.sqlalchemy.org/en/20/', None),
-    'urllib3': ('https://urllib3.readthedocs.io/en/1.26.13/', None),
     'dask': ('https://docs.dask.org/en/stable/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
     })

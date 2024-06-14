@@ -205,7 +205,7 @@ Using the ``group_by`` clause is similar:
 
 In SQLAlchemy, the ``insert().from_select()`` function returns a new ``Insert``
 construct, which represents an ``INSERT...FROM SELECT`` statement. This
-functionality is supported by the CrateDB client library. Here is an example
+functionality is supported by the SQLAlchemy CrateDB dialect. Here is an example
 that uses ``insert().from_select()``.
 
 First, let's define and create the tables:
