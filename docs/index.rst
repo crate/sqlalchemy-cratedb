@@ -206,7 +206,7 @@ The project is licensed under the terms of the Apache 2.0 license, like
 
 
 .. _Apache Superset: https://github.com/apache/superset
-.. _CrateDB: https://crate.io/products/cratedb
+.. _CrateDB: https://cratedb.com/database
 .. _CrateDB Cloud: https://console.cratedb.cloud/
 .. _CrateDB source: https://github.com/crate/crate
 .. _Create an issue: https://github.com/crate-workbench/sqlalchemy-cratedb/issues

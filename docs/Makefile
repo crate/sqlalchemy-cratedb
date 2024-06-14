@@ -1,4 +1,4 @@
-# Licensed to Crate (https://crate.io) under one or more contributor license
+# Licensed to Crate (https://cratedb.com) under one or more contributor license
 # agreements.  See the NOTICE file distributed with this work for additional
 # information regarding copyright ownership.  Crate licenses this file to you
 # under the Apache License, Version 2.0 (the "License"); you may not use this

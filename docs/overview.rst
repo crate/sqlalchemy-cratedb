@@ -707,16 +707,16 @@ the virtual column name as a string (``_score``) instead of using a defined
 column on the ``Character`` class.
 
 
-.. _arguments reference: https://crate.io/docs/crate/reference/en/latest/general/dql/fulltext.html#arguments
-.. _boost values: https://crate.io/docs/crate/reference/en/latest/general/dql/fulltext.html#arguments
+.. _arguments reference: https://cratedb.com/docs/crate/reference/en/latest/general/dql/fulltext.html#arguments
+.. _boost values: https://cratedb.com/docs/crate/reference/en/latest/general/dql/fulltext.html#arguments
 .. _count result rows: https://docs.sqlalchemy.org/en/14/orm/tutorial.html#counting
 .. _CrateDB: https://cratedb.com/database
 .. _CrateDB Cloud: https://console.cratedb.cloud/
 .. _Database API: https://www.python.org/dev/peps/pep-0249/
 .. _geojson geometry objects: https://www.rfc-editor.org/rfc/rfc7946#section-3.1
-.. _match options: https://crate.io/docs/crate/reference/en/latest/general/dql/fulltext.html#options
+.. _match options: https://cratedb.com/docs/crate/reference/en/latest/general/dql/fulltext.html#options
 .. _Object-Relational Mapping: https://en.wikipedia.org/wiki/Object-relational_mapping
-.. _score usage: https://crate.io/docs/crate/reference/en/latest/general/dql/fulltext.html#usage
+.. _score usage: https://cratedb.com/docs/crate/reference/en/latest/general/dql/fulltext.html#usage
 .. _SQLAlchemy: https://www.sqlalchemy.org/
 .. _SQLAlchemy library: https://www.sqlalchemy.org/library.html
 .. _URL: https://en.wikipedia.org/wiki/Uniform_Resource_Locator

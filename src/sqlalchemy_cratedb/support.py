@@ -42,7 +42,7 @@ def insert_bulk(pd_table, conn, keys, data_iter):
     the relevant code in `pandas.io.sql`.
 
     [1] https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_sql.html
-    [2] https://crate.io/docs/crate/reference/en/latest/interfaces/http.html#bulk-operations
+    [2] https://cratedb.com/docs/crate/reference/en/latest/interfaces/http.html#bulk-operations
     [3] https://github.com/pandas-dev/pandas/blob/v2.0.1/pandas/io/sql.py#L1011-L1027
     """
 
