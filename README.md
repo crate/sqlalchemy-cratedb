@@ -1,7 +1,7 @@
 # SQLAlchemy dialect for CrateDB
 
-[![Tests](https://github.com/crate-workbench/sqlalchemy-cratedb/actions/workflows/tests.yml/badge.svg)](https://github.com/crate-workbench/sqlalchemy-cratedb/actions/workflows/tests.yml)
-[![Coverage](https://codecov.io/gh/crate-workbench/sqlalchemy-cratedb/branch/main/graph/badge.svg)](https://app.codecov.io/gh/crate-workbench/sqlalchemy-cratedb)
+[![Tests](https://github.com/crate/sqlalchemy-cratedb/actions/workflows/tests.yml/badge.svg)](https://github.com/crate/sqlalchemy-cratedb/actions/workflows/tests.yml)
+[![Coverage](https://codecov.io/gh/crate/sqlalchemy-cratedb/branch/main/graph/badge.svg)](https://app.codecov.io/gh/crate/sqlalchemy-cratedb)
 [![Build status (documentation)](https://readthedocs.org/projects/sqlalchemy-cratedb/badge/)](https://cratedb.com/docs/sqlalchemy-cratedb/)
 [![PyPI Version](https://img.shields.io/pypi/v/sqlalchemy-cratedb.svg)](https://pypi.org/project/sqlalchemy-cratedb/)
 [![Python Version](https://img.shields.io/pypi/pyversions/sqlalchemy-cratedb.svg)](https://pypi.org/project/sqlalchemy-cratedb/)
@@ -36,7 +36,7 @@ pip install --upgrade sqlalchemy-cratedb
 ## Contributing
 
 The SQLAlchemy dialect for CrateDB is an open source project, and is
-[managed on GitHub](https://github.com/crate-workbench/sqlalchemy-cratedb). We
+[managed on GitHub](https://github.com/crate/sqlalchemy-cratedb). We
 appreciate contributions of any kind.
 
 

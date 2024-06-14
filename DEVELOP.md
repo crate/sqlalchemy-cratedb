@@ -4,7 +4,7 @@
 
 To start things off, bootstrap the sandbox environment:
 
-    git clone https://github.com/crate-workbench/sqlalchemy-cratedb
+    git clone https://github.com/crate/sqlalchemy-cratedb
     cd sqlalchemy-cratedb
     source bootstrap.sh
 
@@ -47,7 +47,7 @@ On branch `main`:
     ```
 -   On GitHub, designate a new release, copying in the relevant section
     from the CHANGELOG.
-    https://github.com/crate-workbench/sqlalchemy-cratedb/releases
+    https://github.com/crate/sqlalchemy-cratedb/releases
 
 Optionally, build the package and upload to PyPI manually.
 ```shell

@@ -124,10 +124,10 @@ vector = [
   "numpy",
 ]
 [project.urls]
-changelog = "https://github.com/crate-workbench/sqlalchemy-cratedb/blob/main/CHANGES.md"
-documentation = "https://github.com/crate-workbench/sqlalchemy-cratedb"
-homepage = "https://github.com/crate-workbench/sqlalchemy-cratedb"
-repository = "https://github.com/crate-workbench/sqlalchemy-cratedb"
+changelog = "https://github.com/crate/sqlalchemy-cratedb/blob/main/CHANGES.md"
+documentation = "https://cratedb.com/docs/sqlalchemy-cratedb/"
+homepage = "https://cratedb.com/docs/sqlalchemy-cratedb/"
+repository = "https://github.com/crate/sqlalchemy-cratedb"
 [project.entry-points."sqlalchemy.dialects"]
 crate = "sqlalchemy_cratedb:dialect"
 
