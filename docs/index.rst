@@ -177,8 +177,8 @@ Project information
 
 Resources
 =========
-- `Source code <https://github.com/crate-workbench/sqlalchemy-cratedb>`_
-- `Documentation <https://github.com/crate-workbench/sqlalchemy-cratedb>`_
+- `Source code <https://github.com/crate/sqlalchemy-cratedb>`_
+- `Documentation <https://github.com/crate/sqlalchemy-cratedb>`_
 - `Python Package Index (PyPI) <https://pypi.org/project/sqlalchemy-cratedb/>`_
 
 Contributions
@@ -209,14 +209,14 @@ The project is licensed under the terms of the Apache 2.0 license, like
 .. _CrateDB: https://cratedb.com/database
 .. _CrateDB Cloud: https://console.cratedb.cloud/
 .. _CrateDB source: https://github.com/crate/crate
-.. _Create an issue: https://github.com/crate-workbench/sqlalchemy-cratedb/issues
-.. _development sandbox: https://github.com/crate-workbench/sqlalchemy-cratedb/blob/main/DEVELOP.md
+.. _Create an issue: https://github.com/crate/sqlalchemy-cratedb/issues
+.. _development sandbox: https://github.com/crate/sqlalchemy-cratedb/blob/main/DEVELOP.md
 .. _cratedb-examples repository: https://github.com/crate/cratedb-examples/tree/main/by-language
 .. _FIWARE QuantumLeap data historian: https://github.com/orchestracities/ngsi-timeseries-api
 .. _GeoJSON: https://geojson.org/
 .. _GeoJSON geometry objects: https://tools.ietf.org/html/rfc7946#section-3.1
-.. _LICENSE: https://github.com/crate-workbench/sqlalchemy-cratedb/blob/main/LICENSE
-.. _managed on GitHub: https://github.com/crate-workbench/sqlalchemy-cratedb
+.. _LICENSE: https://github.com/crate/sqlalchemy-cratedb/blob/main/LICENSE
+.. _managed on GitHub: https://github.com/crate/sqlalchemy-cratedb
 .. _pandas: https://pandas.pydata.org/
 .. _PEP 249: https://peps.python.org/pep-0249/
 .. _PyPI: https://pypi.org/
