@@ -6,4 +6,5 @@
 *.pyc
 .coverage
 coverage.xml
-dist/
+/build
+/dist

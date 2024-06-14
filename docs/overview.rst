@@ -18,9 +18,9 @@ Introduction
 `SQLAlchemy`_ is the most popular `Object-Relational Mapping`_ (ORM) library
 for Python.
 
-The CrateDB Python client library provides support for SQLAlchemy. An
-:ref:`SQLAlchemy dialect <sa:dialect_toplevel>` for CrateDB is registered at
-installation time and can be used without further configuration.
+The ``sqlalchemy-cratedb`` package provides the :ref:`SQLAlchemy dialect
+<sa:dialect_toplevel>` for `CrateDB`_. It is registered at
+installation time, and can be used without further configuration.
 
 The CrateDB SQLAlchemy dialect is validated to work with SQLAlchemy versions
 ``1.3``, ``1.4``, and ``2.0``.
@@ -710,6 +710,7 @@ column on the ``Character`` class.
 .. _arguments reference: https://crate.io/docs/crate/reference/en/latest/general/dql/fulltext.html#arguments
 .. _boost values: https://crate.io/docs/crate/reference/en/latest/general/dql/fulltext.html#arguments
 .. _count result rows: https://docs.sqlalchemy.org/en/14/orm/tutorial.html#counting
+.. _CrateDB: https://cratedb.com/database
 .. _CrateDB Cloud: https://console.cratedb.cloud/
 .. _Database API: https://www.python.org/dev/peps/pep-0249/
 .. _geojson geometry objects: https://www.rfc-editor.org/rfc/rfc7946#section-3.1

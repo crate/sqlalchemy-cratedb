@@ -30,8 +30,8 @@ authors = [
 ]
 requires-python = ">=3.6"
 classifiers = [
-  "Development Status :: 3 - Alpha",
-  "Environment :: Console",
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Plugins",
   "Intended Audience :: Customer Service",
   "Intended Audience :: Developers",
   "Intended Audience :: Education",

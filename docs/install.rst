@@ -4,8 +4,8 @@
 Install
 =======
 
-Learn how to install and get started with the Python client library for
-`CrateDB`_.
+Learn how to install and get started with the SQLAlchemy dialect for
+`CrateDB`_. The package is available from `PyPI`_ at `sqlalchemy-cratedb`_.
 
 .. rubric:: Table of contents
 
@@ -15,12 +15,10 @@ Learn how to install and get started with the Python client library for
 Install
 =======
 
-.. highlight:: sh
-
-The CrateDB Python client is available as package ``sqlalchemy-cratedb`` on `PyPI`_.
-
 To install the most recent driver version, including the SQLAlchemy dialect
-extension, run::
+extension, run:
+
+.. code-block:: shell
 
     pip install --upgrade sqlalchemy-cratedb
 
@@ -42,11 +40,11 @@ and reproducible, achieving `repeatable installations`_.
 Next steps
 ==========
 
-Learn how to :ref:`connect to CrateDB <connect>`.
+Learn how to :ref:`get started <getting-started>`, or how to :ref:`connect to CrateDB <connect>`.
 
 
-.. _sqlalchemy-cratedb: https://pypi.org/project/sqlalchemy-cratedb/
-.. _CrateDB: https://crate.io/products/cratedb/
+.. _CrateDB: https://cratedb.com/database
 .. _many ways: https://packaging.python.org/key_projects/
 .. _PyPI: https://pypi.org/
 .. _repeatable installations: https://pip.pypa.io/en/latest/topics/repeatable-installs/
+.. _sqlalchemy-cratedb: https://pypi.org/project/sqlalchemy-cratedb/

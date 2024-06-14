@@ -2,6 +2,7 @@
 
 
 ## Unreleased
+- Added/reactivated documentation as `sqlalchemy-cratedb`
 
 ## 2024/06/13 0.37.0
 - Added support for CrateDB's [FLOAT_VECTOR] data type and its accompanying

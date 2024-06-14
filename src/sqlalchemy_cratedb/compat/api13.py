@@ -123,8 +123,8 @@ def monkeypatch_amend_select_sa14():
     Make SA13's `sql.select()` transparently accept calling semantics of SA14
     and SA20, by swapping in the newer variant of `select_sa14()`.
 
-    This supports the test suite of `crate-python`, because it already uses the
-    modern calling semantics.
+    This supports the test suite, because it already uses the modern calling
+    semantics.
     """
     import sqlalchemy
 
