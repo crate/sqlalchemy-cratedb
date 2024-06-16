@@ -25,6 +25,17 @@ pandas, Dask, and many other libraries and applications connecting to
 CrateDB from the Python ecosystem. It is verified to work with CPython, but
 it has also been tested successfully with `PyPy`_.
 
+.. note::
+
+    If you are upgrading from ``crate[sqlalchemy]`` to ``sqlalchemy-cratedb``,
+    please read this section carefully.
+
+    .. toctree::
+        :titlesonly:
+
+        migrate-from-crate-client
+
+
 
 ************
 Introduction
