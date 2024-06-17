@@ -10,10 +10,10 @@ ORM schema definition.
 
 Subsequent sections of the documentation will cover:
 
-- :ref:`sqlalchemy-crud`
-- :ref:`sqlalchemy-working-with-types`
-- :ref:`sqlalchemy-advanced-querying`
-- :ref:`sqlalchemy-inspection-reflection`
+- :ref:`crud`
+- :ref:`working-with-types`
+- :ref:`advanced-querying`
+- :ref:`inspection-reflection`
 
 
 .. rubric:: Table of Contents
