@@ -271,7 +271,7 @@ Reset the record:
 
 .. seealso::
 
-    The documentation section :ref:`sqlalchemy-working-with-types` has more
+    The documentation section :ref:`working-with-types` has more
     details about this topic.
 
 
