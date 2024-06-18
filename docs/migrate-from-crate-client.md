@@ -35,6 +35,14 @@ from sqlalchemy_cratedb import ObjectArray, ObjectType, FloatVector, Geopoint, G
 
 ```python
 # Previous import
+from crate.client.sqlalchemy.compiler import CrateDDLCompiler, CrateTypeCompiler
+
+# New import
+from sqlalchemy_cratedb.compiler import CrateDDLCompiler, CrateTypeCompiler
+```
+
+```python
+# Previous import
 # from crate.client.sqlalchemy.predicates import match
 
 # New import
