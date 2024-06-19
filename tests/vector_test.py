@@ -215,13 +215,13 @@ def test_float_vector_as_generic():
     assert fv.python_type is list
 
 
-def test_float_vector_integration():
+def test_float_vector_integration(cratedb_service):
     """
     An integration test for `FLOAT_VECTOR` and `KNN_SEARCH`.
     """
     np = pytest.importorskip("numpy")
 
-    engine = sa.create_engine(f"crate://")
+    engine = cratedb_service.database.engine
     session = sessionmaker(bind=engine)()
     Base = declarative_base()
 
