@@ -10,9 +10,10 @@ def test_correct_schema(cratedb_service):
     database = cratedb_service.database
 
     tablename = f'"{TESTDRIVE_DATA_SCHEMA}"."foobar"'
-    inspector: sa.Inspector = sa.inspect(database.engine)
+    database.run_sql(f"DROP TABLE IF EXISTS {tablename}")
     database.run_sql(f"CREATE TABLE {tablename} AS SELECT 1")
 
+    inspector: sa.Inspector = sa.inspect(database.engine)
     assert TESTDRIVE_DATA_SCHEMA in inspector.get_schema_names()
 
     table_names = inspector.get_table_names(schema=TESTDRIVE_DATA_SCHEMA)
