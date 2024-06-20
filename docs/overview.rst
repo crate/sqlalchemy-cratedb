@@ -1,9 +1,9 @@
 .. _overview:
 .. _using-sqlalchemy:
 
-========
-Overview
-========
+=================
+Features Overview
+=================
 
 .. rubric:: Table of contents
 
@@ -300,15 +300,28 @@ would translate into the following declarative model:
     >>> log.id
     ...
 
+.. _auto-generated-identifiers:
 
-Auto-generated primary key
+Auto-generated identifiers
 ..........................
+
+CrateDB does not provide traditional sequences or ``SERIAL`` data type support,
+which enable automatically assigning incremental values when inserting records.
+However, it offers server-side support by providing an SQL function to generate
+random identifiers of ``STRING`` type, and client-side support for generating
+``INTEGER``-based identifiers, when using the SQLAlchemy dialect.
+
+.. _gen_random_text_uuid:
+
+``gen_random_text_uuid``
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 CrateDB 4.5.0 added the :ref:`gen_random_text_uuid() <crate-reference:scalar-gen_random_text_uuid>`
 scalar function, which can also be used within an SQL DDL statement, in order to automatically
 assign random identifiers to newly inserted records on the server side.
 
 In this spirit, it is suitable to be used as a ``PRIMARY KEY`` constraint for SQLAlchemy.
+It works on SQLAlchemy-defined columns of type ``sa.String``.
 
 A table schema like this
 
@@ -333,6 +346,32 @@ would translate into the following declarative model:
     >>> session.commit()
     >>> item.id
     ...
+
+.. _timestamp-autoincrement:
+
+Timestamp-based Autoincrement
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By using SQLAlchemy's ``sa.func.now()``, you can assign automatically generated
+identifiers to SQLAlchemy columns of types ``sa.BigInteger``, ``sa.DateTime``,
+and ``sa.String``.
+
+This emulates autoincrement / sequential ID behavior for designated columns, based
+on assigning timestamps on record insertion.
+
+    >>> class Item(Base):
+    ...     id = sa.Column("id", sa.BigInteger, default=func.now(), primary_key=True)
+    ...     name = sa.Column("name", sa.String)
+
+    >>> item = Item(name="Foobar")
+    >>> session.add(item)
+    >>> session.commit()
+    >>> item.id
+    ...
+
+There is a support utility which emulates autoincrement / sequential ID
+behavior for designated columns, based on assigning timestamps on record
+insertion. See :ref:`support-autoincrement`.
 
 
 .. _using-extension-types:

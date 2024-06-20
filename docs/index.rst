@@ -135,7 +135,7 @@ Load results into `pandas`_ DataFrame.
         print(df)
 
 
-Data types
+Data Types
 ==========
 
 The :ref:`DB API driver <crate-python:index>` and the SQLAlchemy dialect
@@ -149,6 +149,20 @@ extension types <using-extension-types>` documentation pages.
     :hidden:
 
     data-types
+
+Support Utilities
+=================
+
+The package bundles a few support and utility functions that try to fill a few
+gaps you will observe when working with CrateDB, when compared with other
+databases.
+Due to its distributed nature, CrateDB's behavior and features differ from those
+found in other RDBMS systems.
+
+.. toctree::
+    :maxdepth: 2
+
+    support
 
 
 .. _examples:
