@@ -18,3 +18,4 @@ CrateDB SQLAlchemy dialect -- all pages
     advanced-querying
     inspection-reflection
     dataframe
+    support
