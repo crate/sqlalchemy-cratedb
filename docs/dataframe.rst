@@ -240,8 +240,8 @@ pandas implementation introduced in the previous section.
 .. _Dask: https://en.wikipedia.org/wiki/Dask_(software)
 .. _DataFrame computing: https://realpython.com/pandas-dataframe/
 .. _ETL: https://en.wikipedia.org/wiki/Extract,_transform,_load
-.. _insert_dask.py: https://github.com/crate/cratedb-examples/blob/main/by-language/python-sqlalchemy/insert_dask.py
-.. _insert_pandas.py: https://github.com/crate/cratedb-examples/blob/main/by-language/python-sqlalchemy/insert_pandas.py
+.. _insert_dask.py: https://github.com/crate/cratedb-examples/blob/main/by-dataframe/dask/insert_dask.py
+.. _insert_pandas.py: https://github.com/crate/cratedb-examples/blob/main/by-dataframe/pandas/insert_pandas.py
 .. _leveling up to 200_000: https://acepor.github.io/2017/08/03/using-chunksize/
 .. _NumPy: https://en.wikipedia.org/wiki/NumPy
 .. _pandas: https://en.wikipedia.org/wiki/Pandas_(software)
