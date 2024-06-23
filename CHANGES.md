@@ -9,6 +9,8 @@
 - Added re-usable patches and polyfills from application adapters.
   New utilities: `patch_autoincrement_timestamp`, `refresh_after_dml`,
   `check_uniqueness_factory`
+- Added `table_kwargs` context manager to enable pandas/Dask to support
+  CrateDB dialect table options.
 
 ## 2024/06/13 0.37.0
 - Added support for CrateDB's [FLOAT_VECTOR] data type and its accompanying

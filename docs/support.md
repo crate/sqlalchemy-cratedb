@@ -54,6 +54,36 @@ df.to_sql(
 )
 ```
 
+
+(support-table-kwargs)=
+## Context Manager `table_kwargs`
+
+:::{rubric} Background
+:::
+CrateDB's special SQL DDL options to support [](inv:crate-reference#partitioned-tables),
+[](inv:crate-reference#ddl-sharding), or [](inv:crate-reference#ddl-replication)
+sometimes can't be configured easily when SQLAlchemy is wrapped into a 3rd-party
+framework like pandas or Dask.
+
+:::{rubric} Utility
+:::
+The `table_kwargs` utility is a context manager that is able to forward CrateDB's
+dialect-specific table creation options to the `sa.Table()` constructor call sites
+at runtime.
+
+:::{rubric} Synopsis
+:::
+Using a context manager incantation like outlined below will render a
+`PARTITIONED BY ("time")` SQL clause, without touching the call site of
+`sa.Table(...)`.
+```python
+from sqlalchemy_cratedb.support import table_kwargs
+
+with table_kwargs(crate_partitioned_by="time"):
+    return df.to_sql(...)
+```
+
+
 (support-autoincrement)=
 ## Synthetic Autoincrement using Timestamps
 
