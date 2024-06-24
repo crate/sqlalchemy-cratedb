@@ -225,7 +225,7 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         return 'SHORT'
 
     def visit_datetime(self, type_, **kw):
-        return 'TIMESTAMP'
+        return self.visit_TIMESTAMP(type_, **kw)
 
     def visit_date(self, type_, **kw):
         return 'TIMESTAMP'
@@ -244,6 +244,16 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         if dimensions is None:
             raise ValueError("FloatVector must be initialized with dimension size")
         return f"FLOAT_VECTOR({dimensions})"
+
+    def visit_TIMESTAMP(self, type_, **kw):
+        """
+        Support for `TIMESTAMP WITH|WITHOUT TIME ZONE`.
+
+        From `sqlalchemy.dialects.postgresql.base.PGTypeCompiler`.
+        """
+        return "TIMESTAMP %s" % (
+            (type_.timezone and "WITH" or "WITHOUT") + " TIME ZONE",
+        )
 
 
 class CrateCompiler(compiler.SQLCompiler):

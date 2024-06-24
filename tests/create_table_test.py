@@ -67,8 +67,10 @@ class SqlAlchemyCreateTableTest(TestCase):
              '\n\tlong_col1 LONG, \n\tlong_col2 LONG, '
              '\n\tbool_col BOOLEAN, '
              '\n\tshort_col SHORT, '
-             '\n\tdatetime_col TIMESTAMP, \n\tdate_col TIMESTAMP, '
-             '\n\tfloat_col FLOAT, \n\tdouble_col DOUBLE, '
+             '\n\tdatetime_col TIMESTAMP WITHOUT TIME ZONE, '
+             '\n\tdate_col TIMESTAMP, '
+             '\n\tfloat_col FLOAT, '
+             '\n\tdouble_col DOUBLE, '
              '\n\tPRIMARY KEY (string_col)\n)\n\n'),
             ())
 
@@ -286,7 +288,7 @@ class SqlAlchemyCreateTableTest(TestCase):
         fake_cursor.execute.assert_called_with(
             ('\nCREATE TABLE t (\n\t'
              'pk STRING NOT NULL, \n\t'
-             'a TIMESTAMP DEFAULT now(), \n\t'
+             'a TIMESTAMP WITHOUT TIME ZONE DEFAULT now(), \n\t'
              'PRIMARY KEY (pk)\n)\n\n'), ())
 
     def test_column_server_default_string(self):
@@ -312,7 +314,7 @@ class SqlAlchemyCreateTableTest(TestCase):
         fake_cursor.execute.assert_called_with(
             ('\nCREATE TABLE t (\n\t'
              'pk STRING NOT NULL, \n\t'
-             'a TIMESTAMP DEFAULT now(), \n\t'
+             'a TIMESTAMP WITHOUT TIME ZONE DEFAULT now(), \n\t'
              'PRIMARY KEY (pk)\n)\n\n'), ())
 
     def test_column_server_default_text_constant(self):
