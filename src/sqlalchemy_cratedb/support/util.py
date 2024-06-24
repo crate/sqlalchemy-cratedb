@@ -10,14 +10,21 @@ if t.TYPE_CHECKING:
         pass
 
 
-def refresh_table(connection, target: t.Union[str, "DeclarativeBase"]):
+def refresh_table(connection, target: t.Union[str, "DeclarativeBase", "sa.sql.selectable.TableClause"]):
     """
     Invoke a `REFRESH TABLE` statement.
     """
-    if hasattr(target, "__tablename__"):
-        sql = f"REFRESH TABLE {target.__tablename__}"
+
+    if isinstance(target, sa.sql.selectable.TableClause):
+        full_table_name = f'"{target.name}"'
+        if target.schema is not None:
+            full_table_name = f'"{target.schema}".' + full_table_name
+    elif hasattr(target, "__tablename__"):
+        full_table_name = target.__tablename__
     else:
-        sql = f"REFRESH TABLE {target}"
+        full_table_name = target
+
+    sql = f"REFRESH TABLE {full_table_name}"
     connection.execute(sa.text(sql))
 
 
