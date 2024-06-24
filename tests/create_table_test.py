@@ -154,7 +154,7 @@ class SqlAlchemyCreateTableTest(TestCase):
             ('\nCREATE TABLE t (\n\t'
              'pk STRING NOT NULL, \n\t'
              'PRIMARY KEY (pk)\n'
-             ') CLUSTERED INTO 3 SHARDS WITH (NUMBER_OF_REPLICAS = 2)\n\n'),
+             ') CLUSTERED INTO 3 SHARDS WITH (number_of_replicas = 2)\n\n'),
             ())
 
     def test_table_clustered_by_and_number_of_shards(self):
@@ -173,6 +173,21 @@ class SqlAlchemyCreateTableTest(TestCase):
              'p STRING NOT NULL, \n\t'
              'PRIMARY KEY (pk, p)\n'
              ') CLUSTERED BY (p) INTO 3 SHARDS\n\n'),
+            ())
+
+    def test_table_translog_durability(self):
+        class DummyTable(self.Base):
+            __tablename__ = 't'
+            __table_args__ = {
+                'crate_"translog.durability"': "'async'",
+            }
+            pk = sa.Column(sa.String, primary_key=True)
+        self.Base.metadata.create_all(bind=self.engine)
+        fake_cursor.execute.assert_called_with(
+            ('\nCREATE TABLE t (\n\t'
+             'pk STRING NOT NULL, \n\t'
+             'PRIMARY KEY (pk)\n'
+             """) WITH ("translog.durability" = 'async')\n\n"""),
             ())
 
     def test_column_object_array(self):

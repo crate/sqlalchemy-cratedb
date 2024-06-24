@@ -100,13 +100,13 @@ def crate_before_execute(conn, clauseelement, multiparams, params, *args, **kwar
 class CrateDDLCompiler(compiler.DDLCompiler):
 
     __special_opts_tmpl = {
-        'PARTITIONED_BY': ' PARTITIONED BY ({0})'
+        'partitioned_by': ' PARTITIONED BY ({0})'
     }
     __clustered_opts_tmpl = {
-        'NUMBER_OF_SHARDS': ' INTO {0} SHARDS',
-        'CLUSTERED_BY': ' BY ({0})',
+        'number_of_shards': ' INTO {0} SHARDS',
+        'clustered_by': ' BY ({0})',
     }
-    __clustered_opt_tmpl = ' CLUSTERED{CLUSTERED_BY}{NUMBER_OF_SHARDS}'
+    __clustered_opt_tmpl = ' CLUSTERED{clustered_by}{number_of_shards}'
 
     def get_column_specification(self, column, **kwargs):
         colspec = self.preparer.format_column(column) + " " + \
@@ -162,7 +162,7 @@ class CrateDDLCompiler(compiler.DDLCompiler):
         table_opts = []
 
         opts = dict(
-            (k[len(self.dialect.name) + 1:].upper(), v)
+            (k[len(self.dialect.name) + 1:], v)
             for k, v, in table.kwargs.items()
             if k.startswith('%s_' % self.dialect.name)
         )
