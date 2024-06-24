@@ -108,10 +108,7 @@ def refresh_after_dml_engine(engine: sa.engine.Engine):
     ):
         if isinstance(clauseelement, (sa.sql.Insert, sa.sql.Update, sa.sql.Delete)):
             if not isinstance(clauseelement.table, sa.sql.Join):
-                full_table_name = f'"{clauseelement.table.name}"'
-                if clauseelement.table.schema is not None:
-                    full_table_name = f'"{clauseelement.table.schema}".' + full_table_name
-                refresh_table(conn, full_table_name)
+                refresh_table(conn, clauseelement.table)
 
     sa.event.listen(engine, "after_execute", receive_after_execute)
 
