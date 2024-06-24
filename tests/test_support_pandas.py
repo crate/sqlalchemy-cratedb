@@ -2,7 +2,6 @@ import re
 import sys
 
 import pytest
-import sqlalchemy as sa
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm import sessionmaker
 
@@ -42,10 +41,7 @@ def test_table_kwargs_partitioned_by(cratedb_service):
     cratedb_service.database.refresh_table(TABLE_NAME)
 
     # Inquire table cardinality.
-    metadata = sa.MetaData()
-    query = sa.select(sa.func.count()).select_from(sa.Table(TABLE_NAME, metadata))
-    results = session.execute(query)
-    count = results.scalar()
+    count = cratedb_service.database.count_records(TABLE_NAME)
 
     # Compare outcome.
     assert count == INSERT_RECORDS
@@ -53,6 +49,38 @@ def test_table_kwargs_partitioned_by(cratedb_service):
     # Validate SQL DDL.
     ddl = cratedb_service.database.run_sql(f"SHOW CREATE TABLE {TABLE_NAME}")
     assert 'PARTITIONED BY ("time")' in ddl[0][0]
+
+
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="Feature not supported on Python 3.7 and earlier")
+@pytest.mark.skipif(SA_VERSION < SA_2_0, reason="Feature not supported on SQLAlchemy 1.4 and earlier")
+def test_table_kwargs_translog_durability(cratedb_service):
+    """
+    Validate adding CrateDB dialect table option `translog.durability` at runtime.
+    """
+
+    engine = cratedb_service.database.engine
+
+    # Insert records from pandas dataframe.
+    with table_kwargs(**{'crate_"translog.durability"': "'async'"}):
+        df.to_sql(
+            TABLE_NAME,
+            engine,
+            if_exists="replace",
+            index=False,
+        )
+
+    # Synchronize writes.
+    cratedb_service.database.refresh_table(TABLE_NAME)
+
+    # Inquire table cardinality.
+    count = cratedb_service.database.count_records(TABLE_NAME)
+
+    # Compare outcome.
+    assert count == INSERT_RECORDS
+
+    # Validate SQL DDL.
+    ddl = cratedb_service.database.run_sql(f"SHOW CREATE TABLE {TABLE_NAME}")
+    assert """"translog.durability" = 'ASYNC'""" in ddl[0][0]
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="Feature not supported on Python 3.7 and earlier")
