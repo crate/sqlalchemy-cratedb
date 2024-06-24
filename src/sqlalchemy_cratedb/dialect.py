@@ -39,8 +39,8 @@ TYPES_MAP = {
     "boolean": sqltypes.Boolean,
     "short": sqltypes.SmallInteger,
     "smallint": sqltypes.SmallInteger,
-    "timestamp": sqltypes.TIMESTAMP,
-    "timestamp with time zone": sqltypes.TIMESTAMP,
+    "timestamp": sqltypes.TIMESTAMP(timezone=False),
+    "timestamp with time zone": sqltypes.TIMESTAMP(timezone=True),
     "object": ObjectType,
     "integer": sqltypes.Integer,
     "long": sqltypes.NUMERIC,
@@ -61,8 +61,8 @@ try:
     TYPES_MAP["boolean_array"] = ARRAY(sqltypes.Boolean)
     TYPES_MAP["short_array"] = ARRAY(sqltypes.SmallInteger)
     TYPES_MAP["smallint_array"] = ARRAY(sqltypes.SmallInteger)
-    TYPES_MAP["timestamp_array"] = ARRAY(sqltypes.TIMESTAMP)
-    TYPES_MAP["timestamp with time zone_array"] = ARRAY(sqltypes.TIMESTAMP)
+    TYPES_MAP["timestamp_array"] = ARRAY(sqltypes.TIMESTAMP(timezone=False))
+    TYPES_MAP["timestamp with time zone_array"] = ARRAY(sqltypes.TIMESTAMP(timezone=True))
     TYPES_MAP["long_array"] = ARRAY(sqltypes.NUMERIC)
     TYPES_MAP["bigint_array"] = ARRAY(sqltypes.NUMERIC)
     TYPES_MAP["double_array"] = ARRAY(sqltypes.DECIMAL)
@@ -147,8 +147,9 @@ class DateTime(sqltypes.DateTime):
 
 
 colspecs = {
+    sqltypes.Date: Date,
     sqltypes.DateTime: DateTime,
-    sqltypes.Date: Date
+    sqltypes.TIMESTAMP: DateTime,
 }
 
 

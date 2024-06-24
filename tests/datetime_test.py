@@ -21,7 +21,7 @@
 
 from __future__ import absolute_import
 
-from datetime import datetime, tzinfo, timedelta
+from datetime import tzinfo, timedelta
 import datetime as dt
 from unittest import TestCase, skipIf
 from unittest.mock import patch, MagicMock
@@ -31,6 +31,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Session, sessionmaker
 
 from sqlalchemy_cratedb import SA_VERSION, SA_1_4
+from sqlalchemy_cratedb.dialect import DateTime
 
 try:
     from sqlalchemy.orm import declarative_base
@@ -57,6 +58,15 @@ class CST(tzinfo):
         return timedelta(seconds=-7200)
 
 
+INPUT_DATE = dt.date(2009, 5, 13)
+INPUT_DATETIME_NOTZ = dt.datetime(2009, 5, 13, 19, 19, 30, 123456)
+INPUT_DATETIME_TZ = dt.datetime(2009, 5, 13, 19, 19, 30, 123456, tzinfo=CST())
+OUTPUT_DATE = INPUT_DATE
+OUTPUT_TIME = dt.time(19, 19, 30, 123000)
+OUTPUT_DATETIME_NOTZ = dt.datetime(2009, 5, 13, 19, 19, 30, 123000)
+OUTPUT_DATETIME_TZ = dt.datetime(2009, 5, 13, 19, 19, 30, 123000)
+
+
 @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 @patch('crate.client.connection.Cursor', FakeCursor)
 class SqlAlchemyDateAndDateTimeTest(TestCase):
@@ -69,7 +79,7 @@ class SqlAlchemyDateAndDateTimeTest(TestCase):
             __tablename__ = 'characters'
             name = sa.Column(sa.String, primary_key=True)
             date = sa.Column(sa.Date)
-            timestamp = sa.Column(sa.DateTime)
+            datetime = sa.Column(sa.DateTime)
 
         fake_cursor.description = (
             ('characters_name', None, None, None, None, None, None),
@@ -91,7 +101,7 @@ class SqlAlchemyDateAndDateTimeTest(TestCase):
     def test_date_can_handle_tz_aware_datetime(self):
         character = self.Character()
         character.name = "Athur"
-        character.timestamp = datetime(2009, 5, 13, 19, 19, 30, tzinfo=CST())
+        character.datetime = INPUT_DATETIME_NOTZ
         self.session.add(character)
 
 
@@ -102,7 +112,8 @@ class FooBar(Base):
     __tablename__ = "foobar"
     name = sa.Column(sa.String, primary_key=True)
     date = sa.Column(sa.Date)
-    datetime = sa.Column(sa.DateTime)
+    datetime_notz = sa.Column(DateTime(timezone=False))
+    datetime_tz = sa.Column(DateTime(timezone=True))
 
 
 @pytest.fixture
@@ -124,22 +135,28 @@ def test_datetime_notz(session):
     # Insert record.
     foo_item = FooBar(
         name="foo",
-        date=dt.date(2009, 5, 13),
-        datetime=dt.datetime(2009, 5, 13, 19, 19, 30, 123456),
+        date=INPUT_DATE,
+        datetime_notz=INPUT_DATETIME_NOTZ,
+        datetime_tz=INPUT_DATETIME_NOTZ,
     )
     session.add(foo_item)
     session.commit()
     session.execute(sa.text("REFRESH TABLE foobar"))
 
     # Query record.
-    result = session.execute(sa.select(FooBar.name, FooBar.date, FooBar.datetime)).mappings().first()
+    result = session.execute(sa.select(
+        FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)).mappings().first()
 
     # Compare outcome.
-    assert result["date"].year == 2009
-    assert result["datetime"].year == 2009
-    assert result["datetime"].tzname() is None
-    assert result["datetime"].timetz() == dt.time(19, 19, 30, 123000)
-    assert result["datetime"].tzinfo is None
+    assert result["date"] == OUTPUT_DATE
+    assert result["datetime_notz"] == OUTPUT_DATETIME_NOTZ
+    assert result["datetime_notz"].tzname() is None
+    assert result["datetime_notz"].timetz() == OUTPUT_TIME
+    assert result["datetime_notz"].tzinfo is None
+    assert result["datetime_tz"] == OUTPUT_DATETIME_NOTZ
+    assert result["datetime_tz"].tzname() is None
+    assert result["datetime_tz"].timetz() == OUTPUT_TIME
+    assert result["datetime_tz"].tzinfo is None
 
 
 @pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
@@ -151,19 +168,25 @@ def test_datetime_tz(session):
     # Insert record.
     foo_item = FooBar(
         name="foo",
-        date=dt.date(2009, 5, 13),
-        datetime=dt.datetime(2009, 5, 13, 19, 19, 30, 123456, tzinfo=CST()),
+        date=INPUT_DATE,
+        datetime_notz=INPUT_DATETIME_TZ,
+        datetime_tz=INPUT_DATETIME_TZ,
     )
     session.add(foo_item)
     session.commit()
     session.execute(sa.text("REFRESH TABLE foobar"))
 
     # Query record.
-    result = session.execute(sa.select(FooBar.name, FooBar.date, FooBar.datetime)).mappings().first()
+    result = session.execute(sa.select(
+        FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)).mappings().first()
 
     # Compare outcome.
-    assert result["date"].year == 2009
-    assert result["datetime"].year == 2009
-    assert result["datetime"].tzname() is None
-    assert result["datetime"].timetz() == dt.time(19, 19, 30, 123000)
-    assert result["datetime"].tzinfo is None
+    assert result["date"] == OUTPUT_DATE
+    assert result["datetime_notz"] == OUTPUT_DATETIME_TZ
+    assert result["datetime_notz"].tzname() is None
+    assert result["datetime_notz"].timetz() == OUTPUT_TIME
+    assert result["datetime_notz"].tzinfo is None
+    assert result["datetime_tz"] == OUTPUT_DATETIME_TZ
+    assert result["datetime_tz"].tzname() is None
+    assert result["datetime_tz"].timetz() == OUTPUT_TIME
+    assert result["datetime_tz"].tzinfo is None
