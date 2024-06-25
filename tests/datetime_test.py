@@ -51,12 +51,13 @@ FakeCursor.return_value = fake_cursor
 
 
 INPUT_DATE = dt.date(2009, 5, 13)
-INPUT_DATETIME_NOTZ = dt.datetime(2009, 5, 13, 19, 19, 30, 123456)
-INPUT_DATETIME_TZ = dt.datetime(2009, 5, 13, 19, 19, 30, 123456, tzinfo=zoneinfo.ZoneInfo("Europe/Kyiv"))
+INPUT_DATETIME_NOTZ = dt.datetime(2009, 5, 13, 19, 00, 30, 123456)
+INPUT_DATETIME_TZ = dt.datetime(2009, 5, 13, 19, 00, 30, 123456, tzinfo=zoneinfo.ZoneInfo("Europe/Kyiv"))
 OUTPUT_DATE = INPUT_DATE
-OUTPUT_TIME = dt.time(19, 19, 30, 123000)
-OUTPUT_DATETIME_NOTZ = dt.datetime(2009, 5, 13, 19, 19, 30, 123000)
-OUTPUT_DATETIME_TZ = dt.datetime(2009, 5, 13, 19, 19, 30, 123000)
+OUTPUT_TIMETZ_NOTZ = dt.time(19, 00, 30, 123000)
+OUTPUT_TIMETZ_TZ = dt.time(16, 00, 30, 123000)
+OUTPUT_DATETIME_NOTZ = dt.datetime(2009, 5, 13, 19, 00, 30, 123000)
+OUTPUT_DATETIME_TZ = dt.datetime(2009, 5, 13, 16, 00, 30, 123000)
 
 
 @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
@@ -143,11 +144,11 @@ def test_datetime_notz(session):
     assert result["date"] == OUTPUT_DATE
     assert result["datetime_notz"] == OUTPUT_DATETIME_NOTZ
     assert result["datetime_notz"].tzname() is None
-    assert result["datetime_notz"].timetz() == OUTPUT_TIME
+    assert result["datetime_notz"].timetz() == OUTPUT_TIMETZ_NOTZ
     assert result["datetime_notz"].tzinfo is None
     assert result["datetime_tz"] == OUTPUT_DATETIME_NOTZ
     assert result["datetime_tz"].tzname() is None
-    assert result["datetime_tz"].timetz() == OUTPUT_TIME
+    assert result["datetime_tz"].timetz() == OUTPUT_TIMETZ_NOTZ
     assert result["datetime_tz"].tzinfo is None
 
 
@@ -169,16 +170,17 @@ def test_datetime_tz(session):
     session.execute(sa.text("REFRESH TABLE foobar"))
 
     # Query record.
+    session.expunge(foo_item)
     result = session.execute(sa.select(
         FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)).mappings().first()
 
     # Compare outcome.
     assert result["date"] == OUTPUT_DATE
-    assert result["datetime_notz"] == OUTPUT_DATETIME_TZ
+    assert result["datetime_notz"] == OUTPUT_DATETIME_NOTZ
     assert result["datetime_notz"].tzname() is None
-    assert result["datetime_notz"].timetz() == OUTPUT_TIME
+    assert result["datetime_notz"].timetz() == OUTPUT_TIMETZ_NOTZ
     assert result["datetime_notz"].tzinfo is None
     assert result["datetime_tz"] == OUTPUT_DATETIME_TZ
     assert result["datetime_tz"].tzname() is None
-    assert result["datetime_tz"].timetz() == OUTPUT_TIME
+    assert result["datetime_tz"].timetz() == OUTPUT_TIMETZ_TZ
     assert result["datetime_tz"].tzinfo is None
