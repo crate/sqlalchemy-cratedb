@@ -433,9 +433,9 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
         self.assertIn("CrateDB does not support unique constraints, "
                       "they will be omitted when generating DDL statements.", str(w[-1].message))
 
-    def test_ddl_with_reserved_words(self):
+    def test_ddl_with_reserved_words_and_uppercase(self):
         """
-        Verify CrateDB's reserved words like `object` are quoted properly.
+        Verify CrateDB's reserved words and columns using uppercase characters are quoted properly.
         """
 
         Base = declarative_base(metadata=self.metadata)
@@ -445,7 +445,8 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
 
             __tablename__ = "foobar"
 
-            index = sa.Column(sa.Integer, primary_key=True)
+            ID = sa.Column(sa.Integer, primary_key=True)
+            index = sa.Column(sa.Integer)
             array = sa.Column(sa.String)
             object = sa.Column(sa.String)
 
@@ -453,10 +454,11 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
         self.metadata.create_all(self.engine, tables=[FooBar.__table__], checkfirst=False)
         self.assertEqual(self.executed_statement, dedent("""
             CREATE TABLE testdrive.foobar (
-            \t"index" INT NOT NULL, 
+            \t"ID" INT NOT NULL, 
+            \t"index" INT, 
             \t"array" STRING, 
             \t"object" STRING, 
-            \tPRIMARY KEY ("index")
+            \tPRIMARY KEY ("ID")
             )
 
         """))  # noqa: W291, W293
