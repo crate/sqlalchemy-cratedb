@@ -21,7 +21,6 @@
 
 from __future__ import absolute_import
 
-from datetime import tzinfo, timedelta
 import datetime as dt
 from unittest import TestCase, skipIf
 from unittest.mock import patch, MagicMock
@@ -38,6 +37,11 @@ try:
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
 
+try:
+    import zoneinfo
+except ImportError:
+    from backports import zoneinfo
+
 from crate.client.cursor import Cursor
 
 
@@ -46,21 +50,9 @@ FakeCursor = MagicMock(name='FakeCursor', spec=Cursor)
 FakeCursor.return_value = fake_cursor
 
 
-class CST(tzinfo):
-    """
-    Timezone object for CST
-    """
-
-    def utcoffset(self, date_time):
-        return timedelta(seconds=-3600)
-
-    def dst(self, date_time):
-        return timedelta(seconds=-7200)
-
-
 INPUT_DATE = dt.date(2009, 5, 13)
 INPUT_DATETIME_NOTZ = dt.datetime(2009, 5, 13, 19, 19, 30, 123456)
-INPUT_DATETIME_TZ = dt.datetime(2009, 5, 13, 19, 19, 30, 123456, tzinfo=CST())
+INPUT_DATETIME_TZ = dt.datetime(2009, 5, 13, 19, 19, 30, 123456, tzinfo=zoneinfo.ZoneInfo("Europe/Kyiv"))
 OUTPUT_DATE = INPUT_DATE
 OUTPUT_TIME = dt.time(19, 19, 30, 123000)
 OUTPUT_DATETIME_NOTZ = dt.datetime(2009, 5, 13, 19, 19, 30, 123000)
