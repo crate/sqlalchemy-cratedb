@@ -26,7 +26,6 @@ def test_table_kwargs_partitioned_by(cratedb_service):
     """
 
     engine = cratedb_service.database.engine
-    session = sessionmaker(bind=engine)()
 
     # Insert records from pandas dataframe.
     with table_kwargs(crate_partitioned_by="time"):
