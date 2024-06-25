@@ -117,7 +117,7 @@ class DateTime(sqltypes.DateTime):
         def process(value):
             if value is not None:
                 assert isinstance(value, datetime)
-                return value.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+                return value.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
             return value
         return process
 
