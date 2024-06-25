@@ -3,7 +3,6 @@ import sys
 
 import pytest
 from sqlalchemy.exc import ProgrammingError
-from sqlalchemy.orm import sessionmaker
 
 from pueblo.testing.pandas import makeTimeDataFrame
 
