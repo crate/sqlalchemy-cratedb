@@ -2,6 +2,8 @@
 
 
 ## Unreleased
+
+## 2024/06/25 0.38.0
 - Added/reactivated documentation as `sqlalchemy-cratedb`
 - Added `CrateIdentifierPreparer`, in order to quote reserved words
   like `object` properly, for example when used as column names.
