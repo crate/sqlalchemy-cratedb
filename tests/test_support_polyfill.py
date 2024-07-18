@@ -84,7 +84,7 @@ def test_check_uniqueness_factory(cratedb_service):
         name = sa.Column(sa.String)
 
     # Add synthetic UNIQUE constraint on `name` column.
-    listen(FooBar, "before_insert", check_uniqueness_factory(FooBar, "name"))
+    listen(FooBar, "before_insert", check_uniqueness_factory(FooBar, "id", "name"))
 
     Base.metadata.drop_all(engine, checkfirst=True)
     Base.metadata.create_all(engine, checkfirst=True)
@@ -96,11 +96,11 @@ def test_check_uniqueness_factory(cratedb_service):
     session.execute(sa.text("REFRESH TABLE foobar"))
 
     # Insert second record, violating the uniqueness constraint.
-    bar_item = FooBar(id="bar", name="foo")
+    bar_item = FooBar(id="foo", name="foo")
     session.add(bar_item)
     with pytest.raises(IntegrityError) as ex:
         session.commit()
-    assert ex.match("DuplicateKeyException in table 'foobar' on constraint 'name'")
+    assert ex.match("DuplicateKeyException in table 'foobar' on constraint 'id-name'")
 
 
 @pytest.mark.skipif(
