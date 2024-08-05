@@ -105,7 +105,7 @@ develop = [
 ]
 doc = [
   "crate-docs-theme>=0.26.5",
-  "sphinx<8,>=3.5",
+  "sphinx>=3.5,<9",
 ]
 release = [
   "build<2",
