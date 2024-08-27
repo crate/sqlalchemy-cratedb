@@ -40,7 +40,6 @@ from sqlalchemy.sql import Select
 from sqlalchemy.sql import select as original_select
 from sqlalchemy.util import immutabledict
 
-
 # `_distill_params_20` copied from SA14's `sqlalchemy.engine.{base,util}`.
 _no_tuple = ()
 _no_kw = immutabledict()
@@ -52,9 +51,7 @@ def _distill_params_20(params):
     elif isinstance(params, list):
         # collections_abc.MutableSequence): # avoid abc.__instancecheck__
         if params and not isinstance(params[0], (collections_abc.Mapping, tuple)):
-            raise exc.ArgumentError(
-                "List argument must consist only of tuples or dictionaries"
-            )
+            raise exc.ArgumentError("List argument must consist only of tuples or dictionaries")
 
         return (params,), _no_kw
     elif isinstance(
@@ -74,8 +71,7 @@ def exec_driver_sql(self, statement, parameters=None, execution_options=None):
     """
     if execution_options is not None:
         raise ValueError(
-            "SA13 backward-compatibility: "
-            "`exec_driver_sql` does not support `execution_options`"
+            "SA13 backward-compatibility: " "`exec_driver_sql` does not support `execution_options`"
         )
     args_10style, kwargs_10style = _distill_params_20(parameters)
     return self.execute(statement, *args_10style, **kwargs_10style)
@@ -106,12 +102,11 @@ def select_sa14(*columns, **kw) -> Select:
     Derived from https://github.com/sqlalchemy/alembic/blob/b1fad6b6/alembic/util/sqla_compat.py#L557-L558
 
     sqlalchemy.exc.ArgumentError: columns argument to select() must be a Python list or other iterable
-    """
+    """  # noqa: E501
     if isinstance(columns, tuple) and isinstance(columns[0], list):
         if "whereclause" in kw:
             raise ValueError(
-                "SA13 backward-compatibility: "
-                "`whereclause` is both in kwargs and columns tuple"
+                "SA13 backward-compatibility: " "`whereclause` is both in kwargs and columns tuple"
             )
         columns, whereclause = columns
         kw["whereclause"] = whereclause
@@ -153,4 +148,5 @@ def connectionfairy_driver_connection_sa14(self):
 
 def monkeypatch_add_connectionfairy_driver_connection():
     import sqlalchemy.pool.base
+
     sqlalchemy.pool.base._ConnectionFairy.driver_connection = connectionfairy_driver_connection_sa14

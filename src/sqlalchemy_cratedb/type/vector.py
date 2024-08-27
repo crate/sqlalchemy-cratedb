@@ -33,15 +33,15 @@ The MIT License (MIT)
 Copyright (c) 2021-2023 Andrew Kane
 https://github.com/pgvector/pgvector-python
 """
+
 import typing as t
 
 if t.TYPE_CHECKING:
     import numpy.typing as npt  # pragma: no cover
 
 import sqlalchemy as sa
-from sqlalchemy.sql.expression import ColumnElement, literal
 from sqlalchemy.ext.compiler import compiles
-
+from sqlalchemy.sql.expression import ColumnElement, literal
 
 __all__ = [
     "from_db",
@@ -73,7 +73,9 @@ def to_db(value: t.Any, dim: t.Optional[int] = None) -> t.Optional[t.List]:
         if value.ndim != 1:
             raise ValueError("expected ndim to be 1")
 
-        if not np.issubdtype(value.dtype, np.integer) and not np.issubdtype(value.dtype, np.floating):
+        if not np.issubdtype(value.dtype, np.integer) and not np.issubdtype(
+            value.dtype, np.floating
+        ):
             raise ValueError("dtype must be numeric")
 
         value = value.tolist()
@@ -128,6 +130,7 @@ class KnnMatch(ColumnElement):
 
     https://cratedb.com/docs/crate/reference/en/latest/general/builtins/scalar-functions.html#scalar-knn-match
     """
+
     inherit_cache = True
 
     def __init__(self, column, term, k=None):

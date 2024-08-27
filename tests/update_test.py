@@ -20,12 +20,14 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 from datetime import datetime
 from unittest import TestCase, skipIf
-from unittest.mock import patch, MagicMock
-
-from sqlalchemy_cratedb import ObjectType, SA_VERSION, SA_1_4
+from unittest.mock import MagicMock, patch
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
+
+from sqlalchemy_cratedb import ObjectType
+from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
+
 try:
     from sqlalchemy.orm import declarative_base
 except ImportError:
@@ -33,22 +35,20 @@ except ImportError:
 
 from crate.client.cursor import Cursor
 
-
-fake_cursor = MagicMock(name='fake_cursor')
+fake_cursor = MagicMock(name="fake_cursor")
 fake_cursor.rowcount = 1
-FakeCursor = MagicMock(name='FakeCursor', spec=Cursor)
+FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 FakeCursor.return_value = fake_cursor
 
 
 @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 class SqlAlchemyUpdateTest(TestCase):
-
     def setUp(self):
-        self.engine = sa.create_engine('crate://')
+        self.engine = sa.create_engine("crate://")
         self.base = declarative_base()
 
         class Character(self.base):
-            __tablename__ = 'characters'
+            __tablename__ = "characters"
 
             name = sa.Column(sa.String, primary_key=True)
             age = sa.Column(sa.Integer)
@@ -58,58 +58,58 @@ class SqlAlchemyUpdateTest(TestCase):
         self.character = Character
         self.session = Session(bind=self.engine)
 
-    @patch('crate.client.connection.Cursor', FakeCursor)
+    @patch("crate.client.connection.Cursor", FakeCursor)
     def test_onupdate_is_triggered(self):
-        char = self.character(name='Arthur')
+        char = self.character(name="Arthur")
         self.session.add(char)
         self.session.commit()
         now = datetime.utcnow()
 
-        fake_cursor.fetchall.return_value = [('Arthur', None)]
+        fake_cursor.fetchall.return_value = [("Arthur", None)]
         fake_cursor.description = (
-            ('characters_name', None, None, None, None, None, None),
-            ('characters_ts', None, None, None, None, None, None),
+            ("characters_name", None, None, None, None, None, None),
+            ("characters_ts", None, None, None, None, None, None),
         )
 
         char.age = 40
         self.session.commit()
 
-        expected_stmt = ("UPDATE characters SET age = ?, "
-                         "ts = ? WHERE characters.name = ?")
+        expected_stmt = "UPDATE characters SET age = ?, " "ts = ? WHERE characters.name = ?"
         args, kwargs = fake_cursor.execute.call_args
         stmt = args[0]
         args = args[1]
         self.assertEqual(expected_stmt, stmt)
         self.assertEqual(40, args[0])
-        dt = datetime.strptime(args[1], '%Y-%m-%dT%H:%M:%S.%f')
+        dt = datetime.strptime(args[1], "%Y-%m-%dT%H:%M:%S.%f")
         self.assertIsInstance(dt, datetime)
         self.assertGreater(dt, now)
-        self.assertEqual('Arthur', args[2])
+        self.assertEqual("Arthur", args[2])
 
-    @patch('crate.client.connection.Cursor', FakeCursor)
+    @patch("crate.client.connection.Cursor", FakeCursor)
     def test_bulk_update(self):
         """
-            Checks whether bulk updates work correctly
-            on native types and Crate types.
+        Checks whether bulk updates work correctly
+        on native types and Crate types.
         """
         before_update_time = datetime.utcnow()
 
-        self.session.query(self.character).update({
-            # change everyone's name to Julia
-            self.character.name: 'Julia',
-            self.character.obj: {'favorite_book': 'Romeo & Juliet'}
-        })
+        self.session.query(self.character).update(
+            {
+                # change everyone's name to Julia
+                self.character.name: "Julia",
+                self.character.obj: {"favorite_book": "Romeo & Juliet"},
+            }
+        )
 
         self.session.commit()
 
-        expected_stmt = ("UPDATE characters SET "
-                         "name = ?, obj = ?, ts = ?")
+        expected_stmt = "UPDATE characters SET " "name = ?, obj = ?, ts = ?"
         args, kwargs = fake_cursor.execute.call_args
         stmt = args[0]
         args = args[1]
         self.assertEqual(expected_stmt, stmt)
-        self.assertEqual('Julia', args[0])
-        self.assertEqual({'favorite_book': 'Romeo & Juliet'}, args[1])
-        dt = datetime.strptime(args[2], '%Y-%m-%dT%H:%M:%S.%f')
+        self.assertEqual("Julia", args[0])
+        self.assertEqual({"favorite_book": "Romeo & Juliet"}, args[1])
+        dt = datetime.strptime(args[2], "%Y-%m-%dT%H:%M:%S.%f")
         self.assertIsInstance(dt, datetime)
         self.assertGreater(dt, before_update_time)

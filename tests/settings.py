@@ -21,8 +21,7 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 from __future__ import absolute_import
 
-
 crate_port = 4200
-localhost = '127.0.0.1'
+localhost = "127.0.0.1"
 crate_host = "{host}:{port}".format(host=localhost, port=crate_port)
 crate_uri = "http://%s" % crate_host

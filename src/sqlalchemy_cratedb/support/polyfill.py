@@ -1,6 +1,7 @@
+import typing as t
+
 import sqlalchemy as sa
 from sqlalchemy.event import listen
-import typing as t
 
 from sqlalchemy_cratedb.support.util import refresh_dirty, refresh_table
 
@@ -39,7 +40,7 @@ def check_uniqueness_factory(sa_entity, *attribute_names):
     This is used by CrateDB's MLflow adapter.
 
     TODO: Maybe enable through a dialect parameter `crate_polyfill_unique` or such.
-    """
+    """  # noqa: E501
 
     # Synthesize a canonical "name" for the constraint,
     # composed of all column names involved.
@@ -52,7 +53,9 @@ def check_uniqueness_factory(sa_entity, *attribute_names):
             # TODO: How to use `session.query(SqlExperiment)` here?
             stmt = mapper.selectable.select()
             for attribute_name in attribute_names:
-                stmt = stmt.filter(getattr(sa_entity, attribute_name) == getattr(target, attribute_name))
+                stmt = stmt.filter(
+                    getattr(sa_entity, attribute_name) == getattr(target, attribute_name)
+                )
             stmt = stmt.compile(bind=connection.engine)
             results = connection.execute(stmt)
             if results.rowcount > 0:
@@ -60,7 +63,8 @@ def check_uniqueness_factory(sa_entity, *attribute_names):
                     statement=stmt,
                     params=[],
                     orig=Exception(
-                        f"DuplicateKeyException in table '{target.__tablename__}' " f"on constraint '{constraint_name}'"
+                        f"DuplicateKeyException in table '{target.__tablename__}' "
+                        f"on constraint '{constraint_name}'"
                     ),
                 )
 
@@ -103,6 +107,7 @@ def refresh_after_dml_engine(engine: sa.engine.Engine):
 
     This is used by CrateDB's Singer/Meltano and `rdflib-sqlalchemy` adapters.
     """
+
     def receive_after_execute(
         conn: sa.engine.Connection, clauseelement, multiparams, params, execution_options, result
     ):

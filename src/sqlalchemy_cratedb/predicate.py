@@ -19,8 +19,8 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 
-from sqlalchemy.sql.expression import ColumnElement, literal
 from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql.expression import ColumnElement, literal
 
 
 class Match(ColumnElement):
@@ -35,9 +35,8 @@ class Match(ColumnElement):
 
     def compile_column(self, compiler):
         if isinstance(self.column, dict):
-            column = ', '.join(
-                sorted(["{0} {1}".format(compiler.process(k), v)
-                       for k, v in self.column.items()])
+            column = ", ".join(
+                sorted(["{0} {1}".format(compiler.process(k), v) for k, v in self.column.items()])
             )
             return "({0})".format(column)
         else:
@@ -51,21 +50,22 @@ class Match(ColumnElement):
             using = "using {0}".format(self.match_type)
             with_clause = self.with_clause()
             if with_clause:
-                using = ' '.join([using, with_clause])
+                using = " ".join([using, with_clause])
             return using
         if self.options:
-            raise ValueError("missing match_type. " +
-                             "It's not allowed to specify options " +
-                             "without match_type")
+            raise ValueError(
+                "missing match_type. "
+                + "It's not allowed to specify options "
+                + "without match_type"
+            )
+        return None
 
     def with_clause(self):
         if self.options:
-            options = ', '.join(
-                sorted(["{0}={1}".format(k, v)
-                       for k, v in self.options.items()])
-            )
+            options = ", ".join(sorted(["{0}={1}".format(k, v) for k, v in self.options.items()]))
 
             return "with ({0})".format(options)
+        return None
 
 
 def match(column, term, match_type=None, options=None):
@@ -89,11 +89,8 @@ def match(column, term, match_type=None, options=None):
 
 @compiles(Match)
 def compile_match(match, compiler, **kwargs):
-    func = "match(%s, %s)" % (
-        match.compile_column(compiler),
-        match.compile_term(compiler)
-    )
+    func = "match(%s, %s)" % (match.compile_column(compiler), match.compile_term(compiler))
     using = match.compile_using(compiler)
     if using:
-        func = ' '.join([func, using])
+        func = " ".join([func, using])
     return func

@@ -20,14 +20,16 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 from __future__ import absolute_import
+
 from unittest import TestCase, skipIf
 
 import sqlalchemy as sa
+from crate.testing.settings import crate_host
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.operators import eq
 
-from sqlalchemy_cratedb import SA_VERSION, SA_1_4, ObjectArray, ObjectType
-from crate.testing.settings import crate_host
+from sqlalchemy_cratedb import ObjectArray, ObjectType
+from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
 
 try:
     from sqlalchemy.orm import declarative_base
@@ -36,7 +38,6 @@ except ImportError:
 
 
 class SqlAlchemyQueryCompilationCaching(TestCase):
-
     def setUp(self):
         self.engine = sa.create_engine(f"crate://{crate_host}")
         self.metadata = sa.MetaData(schema="testdrive")
@@ -50,7 +51,7 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
         Base = declarative_base(metadata=self.metadata)
 
         class Character(Base):
-            __tablename__ = 'characters'
+            __tablename__ = "characters"
             name = sa.Column(sa.String, primary_key=True)
             age = sa.Column(sa.Integer)
             data = sa.Column(ObjectType)
@@ -66,8 +67,8 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
         self.metadata.create_all(self.engine)
 
         Character = self.Character
-        char1 = Character(name='Trillian', data={'x': 1}, data_list=[{'foo': 1, 'bar': 10}])
-        char2 = Character(name='Slartibartfast', data={'y': 2}, data_list=[{'bar': 2}])
+        char1 = Character(name="Trillian", data={"x": 1}, data_list=[{"foo": 1, "bar": 10}])
+        char2 = Character(name="Slartibartfast", data={"y": 2}, data_list=[{"bar": 2}])
         self.session.add(char1)
         self.session.add(char2)
         self.session.commit()
@@ -89,11 +90,11 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
         self.setup_data()
         Character = self.Character
 
-        selectable = sa.select(Character).where(Character.data['x'] == 1)
+        selectable = sa.select(Character).where(Character.data["x"] == 1)
         result = self.session.execute(selectable).scalar_one().data
         self.assertEqual({"x": 1}, result)
 
-        selectable = sa.select(Character).where(Character.data['y'] == 2)
+        selectable = sa.select(Character).where(Character.data["y"] == 2)
         result = self.session.execute(selectable).scalar_one().data
         self.assertEqual({"y": 2}, result)
 
@@ -113,11 +114,11 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
         self.setup_data()
         Character = self.Character
 
-        selectable = sa.select(Character).where(Character.data['x'].as_integer() == 1)
+        selectable = sa.select(Character).where(Character.data["x"].as_integer() == 1)
         result = self.session.execute(selectable).scalar_one().data
         self.assertEqual({"x": 1}, result)
 
-        selectable = sa.select(Character).where(Character.data['y'].as_integer() == 2)
+        selectable = sa.select(Character).where(Character.data["y"].as_integer() == 2)
         result = self.session.execute(selectable).scalar_one().data
         self.assertEqual({"y": 2}, result)
 
@@ -132,10 +133,10 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
         self.setup_data()
         Character = self.Character
 
-        selectable = sa.select(Character).where(Character.data_list['foo'].any(1, operator=eq))
+        selectable = sa.select(Character).where(Character.data_list["foo"].any(1, operator=eq))
         result = self.session.execute(selectable).scalar_one().data
         self.assertEqual({"x": 1}, result)
 
-        selectable = sa.select(Character).where(Character.data_list['bar'].any(2, operator=eq))
+        selectable = sa.select(Character).where(Character.data_list["bar"].any(2, operator=eq))
         result = self.session.execute(selectable).scalar_one().data
         self.assertEqual({"y": 2}, result)

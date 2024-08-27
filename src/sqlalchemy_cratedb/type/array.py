@@ -20,16 +20,14 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 import sqlalchemy.types as sqltypes
-from sqlalchemy.sql import operators, expression
-from sqlalchemy.sql import default_comparator
 from sqlalchemy.ext.mutable import Mutable
+from sqlalchemy.sql import default_comparator, expression, operators
 
 
 class MutableList(Mutable, list):
-
     @classmethod
     def coerce(cls, key, value):
-        """ Convert plain list to MutableList """
+        """Convert plain list to MutableList"""
         if not isinstance(value, MutableList):
             if isinstance(value, list):
                 return MutableList(value)
@@ -85,7 +83,8 @@ class Any(expression.ColumnElement):
             ARRAY-bound method
 
     """
-    __visit_name__ = 'any'
+
+    __visit_name__ = "any"
     inherit_cache = True
 
     def __init__(self, left, right, operator=operators.eq):
@@ -100,9 +99,7 @@ class _ObjectArray(sqltypes.UserDefinedType):
 
     class Comparator(sqltypes.TypeEngine.Comparator):
         def __getitem__(self, key):
-            return default_comparator._binary_operate(self.expr,
-                                                      operators.getitem,
-                                                      key)
+            return default_comparator._binary_operate(self.expr, operators.getitem, key)
 
         def any(self, other, operator=operators.eq):
             """Return ``other operator ANY (array)`` clause.

@@ -5,7 +5,6 @@ from sqlalchemy.ext.mutable import Mutable
 
 
 class MutableDict(Mutable, dict):
-
     @classmethod
     def coerce(cls, key, value):
         "Convert plain dictionaries to MutableDict."
@@ -26,17 +25,17 @@ class MutableDict(Mutable, dict):
         self._overwrite_key = root_change_key
         self.to_update = self if to_update is None else to_update
         for k in initval:
-            initval[k] = self._convert_dict(initval[k],
-                                            overwrite_key=k if self._overwrite_key is None else self._overwrite_key
-                                            )
+            initval[k] = self._convert_dict(
+                initval[k], overwrite_key=k if self._overwrite_key is None else self._overwrite_key
+            )
         dict.__init__(self, initval)
 
     def __setitem__(self, key, value):
-        value = self._convert_dict(value, key if self._overwrite_key is None else self._overwrite_key)
-        dict.__setitem__(self, key, value)
-        self.to_update.on_key_changed(
-            key if self._overwrite_key is None else self._overwrite_key
+        value = self._convert_dict(
+            value, key if self._overwrite_key is None else self._overwrite_key
         )
+        dict.__setitem__(self, key, value)
+        self.to_update.on_key_changed(key if self._overwrite_key is None else self._overwrite_key)
 
     def __delitem__(self, key):
         dict.__delitem__(self, key)
@@ -63,7 +62,6 @@ class MutableDict(Mutable, dict):
 
 
 class ObjectTypeImpl(sqltypes.UserDefinedType, sqltypes.JSON):
-
     __visit_name__ = "OBJECT"
 
     cache_ok = False
@@ -83,8 +81,12 @@ deprecated_names = ["Craty", "Object"]
 
 def __getattr__(name):
     if name in deprecated_names:
-        warnings.warn(f"{name} is deprecated and will be removed in future releases. "
-                      f"Please use ObjectType instead.", DeprecationWarning)
+        warnings.warn(
+            f"{name} is deprecated and will be removed in future releases. "
+            f"Please use ObjectType instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
         return globals()[f"_deprecated_{name}"]
     raise AttributeError(f"module {__name__} has no attribute {name}")
 

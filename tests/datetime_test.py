@@ -23,14 +23,14 @@ from __future__ import absolute_import
 
 import datetime as dt
 from unittest import TestCase, skipIf
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import sqlalchemy as sa
 from sqlalchemy.orm import Session, sessionmaker
 
-from sqlalchemy_cratedb import SA_VERSION, SA_1_4
 from sqlalchemy_cratedb.dialect import DateTime
+from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
 
 try:
     from sqlalchemy.orm import declarative_base
@@ -44,15 +44,16 @@ except ImportError:
 
 from crate.client.cursor import Cursor
 
-
-fake_cursor = MagicMock(name='fake_cursor')
-FakeCursor = MagicMock(name='FakeCursor', spec=Cursor)
+fake_cursor = MagicMock(name="fake_cursor")
+FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 FakeCursor.return_value = fake_cursor
 
 
 INPUT_DATE = dt.date(2009, 5, 13)
 INPUT_DATETIME_NOTZ = dt.datetime(2009, 5, 13, 19, 00, 30, 123456)
-INPUT_DATETIME_TZ = dt.datetime(2009, 5, 13, 19, 00, 30, 123456, tzinfo=zoneinfo.ZoneInfo("Europe/Kyiv"))
+INPUT_DATETIME_TZ = dt.datetime(
+    2009, 5, 13, 19, 00, 30, 123456, tzinfo=zoneinfo.ZoneInfo("Europe/Kyiv")
+)
 OUTPUT_DATE = INPUT_DATE
 OUTPUT_TIMETZ_NOTZ = dt.time(19, 00, 30, 123000)
 OUTPUT_TIMETZ_TZ = dt.time(16, 00, 30, 123000)
@@ -61,34 +62,31 @@ OUTPUT_DATETIME_TZ = dt.datetime(2009, 5, 13, 16, 00, 30, 123000)
 
 
 @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
-@patch('crate.client.connection.Cursor', FakeCursor)
+@patch("crate.client.connection.Cursor", FakeCursor)
 class SqlAlchemyDateAndDateTimeTest(TestCase):
-
     def setUp(self):
-        self.engine = sa.create_engine('crate://')
+        self.engine = sa.create_engine("crate://")
         Base = declarative_base()
 
         class Character(Base):
-            __tablename__ = 'characters'
+            __tablename__ = "characters"
             name = sa.Column(sa.String, primary_key=True)
             date = sa.Column(sa.Date)
             datetime = sa.Column(sa.DateTime)
 
         fake_cursor.description = (
-            ('characters_name', None, None, None, None, None, None),
-            ('characters_date', None, None, None, None, None, None)
+            ("characters_name", None, None, None, None, None, None),
+            ("characters_date", None, None, None, None, None, None),
         )
         self.session = Session(bind=self.engine)
         self.Character = Character
 
     def test_date_can_handle_datetime(self):
-        """ date type should also be able to handle iso datetime strings.
+        """date type should also be able to handle iso datetime strings.
 
         this verifies that the fallback in the Date result_processor works.
         """
-        fake_cursor.fetchall.return_value = [
-            ('Trillian', '2013-07-16T00:00:00.000Z')
-        ]
+        fake_cursor.fetchall.return_value = [("Trillian", "2013-07-16T00:00:00.000Z")]
         self.session.query(self.Character).first()
 
     def test_date_can_handle_tz_aware_datetime(self):
@@ -137,8 +135,13 @@ def test_datetime_notz(session):
     session.execute(sa.text("REFRESH TABLE foobar"))
 
     # Query record.
-    result = session.execute(sa.select(
-        FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)).mappings().first()
+    result = (
+        session.execute(
+            sa.select(FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)
+        )
+        .mappings()
+        .first()
+    )
 
     # Compare outcome.
     assert result["date"] == OUTPUT_DATE
@@ -171,8 +174,13 @@ def test_datetime_tz(session):
 
     # Query record.
     session.expunge(foo_item)
-    result = session.execute(sa.select(
-        FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)).mappings().first()
+    result = (
+        session.execute(
+            sa.select(FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)
+        )
+        .mappings()
+        .first()
+    )
 
     # Compare outcome.
     assert result["date"] == OUTPUT_DATE
@@ -209,7 +217,13 @@ def test_datetime_date(session):
     session.execute(sa.text("REFRESH TABLE foobar"))
 
     # Query record.
-    result = session.execute(sa.select(FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)).mappings().first()
+    result = (
+        session.execute(
+            sa.select(FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)
+        )
+        .mappings()
+        .first()
+    )
 
     # Compare outcome.
     assert result["datetime_notz"] == dt.datetime(2009, 5, 13, 0, 0, 0)

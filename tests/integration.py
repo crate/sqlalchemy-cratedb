@@ -21,15 +21,16 @@
 
 from __future__ import absolute_import
 
+import doctest
+import logging
 import os
 import sys
 import unittest
-import doctest
 from pprint import pprint
-import logging
 
 from crate.client import connect
-from sqlalchemy_cratedb import SA_VERSION, SA_2_0
+
+from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
 from tests.settings import crate_host
 
 log = logging.getLogger()
@@ -40,30 +41,26 @@ log.addHandler(ch)
 
 def cprint(s):
     if isinstance(s, bytes):
-        s = s.decode('utf-8')
-    print(s)
+        s = s.decode("utf-8")
+    print(s)  # noqa: T201
 
 
 def docs_path(*parts):
-    return os.path.abspath(
-        os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), *parts
-        )
-    )
+    return os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), *parts))
 
 
 def provision_database():
-
     drop_tables()
 
     with connect(crate_host) as conn:
         cursor = conn.cursor()
 
-        with open(docs_path('tests/assets/locations.sql')) as s:
+        with open(docs_path("tests/assets/locations.sql")) as s:
             stmt = s.read()
             cursor.execute(stmt)
-            stmt = ("SELECT COUNT(*) FROM information_schema.tables "
-                    "WHERE table_name = 'locations'")
+            stmt = (
+                "SELECT COUNT(*) FROM information_schema.tables " "WHERE table_name = 'locations'"
+            )
             cursor.execute(stmt)
             assert cursor.fetchall()[0][0] == 1
 
@@ -76,8 +73,9 @@ def provision_database():
         # refresh location table so imported data is visible immediately
         cursor.execute("REFRESH TABLE locations")
         # create blob table
-        cursor.execute("CREATE BLOB TABLE myfiles CLUSTERED INTO 1 SHARDS " +
-                       "WITH (number_of_replicas=0)")
+        cursor.execute(
+            "CREATE BLOB TABLE myfiles CLUSTERED INTO 1 SHARDS " + "WITH (number_of_replicas=0)"
+        )
 
         # create users
         cursor.execute("CREATE USER me WITH (password = 'my_secret_pw')")
@@ -155,7 +153,7 @@ def _execute_statement(cursor, stmt, on_error="raise"):
         # FIXME: Why does this croak on statements like ``DROP TABLE cities``?
         # Note: When needing to debug the test environment, you may want to
         #       enable this logger statement.
-        # log.exception("Executing SQL statement failed")
+        # log.exception("Executing SQL statement failed")  # noqa: ERA001
         if on_error == "ignore":
             pass
         elif on_error == "raise":
@@ -163,12 +161,11 @@ def _execute_statement(cursor, stmt, on_error="raise"):
 
 
 def setUp(test):
-
     provision_database()
 
-    test.globs['crate_host'] = crate_host
-    test.globs['pprint'] = pprint
-    test.globs['print'] = cprint
+    test.globs["crate_host"] = crate_host
+    test.globs["pprint"] = pprint
+    test.globs["print"] = cprint
 
 
 def tearDown(test):
@@ -177,21 +174,21 @@ def tearDown(test):
 
 def create_test_suite():
     suite = unittest.TestSuite()
-    flags = (doctest.NORMALIZE_WHITESPACE | doctest.ELLIPSIS)
+    flags = doctest.NORMALIZE_WHITESPACE | doctest.ELLIPSIS
 
     sqlalchemy_integration_tests = [
-        'docs/getting-started.rst',
-        'docs/crud.rst',
-        'docs/working-with-types.rst',
-        'docs/advanced-querying.rst',
-        'docs/inspection-reflection.rst',
+        "docs/getting-started.rst",
+        "docs/crud.rst",
+        "docs/working-with-types.rst",
+        "docs/advanced-querying.rst",
+        "docs/inspection-reflection.rst",
     ]
 
     # Don't run DataFrame integration tests on SQLAlchemy 1.3 and Python 3.7.
     skip_dataframe = SA_VERSION < SA_2_0 or sys.version_info < (3, 8)
     if not skip_dataframe:
         sqlalchemy_integration_tests += [
-            'docs/dataframe.rst',
+            "docs/dataframe.rst",
         ]
 
     s = doctest.DocFileSuite(
@@ -200,7 +197,7 @@ def create_test_suite():
         setUp=setUp,
         tearDown=tearDown,
         optionflags=flags,
-        encoding='utf-8'
+        encoding="utf-8",
     )
     suite.addTest(s)
 

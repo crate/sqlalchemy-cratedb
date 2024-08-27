@@ -21,12 +21,12 @@
 import math
 import sys
 from unittest import TestCase, skipIf
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from sqlalchemy_cratedb import SA_VERSION, SA_2_0
+from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
 
 try:
     from sqlalchemy.orm import declarative_base
@@ -35,19 +35,17 @@ except ImportError:
 
 from crate.client.cursor import Cursor
 
-
-fake_cursor = MagicMock(name='fake_cursor')
-FakeCursor = MagicMock(name='FakeCursor', spec=Cursor, return_value=fake_cursor)
+fake_cursor = MagicMock(name="fake_cursor")
+FakeCursor = MagicMock(name="FakeCursor", spec=Cursor, return_value=fake_cursor)
 
 
 class SqlAlchemyBulkTest(TestCase):
-
     def setUp(self):
-        self.engine = sa.create_engine('crate://')
+        self.engine = sa.create_engine("crate://")
         Base = declarative_base()
 
         class Character(Base):
-            __tablename__ = 'characters'
+            __tablename__ = "characters"
 
             name = sa.Column(sa.String, primary_key=True)
             age = sa.Column(sa.Integer)
@@ -56,7 +54,7 @@ class SqlAlchemyBulkTest(TestCase):
         self.session = Session(bind=self.engine)
 
     @skipIf(SA_VERSION >= SA_2_0, "SQLAlchemy 2.x uses modern bulk INSERT mode")
-    @patch('crate.client.connection.Cursor', FakeCursor)
+    @patch("crate.client.connection.Cursor", FakeCursor)
     def test_bulk_save_legacy(self):
         """
         Verify legacy SQLAlchemy bulk INSERT mode.
@@ -85,17 +83,17 @@ class SqlAlchemyBulkTest(TestCase):
         > -- https://github.com/sqlalchemy/sqlalchemy/discussions/6935#discussioncomment-4789701
         """
         chars = [
-            self.character(name='Arthur', age=35),
-            self.character(name='Banshee', age=26),
-            self.character(name='Callisto', age=37),
+            self.character(name="Arthur", age=35),
+            self.character(name="Banshee", age=26),
+            self.character(name="Callisto", age=37),
         ]
 
         fake_cursor.description = ()
         fake_cursor.rowcount = len(chars)
         fake_cursor.executemany.return_value = [
-            {'rowcount': 1},
-            {'rowcount': 1},
-            {'rowcount': 1},
+            {"rowcount": 1},
+            {"rowcount": 1},
+            {"rowcount": 1},
         ]
         self.session.bulk_save_objects(chars)
         (stmt, bulk_args), _ = fake_cursor.executemany.call_args
@@ -103,15 +101,11 @@ class SqlAlchemyBulkTest(TestCase):
         expected_stmt = "INSERT INTO characters (name, age) VALUES (?, ?)"
         self.assertEqual(expected_stmt, stmt)
 
-        expected_bulk_args = (
-            ('Arthur', 35),
-            ('Banshee', 26),
-            ('Callisto', 37)
-        )
+        expected_bulk_args = (("Arthur", 35), ("Banshee", 26), ("Callisto", 37))
         self.assertSequenceEqual(expected_bulk_args, bulk_args)
 
     @skipIf(SA_VERSION < SA_2_0, "SQLAlchemy 1.x uses legacy bulk INSERT mode")
-    @patch('crate.client.connection.Cursor', FakeCursor)
+    @patch("crate.client.connection.Cursor", FakeCursor)
     def test_bulk_save_modern(self):
         """
         Verify modern SQLAlchemy bulk INSERT mode.
@@ -143,17 +137,17 @@ class SqlAlchemyBulkTest(TestCase):
         self.maxDiff = None
 
         chars = [
-            self.character(name='Arthur', age=35),
-            self.character(name='Banshee', age=26),
-            self.character(name='Callisto', age=37),
+            self.character(name="Arthur", age=35),
+            self.character(name="Banshee", age=26),
+            self.character(name="Callisto", age=37),
         ]
 
         fake_cursor.description = ()
         fake_cursor.rowcount = len(chars)
         fake_cursor.execute.return_value = [
-            {'rowcount': 1},
-            {'rowcount': 1},
-            {'rowcount': 1},
+            {"rowcount": 1},
+            {"rowcount": 1},
+            {"rowcount": 1},
         ]
         self.session.add_all(chars)
         self.session.commit()
@@ -163,20 +157,24 @@ class SqlAlchemyBulkTest(TestCase):
         self.assertEqual(expected_stmt, stmt)
 
         expected_bulk_args = (
-            'Arthur', 35,
-            'Banshee', 26,
-            'Callisto', 37,
+            "Arthur",
+            35,
+            "Banshee",
+            26,
+            "Callisto",
+            37,
         )
         self.assertSequenceEqual(expected_bulk_args, bulk_args)
 
     @skipIf(sys.version_info < (3, 8), "SQLAlchemy/pandas is not supported on Python <3.8")
     @skipIf(SA_VERSION < SA_2_0, "SQLAlchemy 1.4 is no longer supported by pandas 2.2")
-    @patch('crate.client.connection.Cursor', mock_cursor=FakeCursor)
+    @patch("crate.client.connection.Cursor", mock_cursor=FakeCursor)
     def test_bulk_save_pandas(self, mock_cursor):
         """
         Verify bulk INSERT with pandas.
         """
         from pueblo.testing.pandas import makeTimeDataFrame
+
         from sqlalchemy_cratedb import insert_bulk
 
         # 42 records / 8 chunksize = 5.25, which means 6 batches will be emitted.
@@ -201,8 +199,8 @@ class SqlAlchemyBulkTest(TestCase):
 
         # Initializing the query has an overhead of two calls to the cursor object, probably one
         # initial connection from the DB-API driver, to inquire the database version, and another
-        # one, for SQLAlchemy. SQLAlchemy will use it to inquire the table schema using `information_schema`,
-        # and to eventually issue the `CREATE TABLE ...` statement.
+        # one, for SQLAlchemy. SQLAlchemy will use it to inquire the table schema using
+        # `information_schema`, and to eventually issue the `CREATE TABLE ...` statement.
         effective_op_count = mock_cursor.call_count - 2
 
         # Verify number of batches.
@@ -210,13 +208,14 @@ class SqlAlchemyBulkTest(TestCase):
 
     @skipIf(sys.version_info < (3, 8), "SQLAlchemy/Dask is not supported on Python <3.8")
     @skipIf(SA_VERSION < SA_2_0, "SQLAlchemy 1.4 is no longer supported by pandas 2.2")
-    @patch('crate.client.connection.Cursor', mock_cursor=FakeCursor)
+    @patch("crate.client.connection.Cursor", mock_cursor=FakeCursor)
     def test_bulk_save_dask(self, mock_cursor):
         """
         Verify bulk INSERT with Dask.
         """
         import dask.dataframe as dd
         from pueblo.testing.pandas import makeTimeDataFrame
+
         from sqlalchemy_cratedb import insert_bulk
 
         # 42 records / 4 partitions means each partition has a size of 10.5 elements.

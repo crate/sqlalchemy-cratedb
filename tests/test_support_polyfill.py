@@ -6,17 +6,23 @@ from sqlalchemy.event import listen
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
-from sqlalchemy_cratedb import SA_VERSION, SA_1_4
+from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
 
 try:
     from sqlalchemy.orm import declarative_base
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
 
-from sqlalchemy_cratedb.support import check_uniqueness_factory, patch_autoincrement_timestamp, refresh_after_dml
+from sqlalchemy_cratedb.support import (
+    check_uniqueness_factory,
+    patch_autoincrement_timestamp,
+    refresh_after_dml,
+)
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3 and earlier")
+@pytest.mark.skipif(
+    SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3 and earlier"
+)
 def test_autoincrement_timestamp(cratedb_service):
     """
     Validate autoincrement columns using `sa.DateTime` columns.
@@ -31,7 +37,7 @@ def test_autoincrement_timestamp(cratedb_service):
 
     # Define DDL.
     class FooBar(Base):
-        __tablename__ = 'foobar'
+        __tablename__ = "foobar"
         id = sa.Column(sa.String, primary_key=True)
         date = sa.Column(sa.DateTime, autoincrement=True)
         number = sa.Column(sa.BigInteger, autoincrement=True)
@@ -47,7 +53,9 @@ def test_autoincrement_timestamp(cratedb_service):
     session.execute(sa.text("REFRESH TABLE foobar"))
 
     # Query record.
-    result = session.execute(sa.select(FooBar.date, FooBar.number, FooBar.string)).mappings().first()
+    result = (
+        session.execute(sa.select(FooBar.date, FooBar.number, FooBar.string)).mappings().first()
+    )
 
     # Compare outcome.
     assert result["date"].year == dt.datetime.now().year
@@ -55,7 +63,9 @@ def test_autoincrement_timestamp(cratedb_service):
     assert result["string"] >= "1718846016235"
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Feature not supported on SQLAlchemy 1.3 and earlier")
+@pytest.mark.skipif(
+    SA_VERSION < SA_1_4, reason="Feature not supported on SQLAlchemy 1.3 and earlier"
+)
 def test_check_uniqueness_factory(cratedb_service):
     """
     Validate basic synthetic UNIQUE constraints.
@@ -69,7 +79,7 @@ def test_check_uniqueness_factory(cratedb_service):
 
     # Define DDL.
     class FooBar(Base):
-        __tablename__ = 'foobar'
+        __tablename__ = "foobar"
         id = sa.Column(sa.String, primary_key=True)
         name = sa.Column(sa.String)
 
@@ -93,7 +103,9 @@ def test_check_uniqueness_factory(cratedb_service):
     assert ex.match("DuplicateKeyException in table 'foobar' on constraint 'name'")
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Feature not supported on SQLAlchemy 1.3 and earlier")
+@pytest.mark.skipif(
+    SA_VERSION < SA_1_4, reason="Feature not supported on SQLAlchemy 1.3 and earlier"
+)
 @pytest.mark.parametrize("mode", ["engine", "session"])
 def test_refresh_after_dml(cratedb_service, mode):
     """
@@ -115,7 +127,7 @@ def test_refresh_after_dml(cratedb_service, mode):
 
     # Define DDL.
     class FooBar(Base):
-        __tablename__ = 'foobar'
+        __tablename__ = "foobar"
         id = sa.Column(sa.String, primary_key=True)
 
     Base.metadata.drop_all(engine, checkfirst=True)
@@ -131,7 +143,9 @@ def test_refresh_after_dml(cratedb_service, mode):
     result = query.first()
 
     # Sanity checks.
-    assert result is not None, "Database result is empty. Most probably, `REFRESH TABLE` wasn't issued."
+    assert (
+        result is not None
+    ), "Database result is empty. Most probably, `REFRESH TABLE` wasn't issued."
 
     # Compare outcome.
     assert result[0] == "foo"

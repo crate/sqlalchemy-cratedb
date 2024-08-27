@@ -22,7 +22,7 @@
 from .compat.api13 import monkeypatch_add_exec_driver_sql
 from .dialect import dialect
 from .predicate import match
-from .sa_version import SA_1_4, SA_2_0, SA_VERSION
+from .sa_version import SA_1_4, SA_VERSION
 from .support import insert_bulk
 from .type.array import ObjectArray
 from .type.geo import Geopoint, Geoshape
@@ -34,7 +34,8 @@ if SA_VERSION < SA_1_4:
     import warnings
 
     # SQLAlchemy 1.3 is effectively EOL.
-    SA13_DEPRECATION_WARNING = textwrap.dedent("""
+    SA13_DEPRECATION_WARNING = textwrap.dedent(
+        """
     WARNING: SQLAlchemy 1.3 is effectively EOL.
 
     SQLAlchemy 1.3 is EOL since 2023-01-27.
@@ -43,8 +44,9 @@ if SA_VERSION < SA_1_4:
 
     - https://docs.sqlalchemy.org/en/14/changelog/migration_14.html
     - https://docs.sqlalchemy.org/en/20/changelog/migration_20.html
-    """.lstrip("\n"))
-    warnings.warn(message=SA13_DEPRECATION_WARNING, category=DeprecationWarning)
+    """.lstrip("\n")
+    )
+    warnings.warn(message=SA13_DEPRECATION_WARNING, category=DeprecationWarning, stacklevel=2)
 
     # SQLAlchemy 1.3 does not have the `exec_driver_sql` method, so add it.
     monkeypatch_add_exec_driver_sql()
@@ -59,4 +61,5 @@ __all__ = [
     ObjectType,
     match,
     knn_match,
+    insert_bulk,
 ]

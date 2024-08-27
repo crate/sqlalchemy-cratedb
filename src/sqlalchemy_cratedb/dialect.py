@@ -20,7 +20,7 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 import logging
-from datetime import datetime, date
+from datetime import date, datetime
 
 from sqlalchemy import types as sqltypes
 from sqlalchemy.engine import default, reflection
@@ -28,11 +28,11 @@ from sqlalchemy.sql import functions
 from sqlalchemy.util import asbool, to_list
 
 from .compiler import (
-    CrateTypeCompiler,
     CrateDDLCompiler,
     CrateIdentifierPreparer,
+    CrateTypeCompiler,
 )
-from .sa_version import SA_VERSION, SA_1_4, SA_2_0
+from .sa_version import SA_1_4, SA_2_0, SA_VERSION
 from .type import FloatVector, ObjectArray, ObjectType
 
 TYPES_MAP = {
@@ -54,9 +54,12 @@ TYPES_MAP = {
     "text": sqltypes.String,
     "float_vector": FloatVector,
 }
+
+# Needed for SQLAlchemy >= 1.1.
+# TODO: Dissolve.
 try:
-    # SQLAlchemy >= 1.1
     from sqlalchemy.types import ARRAY
+
     TYPES_MAP["integer_array"] = ARRAY(sqltypes.Integer)
     TYPES_MAP["boolean_array"] = ARRAY(sqltypes.Boolean)
     TYPES_MAP["short_array"] = ARRAY(sqltypes.SmallInteger)
@@ -71,7 +74,7 @@ try:
     TYPES_MAP["real_array"] = ARRAY(sqltypes.Float)
     TYPES_MAP["string_array"] = ARRAY(sqltypes.String)
     TYPES_MAP["text_array"] = ARRAY(sqltypes.String)
-except Exception:
+except Exception:  # noqa: S110
     pass
 
 
@@ -82,14 +85,16 @@ class Date(sqltypes.Date):
     def bind_processor(self, dialect):
         def process(value):
             if value is not None:
-                assert isinstance(value, date)
-                return value.strftime('%Y-%m-%d')
+                assert isinstance(value, date)  # noqa: S101
+                return value.strftime("%Y-%m-%d")
+            return None
+
         return process
 
     def result_processor(self, dialect, coltype):
         def process(value):
             if not value:
-                return
+                return None
             try:
                 return datetime.utcfromtimestamp(value / 1e3).date()
             except TypeError:
@@ -103,27 +108,29 @@ class Date(sqltypes.Date):
             # the date will be returned in the format it was inserted.
             log.warning(
                 "Received timestamp isn't a long value."
-                "Trying to parse as date string and then as datetime string")
+                "Trying to parse as date string and then as datetime string"
+            )
             try:
-                return datetime.strptime(value, '%Y-%m-%d').date()
+                return datetime.strptime(value, "%Y-%m-%d").date()
             except ValueError:
-                return datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%fZ').date()
+                return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ").date()
+
         return process
 
 
 class DateTime(sqltypes.DateTime):
-
     def bind_processor(self, dialect):
         def process(value):
             if isinstance(value, (datetime, date)):
-                return value.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+                return value.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
             return value
+
         return process
 
     def result_processor(self, dialect, coltype):
         def process(value):
             if not value:
-                return
+                return None
             try:
                 return datetime.utcfromtimestamp(value / 1e3)
             except TypeError:
@@ -137,11 +144,13 @@ class DateTime(sqltypes.DateTime):
             # the date will be returned in the format it was inserted.
             log.warning(
                 "Received timestamp isn't a long value."
-                "Trying to parse as datetime string and then as date string")
+                "Trying to parse as datetime string and then as date string"
+            )
             try:
-                return datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%fZ')
+                return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
             except ValueError:
-                return datetime.strptime(value, '%Y-%m-%d')
+                return datetime.strptime(value, "%Y-%m-%d")
+
         return process
 
 
@@ -154,19 +163,22 @@ colspecs = {
 
 if SA_VERSION >= SA_2_0:
     from .compat.core20 import CrateCompilerSA20
+
     statement_compiler = CrateCompilerSA20
 elif SA_VERSION >= SA_1_4:
     from .compat.core14 import CrateCompilerSA14
+
     statement_compiler = CrateCompilerSA14
 else:
     from .compat.core10 import CrateCompilerSA10
+
     statement_compiler = CrateCompilerSA10
 
 
 class CrateDialect(default.DefaultDialect):
-    name = 'crate'
-    driver = 'crate-python'
-    default_paramstyle = 'qmark'
+    name = "crate"
+    driver = "crate-python"
+    default_paramstyle = "qmark"
     statement_compiler = statement_compiler
     ddl_compiler = CrateDDLCompiler
     type_compiler = CrateTypeCompiler
@@ -192,15 +204,13 @@ class CrateDialect(default.DefaultDialect):
 
         # Currently, our SQL parser doesn't support unquoted column names that
         # start with _. Adding it here causes sqlalchemy to quote such columns.
-        self.identifier_preparer.illegal_initial_characters.add('_')
+        self.identifier_preparer.illegal_initial_characters.add("_")
 
     def initialize(self, connection):
         # get lowest server version
-        self.server_version_info = \
-            self._get_server_version_info(connection)
+        self.server_version_info = self._get_server_version_info(connection)
         # get default schema name
-        self.default_schema_name = \
-            self._get_default_schema_name(connection)
+        self.default_schema_name = self._get_default_schema_name(connection)
 
     def do_rollback(self, connection):
         # if any exception is raised by the dbapi, sqlalchemy by default
@@ -212,9 +222,9 @@ class CrateDialect(default.DefaultDialect):
     def connect(self, host=None, port=None, *args, **kwargs):
         server = None
         if host:
-            server = '{0}:{1}'.format(host, port or '4200')
-        if 'servers' in kwargs:
-            server = kwargs.pop('servers')
+            server = "{0}:{1}".format(host, port or "4200")
+        if "servers" in kwargs:
+            server = kwargs.pop("servers")
         servers = to_list(server)
         if servers:
             use_ssl = asbool(kwargs.pop("ssl", False))
@@ -224,7 +234,7 @@ class CrateDialect(default.DefaultDialect):
         return self.dbapi.connect(**kwargs)
 
     def _get_default_schema_name(self, connection):
-        return 'doc'
+        return "doc"
 
     def _get_effective_schema_name(self, connection):
         schema_name_raw = connection.engine.url.query.get("schema")
@@ -241,6 +251,7 @@ class CrateDialect(default.DefaultDialect):
     @classmethod
     def import_dbapi(cls):
         from crate import client
+
         return client
 
     @classmethod
@@ -256,9 +267,7 @@ class CrateDialect(default.DefaultDialect):
     @reflection.cache
     def get_schema_names(self, connection, **kw):
         cursor = connection.exec_driver_sql(
-            "select schema_name "
-            "from information_schema.schemata "
-            "order by schema_name asc"
+            "select schema_name " "from information_schema.schemata " "order by schema_name asc"
         )
         return [row[0] for row in cursor.fetchall()]
 
@@ -271,7 +280,7 @@ class CrateDialect(default.DefaultDialect):
             "WHERE {0} = ? "
             "AND table_type = 'BASE TABLE' "
             "ORDER BY table_name ASC, {0} ASC".format(self.schema_column),
-            (schema or self.default_schema_name, )
+            (schema or self.default_schema_name,),
         )
         return [row[0] for row in cursor.fetchall()]
 
@@ -280,22 +289,25 @@ class CrateDialect(default.DefaultDialect):
         cursor = connection.exec_driver_sql(
             "SELECT table_name FROM information_schema.views "
             "ORDER BY table_name ASC, {0} ASC".format(self.schema_column),
-            (schema or self.default_schema_name, )
+            (schema or self.default_schema_name,),
         )
         return [row[0] for row in cursor.fetchall()]
 
     @reflection.cache
     def get_columns(self, connection, table_name, schema=None, **kw):
-        query = "SELECT column_name, data_type " \
-                "FROM information_schema.columns " \
-                "WHERE table_name = ? AND {0} = ? " \
-                "AND column_name !~ ?" \
-                .format(self.schema_column)
+        query = (
+            "SELECT column_name, data_type "
+            "FROM information_schema.columns "
+            "WHERE table_name = ? AND {0} = ? "
+            "AND column_name !~ ?".format(self.schema_column)
+        )
         cursor = connection.exec_driver_sql(
             query,
-            (table_name,
-             schema or self.default_schema_name,
-             r"(.*)\[\'(.*)\'\]")  # regex to filter subscript
+            (
+                table_name,
+                schema or self.default_schema_name,
+                r"(.*)\[\'(.*)\'\]",
+            ),  # regex to filter subscript
         )
         return [self._create_column_info(row) for row in cursor.fetchall()]
 
@@ -330,17 +342,14 @@ class CrateDialect(default.DefaultDialect):
                 rows = result.fetchone()
                 return set(rows[0] if rows else [])
 
-        pk_result = engine.exec_driver_sql(
-            query,
-            (table_name, schema or self.default_schema_name)
-        )
+        pk_result = engine.exec_driver_sql(query, (table_name, schema or self.default_schema_name))
         pks = result_fun(pk_result)
-        return {'constrained_columns': list(sorted(pks)),
-                'name': 'PRIMARY KEY'}
+        return {"constrained_columns": sorted(pks), "name": "PRIMARY KEY"}
 
     @reflection.cache
-    def get_foreign_keys(self, connection, table_name, schema=None,
-                         postgresql_ignore_search_path=False, **kw):
+    def get_foreign_keys(
+        self, connection, table_name, schema=None, postgresql_ignore_search_path=False, **kw
+    ):
         # Crate doesn't support Foreign Keys, so this stays empty
         return []
 
@@ -354,12 +363,12 @@ class CrateDialect(default.DefaultDialect):
 
     def _create_column_info(self, row):
         return {
-            'name': row[0],
-            'type': self._resolve_type(row[1]),
+            "name": row[0],
+            "type": self._resolve_type(row[1]),
             # In Crate every column is nullable except PK
             # Primary Key Constraints are not nullable anyway, no matter what
             # we return here, so it's fine to return always `True`
-            'nullable': True
+            "nullable": True,
         }
 
     def _resolve_type(self, type_):
