@@ -1,7 +1,7 @@
 # Changelog
 
-
 ## Unreleased
+- Added `quote_relation_name` support utility function
 
 ## 2024/06/25 0.38.0
 - Added/reactivated documentation as `sqlalchemy-cratedb`
