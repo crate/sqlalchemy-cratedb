@@ -1,7 +1,10 @@
 from sqlalchemy_cratedb.support.pandas import insert_bulk, table_kwargs
-from sqlalchemy_cratedb.support.polyfill import check_uniqueness_factory, refresh_after_dml, \
-    patch_autoincrement_timestamp
-from sqlalchemy_cratedb.support.util import refresh_table, refresh_dirty
+from sqlalchemy_cratedb.support.polyfill import (
+    check_uniqueness_factory,
+    patch_autoincrement_timestamp,
+    refresh_after_dml,
+)
+from sqlalchemy_cratedb.support.util import refresh_dirty, refresh_table
 
 __all__ = [
     check_uniqueness_factory,

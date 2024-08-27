@@ -23,6 +23,7 @@ from unittest import TestCase
 
 import sqlalchemy as sa
 from sqlalchemy.sql.sqltypes import TIMESTAMP
+
 try:
     from sqlalchemy.orm import declarative_base
 except ImportError:

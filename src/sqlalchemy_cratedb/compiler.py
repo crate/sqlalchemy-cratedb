@@ -24,17 +24,18 @@ import warnings
 from collections import defaultdict
 
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql.base import PGCompiler
 from sqlalchemy.dialects.postgresql.base import RESERVED_WORDS as POSTGRESQL_RESERVED_WORDS
+from sqlalchemy.dialects.postgresql.base import PGCompiler
 from sqlalchemy.sql import compiler
 from sqlalchemy.types import String
+
+from .sa_version import SA_1_4, SA_VERSION
 from .type.geo import Geopoint, Geoshape
 from .type.object import MutableDict, ObjectTypeImpl
-from .sa_version import SA_VERSION, SA_1_4
 
 
 def rewrite_update(clauseelement, multiparams, params):
-    """ change the params to enable partial updates
+    """change the params to enable partial updates
 
     sqlalchemy by default only supports updates of complex types in the form of
 
@@ -55,9 +56,8 @@ def rewrite_update(clauseelement, multiparams, params):
     for _params in _multiparams:
         newparams = {}
         for key, val in _params.items():
-            if (
-                not isinstance(val, MutableDict) or
-                (not any(val._changed_keys) and not any(val._deleted_keys))
+            if not isinstance(val, MutableDict) or (
+                not any(val._changed_keys) and not any(val._deleted_keys)
             ):
                 newparams[key] = val
                 continue
@@ -68,7 +68,7 @@ def rewrite_update(clauseelement, multiparams, params):
             for subkey in val._deleted_keys:
                 newparams["{0}['{1}']".format(key, subkey)] = None
         newmultiparams.append(newparams)
-    _multiparams = (newmultiparams, )
+    _multiparams = (newmultiparams,)
     clause = clauseelement.values(newmultiparams[0])
     clause._crate_specific = True
     return clause, _multiparams, params
@@ -76,7 +76,7 @@ def rewrite_update(clauseelement, multiparams, params):
 
 @sa.event.listens_for(sa.engine.Engine, "before_execute", retval=True)
 def crate_before_execute(conn, clauseelement, multiparams, params, *args, **kwargs):
-    is_crate = type(conn.dialect).__name__ == 'CrateDialect'
+    is_crate = type(conn.dialect).__name__ == "CrateDialect"
     if is_crate and isinstance(clauseelement, sa.sql.expression.Update):
         if SA_VERSION >= SA_1_4:
             if params is None:
@@ -98,19 +98,19 @@ def crate_before_execute(conn, clauseelement, multiparams, params, *args, **kwar
 
 
 class CrateDDLCompiler(compiler.DDLCompiler):
-
-    __special_opts_tmpl = {
-        'partitioned_by': ' PARTITIONED BY ({0})'
-    }
+    __special_opts_tmpl = {"partitioned_by": " PARTITIONED BY ({0})"}
     __clustered_opts_tmpl = {
-        'number_of_shards': ' INTO {0} SHARDS',
-        'clustered_by': ' BY ({0})',
+        "number_of_shards": " INTO {0} SHARDS",
+        "clustered_by": " BY ({0})",
     }
-    __clustered_opt_tmpl = ' CLUSTERED{clustered_by}{number_of_shards}'
+    __clustered_opt_tmpl = " CLUSTERED{clustered_by}{number_of_shards}"
 
     def get_column_specification(self, column, **kwargs):
-        colspec = self.preparer.format_column(column) + " " + \
-            self.dialect.type_compiler.process(column.type)
+        colspec = (
+            self.preparer.format_column(column)
+            + " "
+            + self.dialect.type_compiler.process(column.type)
+        )
 
         default = self.get_column_default_string(column)
         if default is not None:
@@ -122,11 +122,9 @@ class CrateDDLCompiler(compiler.DDLCompiler):
         if column.nullable is False:
             colspec += " NOT NULL"
         elif column.nullable and column.primary_key:
-            raise sa.exc.CompileError(
-                "Primary key columns cannot be nullable"
-            )
+            raise sa.exc.CompileError("Primary key columns cannot be nullable")
 
-        if column.dialect_options['crate'].get('index') is False:
+        if column.dialect_options["crate"].get("index") is False:
             if isinstance(column.type, (Geopoint, Geoshape, ObjectTypeImpl)):
                 raise sa.exc.CompileError(
                     "Disabling indexing is not supported for column "
@@ -135,8 +133,8 @@ class CrateDDLCompiler(compiler.DDLCompiler):
 
             colspec += " INDEX OFF"
 
-        if column.dialect_options['crate'].get('columnstore') is False:
-            if not isinstance(column.type, (String, )):
+        if column.dialect_options["crate"].get("columnstore") is False:
+            if not isinstance(column.type, (String,)):
                 raise sa.exc.CompileError(
                     "Controlling the columnstore is only allowed for STRING columns"
                 )
@@ -148,8 +146,7 @@ class CrateDDLCompiler(compiler.DDLCompiler):
     def visit_computed_column(self, generated):
         if generated.persisted is False:
             raise sa.exc.CompileError(
-                "Virtual computed columns are not supported, set "
-                "'persisted' to None or True"
+                "Virtual computed columns are not supported, set " "'persisted' to None or True"
             )
 
         return "GENERATED ALWAYS AS (%s)" % self.sql_compiler.process(
@@ -157,14 +154,14 @@ class CrateDDLCompiler(compiler.DDLCompiler):
         )
 
     def post_create_table(self, table):
-        special_options = ''
+        special_options = ""
         clustered_options = defaultdict(str)
         table_opts = []
 
         opts = dict(
-            (k[len(self.dialect.name) + 1:], v)
-            for k, v, in table.kwargs.items()
-            if k.startswith('%s_' % self.dialect.name)
+            (k[len(self.dialect.name) + 1 :], v)
+            for k, v in table.kwargs.items()
+            if k.startswith("%s_" % self.dialect.name)
         )
         for k, v in opts.items():
             if k in self.__special_opts_tmpl:
@@ -172,69 +169,73 @@ class CrateDDLCompiler(compiler.DDLCompiler):
             elif k in self.__clustered_opts_tmpl:
                 clustered_options[k] = self.__clustered_opts_tmpl[k].format(v)
             else:
-                table_opts.append('{0} = {1}'.format(k, v))
+                table_opts.append("{0} = {1}".format(k, v))
         if clustered_options:
             special_options += string.Formatter().vformat(
-                self.__clustered_opt_tmpl, (), clustered_options)
+                self.__clustered_opt_tmpl, (), clustered_options
+            )
         if table_opts:
-            return special_options + ' WITH ({0})'.format(
-                ', '.join(sorted(table_opts)))
+            return special_options + " WITH ({0})".format(", ".join(sorted(table_opts)))
         return special_options
 
     def visit_foreign_key_constraint(self, constraint, **kw):
         """
         CrateDB does not support foreign key constraints.
         """
-        warnings.warn("CrateDB does not support foreign key constraints, "
-                      "they will be omitted when generating DDL statements.")
-        return None
+        warnings.warn(
+            "CrateDB does not support foreign key constraints, "
+            "they will be omitted when generating DDL statements.",
+            stacklevel=2,
+        )
+        return
 
     def visit_unique_constraint(self, constraint, **kw):
         """
         CrateDB does not support unique key constraints.
         """
-        warnings.warn("CrateDB does not support unique constraints, "
-                      "they will be omitted when generating DDL statements.")
-        return None
+        warnings.warn(
+            "CrateDB does not support unique constraints, "
+            "they will be omitted when generating DDL statements.",
+            stacklevel=2,
+        )
+        return
 
 
 class CrateTypeCompiler(compiler.GenericTypeCompiler):
-
     def visit_string(self, type_, **kw):
-        return 'STRING'
+        return "STRING"
 
     def visit_unicode(self, type_, **kw):
-        return 'STRING'
+        return "STRING"
 
     def visit_TEXT(self, type_, **kw):
-        return 'STRING'
+        return "STRING"
 
     def visit_DECIMAL(self, type_, **kw):
-        return 'DOUBLE'
+        return "DOUBLE"
 
     def visit_BIGINT(self, type_, **kw):
-        return 'LONG'
+        return "LONG"
 
     def visit_NUMERIC(self, type_, **kw):
-        return 'LONG'
+        return "LONG"
 
     def visit_INTEGER(self, type_, **kw):
-        return 'INT'
+        return "INT"
 
     def visit_SMALLINT(self, type_, **kw):
-        return 'SHORT'
+        return "SHORT"
 
     def visit_datetime(self, type_, **kw):
         return self.visit_TIMESTAMP(type_, **kw)
 
     def visit_date(self, type_, **kw):
-        return 'TIMESTAMP'
+        return "TIMESTAMP"
 
     def visit_ARRAY(self, type_, **kw):
         if type_.dimensions is not None and type_.dimensions > 1:
-            raise NotImplementedError(
-                "CrateDB doesn't support multidimensional arrays")
-        return 'ARRAY({0})'.format(self.process(type_.item_type))
+            raise NotImplementedError("CrateDB doesn't support multidimensional arrays")
+        return "ARRAY({0})".format(self.process(type_.item_type))
 
     def visit_OBJECT(self, type_, **kw):
         return "OBJECT"
@@ -251,32 +252,21 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
 
         From `sqlalchemy.dialects.postgresql.base.PGTypeCompiler`.
         """
-        return "TIMESTAMP %s" % (
-            (type_.timezone and "WITH" or "WITHOUT") + " TIME ZONE",
-        )
+        return "TIMESTAMP %s" % ((type_.timezone and "WITH" or "WITHOUT") + " TIME ZONE",)
 
 
 class CrateCompiler(compiler.SQLCompiler):
-
     def visit_getitem_binary(self, binary, operator, **kw):
-        return "{0}['{1}']".format(
-            self.process(binary.left, **kw),
-            binary.right.value
-        )
+        return "{0}['{1}']".format(self.process(binary.left, **kw), binary.right.value)
 
-    def visit_json_getitem_op_binary(
-        self, binary, operator, _cast_applied=False, **kw
-    ):
-        return "{0}['{1}']".format(
-            self.process(binary.left, **kw),
-            binary.right.value
-        )
+    def visit_json_getitem_op_binary(self, binary, operator, _cast_applied=False, **kw):
+        return "{0}['{1}']".format(self.process(binary.left, **kw), binary.right.value)
 
     def visit_any(self, element, **kw):
         return "%s%sANY (%s)" % (
             self.process(element.left, **kw),
             compiler.OPERATORS[element.operator],
-            self.process(element.right, **kw)
+            self.process(element.right, **kw),
         )
 
     def visit_ilike_case_insensitive_operand(self, element, **kw):
@@ -331,29 +321,32 @@ class CrateCompiler(compiler.SQLCompiler):
     def for_update_clause(self, select, **kw):
         # CrateDB does not support the `INSERT ... FOR UPDATE` clause.
         # See https://github.com/crate/crate-python/issues/577.
-        warnings.warn("CrateDB does not support the 'INSERT ... FOR UPDATE' clause, "
-                      "it will be omitted when generating SQL statements.")
-        return ''
+        warnings.warn(
+            "CrateDB does not support the 'INSERT ... FOR UPDATE' clause, "
+            "it will be omitted when generating SQL statements.",
+            stacklevel=2,
+        )
+        return ""
 
 
-CRATEDB_RESERVED_WORDS = \
-    "add, alter, between, by, called, costs, delete, deny, directory, drop, escape, exists, " \
-    "extract, first, function, if, index, input, insert, last, match, nulls, object, " \
-    "persistent, recursive, reset, returns, revoke, set, stratify, transient, try_cast, " \
+CRATEDB_RESERVED_WORDS = (
+    "add, alter, between, by, called, costs, delete, deny, directory, drop, escape, exists, "
+    "extract, first, function, if, index, input, insert, last, match, nulls, object, "
+    "persistent, recursive, reset, returns, revoke, set, stratify, transient, try_cast, "
     "unbounded, update".split(", ")
+)
 
 
 class CrateIdentifierPreparer(sa.sql.compiler.IdentifierPreparer):
     """
     Define CrateDB's reserved words to be quoted properly.
     """
+
     reserved_words = set(list(POSTGRESQL_RESERVED_WORDS) + CRATEDB_RESERVED_WORDS)
 
     def _unquote_identifier(self, value):
         if value[0] == self.initial_quote:
-            value = value[1:-1].replace(
-                self.escape_to_quote, self.escape_quote
-            )
+            value = value[1:-1].replace(self.escape_to_quote, self.escape_quote)
         return value
 
     def format_type(self, type_, use_schema=True):
@@ -363,10 +356,6 @@ class CrateIdentifierPreparer(sa.sql.compiler.IdentifierPreparer):
         name = self.quote(type_.name)
         effective_schema = self.schema_for_object(type_)
 
-        if (
-            not self.omit_schema
-            and use_schema
-            and effective_schema is not None
-        ):
+        if not self.omit_schema and use_schema and effective_schema is not None:
             name = self.quote_schema(effective_schema) + "." + name
         return name

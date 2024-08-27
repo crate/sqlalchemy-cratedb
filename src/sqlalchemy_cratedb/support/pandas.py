@@ -18,15 +18,14 @@
 # However, if you have executed another commercial license agreement
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
+import logging
 from contextlib import contextmanager
 from typing import Any
 from unittest.mock import patch
 
-import logging
-
 import sqlalchemy as sa
 
-from sqlalchemy_cratedb import SA_VERSION, SA_2_0
+from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ def insert_bulk(pd_table, conn, keys, data_iter):
     [1] https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_sql.html
     [2] https://cratedb.com/docs/crate/reference/en/latest/interfaces/http.html#bulk-operations
     [3] https://github.com/pandas-dev/pandas/blob/v2.0.1/pandas/io/sql.py#L1011-L1027
-    """
+    """  # noqa: E501
 
     # Compile SQL statement and materialize batch.
     sql = str(pd_table.table.insert().compile(bind=conn))
@@ -61,7 +60,7 @@ def insert_bulk(pd_table, conn, keys, data_iter):
     if logger.level == logging.DEBUG:
         logger.debug(f"Bulk SQL:     {sql}")
         logger.debug(f"Bulk records: {len(data)}")
-        # logger.debug(f"Bulk data:    {data}")
+        # logger.debug(f"Bulk data:    {data}")  # noqa: ERA001
 
     # Invoke bulk insert operation.
     cursor = conn._dbapi_connection.cursor()

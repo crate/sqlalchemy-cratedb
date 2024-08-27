@@ -20,15 +20,14 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 import warnings
 from textwrap import dedent
-from unittest import mock, skipIf, TestCase
+from unittest import TestCase, mock, skipIf
 from unittest.mock import MagicMock, patch
 
-from crate.client.cursor import Cursor
-from sqlalchemy_cratedb.compiler import crate_before_execute
-
 import sqlalchemy as sa
-from sqlalchemy.sql import text, Update
+from crate.client.cursor import Cursor
+from sqlalchemy.sql import Update, text
 
+from sqlalchemy_cratedb.compiler import crate_before_execute
 from tests.settings import crate_host
 from tests.util import ExtraAssertions
 
@@ -37,41 +36,41 @@ try:
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
 
-from sqlalchemy_cratedb import SA_VERSION, SA_1_4, SA_2_0, ObjectType
+from sqlalchemy_cratedb import ObjectType
+from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_0, SA_VERSION
+
 from .util import ParametrizedTestCase
 
 
-
 class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
-
     def setUp(self):
-        self.crate_engine = sa.create_engine('crate://')
+        self.crate_engine = sa.create_engine("crate://")
         if isinstance(self.param, dict) and "server_version_info" in self.param:
             server_version_info = self.param["server_version_info"]
             self.crate_engine.dialect.server_version_info = server_version_info
-        self.sqlite_engine = sa.create_engine('sqlite://')
+        self.sqlite_engine = sa.create_engine("sqlite://")
         self.metadata = sa.MetaData()
-        self.mytable = sa.Table('mytable', self.metadata,
-                                sa.Column('name', sa.String),
-                                sa.Column('data', ObjectType))
+        self.mytable = sa.Table(
+            "mytable", self.metadata, sa.Column("name", sa.String), sa.Column("data", ObjectType)
+        )
 
-        self.update = Update(self.mytable).where(text('name=:name'))
-        self.values = [{'name': 'crate'}]
-        self.values = (self.values, )
+        self.update = Update(self.mytable).where(text("name=:name"))
+        self.values = [{"name": "crate"}]
+        self.values = (self.values,)
 
     def test_sqlite_update_not_rewritten(self):
         clauseelement, multiparams, params = crate_before_execute(
             self.sqlite_engine, self.update, self.values, {}
         )
 
-        self.assertFalse(hasattr(clauseelement, '_crate_specific'))
+        self.assertFalse(hasattr(clauseelement, "_crate_specific"))
 
     def test_crate_update_rewritten(self):
         clauseelement, multiparams, params = crate_before_execute(
             self.crate_engine, self.update, self.values, {}
         )
 
-        self.assertTrue(hasattr(clauseelement, '_crate_specific'))
+        self.assertTrue(hasattr(clauseelement, "_crate_specific"))
 
     def test_bulk_update_on_builtin_type(self):
         """
@@ -84,7 +83,7 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
             self.crate_engine, self.update, data, None
         )
 
-        self.assertFalse(hasattr(clauseelement, '_crate_specific'))
+        self.assertFalse(hasattr(clauseelement, "_crate_specific"))
 
     def test_select_with_ilike_no_escape(self):
         """
@@ -93,17 +92,23 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         selectable = self.mytable.select().where(self.mytable.c.name.ilike("%foo%"))
         statement = str(selectable.compile(bind=self.crate_engine))
         if self.crate_engine.dialect.has_ilike_operator():
-            self.assertEqual(statement, dedent("""
+            self.assertEqual(
+                statement,
+                dedent("""
                 SELECT mytable.name, mytable.data 
                 FROM mytable 
                 WHERE mytable.name ILIKE ?
-            """).strip())  # noqa: W291
+            """).strip(),
+            )  # noqa: W291
         else:
-            self.assertEqual(statement, dedent("""
+            self.assertEqual(
+                statement,
+                dedent("""
                 SELECT mytable.name, mytable.data 
                 FROM mytable 
                 WHERE lower(mytable.name) LIKE lower(?)
-            """).strip())  # noqa: W291
+            """).strip(),
+            )  # noqa: W291
 
     def test_select_with_not_ilike_no_escape(self):
         """
@@ -112,35 +117,44 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         selectable = self.mytable.select().where(self.mytable.c.name.notilike("%foo%"))
         statement = str(selectable.compile(bind=self.crate_engine))
         if SA_VERSION < SA_1_4 or not self.crate_engine.dialect.has_ilike_operator():
-            self.assertEqual(statement, dedent("""
+            self.assertEqual(
+                statement,
+                dedent("""
                 SELECT mytable.name, mytable.data 
                 FROM mytable 
                 WHERE lower(mytable.name) NOT LIKE lower(?)
-            """).strip())  # noqa: W291
+            """).strip(),
+            )  # noqa: W291
         else:
-            self.assertEqual(statement, dedent("""
+            self.assertEqual(
+                statement,
+                dedent("""
                 SELECT mytable.name, mytable.data 
                 FROM mytable 
                 WHERE mytable.name NOT ILIKE ?
-            """).strip())  # noqa: W291
+            """).strip(),
+            )  # noqa: W291
 
     def test_select_with_ilike_and_escape(self):
         """
         Verify the compiler fails when using CrateDB's native `ILIKE` method together with `ESCAPE`.
         """
 
-        selectable = self.mytable.select().where(self.mytable.c.name.ilike("%foo%", escape='\\'))
+        selectable = self.mytable.select().where(self.mytable.c.name.ilike("%foo%", escape="\\"))
         with self.assertRaises(NotImplementedError) as cmex:
             selectable.compile(bind=self.crate_engine)
         self.assertEqual(str(cmex.exception), "Unsupported feature: ESCAPE is not supported")
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 and earlier do not support native `NOT ILIKE` compilation")
+    @skipIf(
+        SA_VERSION < SA_1_4,
+        "SQLAlchemy 1.3 and earlier do not support native `NOT ILIKE` compilation",
+    )
     def test_select_with_not_ilike_and_escape(self):
         """
         Verify the compiler fails when using CrateDB's native `ILIKE` method together with `ESCAPE`.
         """
 
-        selectable = self.mytable.select().where(self.mytable.c.name.notilike("%foo%", escape='\\'))
+        selectable = self.mytable.select().where(self.mytable.c.name.notilike("%foo%", escape="\\"))
         with self.assertRaises(NotImplementedError) as cmex:
             selectable.compile(bind=self.crate_engine)
         self.assertEqual(str(cmex.exception), "Unsupported feature: ESCAPE is not supported")
@@ -152,9 +166,13 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         selectable = self.mytable.select().offset(5)
         statement = str(selectable.compile(bind=self.crate_engine))
         if SA_VERSION >= SA_1_4:
-            self.assertEqual(statement, "SELECT mytable.name, mytable.data \nFROM mytable\n LIMIT ALL OFFSET ?")
+            self.assertEqual(
+                statement, "SELECT mytable.name, mytable.data \nFROM mytable\n LIMIT ALL OFFSET ?"
+            )
         else:
-            self.assertEqual(statement, "SELECT mytable.name, mytable.data \nFROM mytable \n LIMIT ALL OFFSET ?")
+            self.assertEqual(
+                statement, "SELECT mytable.name, mytable.data \nFROM mytable \n LIMIT ALL OFFSET ?"
+            )
 
     def test_select_with_limit(self):
         """
@@ -170,7 +188,9 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         """
         selectable = self.mytable.select().offset(5).limit(42)
         statement = str(selectable.compile(bind=self.crate_engine))
-        self.assertEqual(statement, "SELECT mytable.name, mytable.data \nFROM mytable \n LIMIT ? OFFSET ?")
+        self.assertEqual(
+            statement, "SELECT mytable.name, mytable.data \nFROM mytable \n LIMIT ? OFFSET ?"
+        )
 
     def test_insert_multivalues(self):
         """
@@ -202,7 +222,10 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         statement = str(insertable.compile(bind=self.crate_engine))
         self.assertEqual(statement, "INSERT INTO mytable (name) VALUES (?), (?), (?)")
 
-    @skipIf(SA_VERSION < SA_2_0, "SQLAlchemy 1.x does not support the 'insertmanyvalues' dialect feature")
+    @skipIf(
+        SA_VERSION < SA_2_0,
+        "SQLAlchemy 1.x does not support the 'insertmanyvalues' dialect feature",
+    )
     def test_insert_manyvalues(self):
         """
         Verify the `use_insertmanyvalues` and `use_insertmanyvalues_wo_returning` dialect features.
@@ -242,19 +265,27 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         statement = str(insertable.compile(bind=self.crate_engine))
         self.assertEqual(statement, "INSERT INTO mytable (name, data) VALUES (?, ?)")
 
-        with mock.patch("crate.client.http.Client.sql", autospec=True, return_value={"cols": []}) as client_mock:
-
+        with mock.patch(
+            "crate.client.http.Client.sql", autospec=True, return_value={"cols": []}
+        ) as client_mock:
             with self.crate_engine.begin() as conn:
                 # Adjust page size on a per-connection level.
                 conn.execution_options(insertmanyvalues_page_size=batch_size)
                 conn.execute(insertable, parameters=records)
 
         # Verify that input data has been batched correctly.
-        self.assertListEqual(client_mock.mock_calls, [
-            mock.call(mock.ANY, 'INSERT INTO mytable (name) VALUES (?), (?)', ('foo_0', 'foo_1'), None),
-            mock.call(mock.ANY, 'INSERT INTO mytable (name) VALUES (?), (?)', ('foo_2', 'foo_3'), None),
-            mock.call(mock.ANY, 'INSERT INTO mytable (name) VALUES (?)', ('foo_4', ), None),
-        ])
+        self.assertListEqual(
+            client_mock.mock_calls,
+            [
+                mock.call(
+                    mock.ANY, "INSERT INTO mytable (name) VALUES (?), (?)", ("foo_0", "foo_1"), None
+                ),
+                mock.call(
+                    mock.ANY, "INSERT INTO mytable (name) VALUES (?), (?)", ("foo_2", "foo_3"), None
+                ),
+                mock.call(mock.ANY, "INSERT INTO mytable (name) VALUES (?)", ("foo_4",), None),
+            ],
+        )
 
     def test_for_update(self):
         """
@@ -263,7 +294,6 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         """
 
         with warnings.catch_warnings(record=True) as w:
-
             # By default, warnings from a loop will only be emitted once.
             # This scenario tests exactly this behaviour, to verify logs
             # don't get flooded.
@@ -281,11 +311,14 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         # Verify if corresponding warning is emitted, once.
         self.assertEqual(len(w), 1)
         self.assertIsSubclass(w[-1].category, UserWarning)
-        self.assertIn("CrateDB does not support the 'INSERT ... FOR UPDATE' clause, "
-                      "it will be omitted when generating SQL statements.", str(w[-1].message))
+        self.assertIn(
+            "CrateDB does not support the 'INSERT ... FOR UPDATE' clause, "
+            "it will be omitted when generating SQL statements.",
+            str(w[-1].message),
+        )
 
 
-FakeCursor = MagicMock(name='FakeCursor', spec=Cursor)
+FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 
 
 @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
@@ -319,7 +352,7 @@ class CompilerTestCase(TestCase):
         return self.fake_cursor
 
 
-@patch('crate.client.connection.Cursor', FakeCursor)
+@patch("crate.client.connection.Cursor", FakeCursor)
 class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
     """
     Verify a few scenarios regarding the DDL compiler.
@@ -363,24 +396,28 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
             root = sa.orm.relationship(RootStore, back_populates="items")
 
         with warnings.catch_warnings(record=True) as w:
-
             # Cause all warnings to always be triggered.
             warnings.simplefilter("always")
 
             # Verify SQL DDL statement.
             self.metadata.create_all(self.engine, tables=[RootStore.__table__], checkfirst=False)
-            self.assertEqual(self.executed_statement, dedent("""
+            self.assertEqual(
+                self.executed_statement,
+                dedent("""
                 CREATE TABLE testdrive.root (
                 \tid INT NOT NULL, 
                 \tname STRING, 
                 \tPRIMARY KEY (id)
                 )
     
-            """))  # noqa: W291, W293
+            """),
+            )  # noqa: W291, W293
 
             # Verify SQL DDL statement.
             self.metadata.create_all(self.engine, tables=[ItemStore.__table__], checkfirst=False)
-            self.assertEqual(self.executed_statement, dedent("""
+            self.assertEqual(
+                self.executed_statement,
+                dedent("""
                 CREATE TABLE testdrive.item (
                 \tid INT NOT NULL, 
                 \tname STRING, 
@@ -388,13 +425,17 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
                 \tPRIMARY KEY (id)
                 )
     
-            """))  # noqa: W291, W293
+            """),
+            )  # noqa: W291, W293
 
         # Verify if corresponding warning is emitted.
         self.assertEqual(len(w), 1)
         self.assertIsSubclass(w[-1].category, UserWarning)
-        self.assertIn("CrateDB does not support foreign key constraints, "
-                      "they will be omitted when generating DDL statements.", str(w[-1].message))
+        self.assertIn(
+            "CrateDB does not support foreign key constraints, "
+            "they will be omitted when generating DDL statements.",
+            str(w[-1].message),
+        )
 
     def test_ddl_with_unique_key(self):
         """
@@ -412,26 +453,31 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
             name = sa.Column(sa.String, unique=True)
 
         with warnings.catch_warnings(record=True) as w:
-
             # Cause all warnings to always be triggered.
             warnings.simplefilter("always")
 
             # Verify SQL DDL statement.
             self.metadata.create_all(self.engine, tables=[FooBar.__table__], checkfirst=False)
-            self.assertEqual(self.executed_statement, dedent("""
+            self.assertEqual(
+                self.executed_statement,
+                dedent("""
                 CREATE TABLE testdrive.foobar (
                 \tid INT NOT NULL, 
                 \tname STRING, 
                 \tPRIMARY KEY (id)
                 )
     
-            """))  # noqa: W291, W293
+            """),
+            )  # noqa: W291, W293
 
         # Verify if corresponding warning is emitted.
         self.assertEqual(len(w), 1)
         self.assertIsSubclass(w[-1].category, UserWarning)
-        self.assertIn("CrateDB does not support unique constraints, "
-                      "they will be omitted when generating DDL statements.", str(w[-1].message))
+        self.assertIn(
+            "CrateDB does not support unique constraints, "
+            "they will be omitted when generating DDL statements.",
+            str(w[-1].message),
+        )
 
     def test_ddl_with_reserved_words_and_uppercase(self):
         """
@@ -452,7 +498,9 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
 
         # Verify SQL DDL statement.
         self.metadata.create_all(self.engine, tables=[FooBar.__table__], checkfirst=False)
-        self.assertEqual(self.executed_statement, dedent("""
+        self.assertEqual(
+            self.executed_statement,
+            dedent("""
             CREATE TABLE testdrive.foobar (
             \t"ID" INT NOT NULL, 
             \t"index" INT, 
@@ -461,4 +509,5 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
             \tPRIMARY KEY ("ID")
             )
 
-        """))  # noqa: W291, W293
+        """),
+        )  # noqa: W291, W293

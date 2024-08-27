@@ -20,12 +20,12 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 from datetime import datetime
 from unittest import TestCase, skipIf
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from sqlalchemy_cratedb import SA_VERSION, SA_1_4
+from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
 
 try:
     from sqlalchemy.orm import declarative_base
@@ -34,25 +34,23 @@ except ImportError:
 
 from crate.client.cursor import Cursor
 
-
-fake_cursor = MagicMock(name='fake_cursor')
+fake_cursor = MagicMock(name="fake_cursor")
 fake_cursor.rowcount = 1
-FakeCursor = MagicMock(name='FakeCursor', spec=Cursor)
+FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 FakeCursor.return_value = fake_cursor
 
 
 @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 class SqlAlchemyInsertFromSelectTest(TestCase):
-
     def assertSQL(self, expected_str, actual_expr):
-        self.assertEqual(expected_str, str(actual_expr).replace('\n', ''))
+        self.assertEqual(expected_str, str(actual_expr).replace("\n", ""))
 
     def setUp(self):
-        self.engine = sa.create_engine('crate://')
+        self.engine = sa.create_engine("crate://")
         Base = declarative_base()
 
         class Character(Base):
-            __tablename__ = 'characters'
+            __tablename__ = "characters"
 
             name = sa.Column(sa.String, primary_key=True)
             age = sa.Column(sa.Integer)
@@ -60,7 +58,7 @@ class SqlAlchemyInsertFromSelectTest(TestCase):
             status = sa.Column(sa.String)
 
         class CharacterArchive(Base):
-            __tablename__ = 'characters_archive'
+            __tablename__ = "characters_archive"
 
             name = sa.Column(sa.String, primary_key=True)
             age = sa.Column(sa.Integer)
@@ -71,17 +69,20 @@ class SqlAlchemyInsertFromSelectTest(TestCase):
         self.character_archived = CharacterArchive
         self.session = Session(bind=self.engine)
 
-    @patch('crate.client.connection.Cursor', FakeCursor)
+    @patch("crate.client.connection.Cursor", FakeCursor)
     def test_insert_from_select_triggered(self):
-        char = self.character(name='Arthur', status='Archived')
+        char = self.character(name="Arthur", status="Archived")
         self.session.add(char)
         self.session.commit()
 
-        sel = sa.select(self.character.name, self.character.age).where(self.character.status == "Archived")
-        ins = sa.insert(self.character_archived).from_select(['name', 'age'], sel)
+        sel = sa.select(self.character.name, self.character.age).where(
+            self.character.status == "Archived"
+        )
+        ins = sa.insert(self.character_archived).from_select(["name", "age"], sel)
         self.session.execute(ins)
         self.session.commit()
         self.assertSQL(
-            "INSERT INTO characters_archive (name, age) SELECT characters.name, characters.age FROM characters WHERE characters.status = ?",
-            ins.compile(bind=self.engine)
+            "INSERT INTO characters_archive (name, age) "
+            "SELECT characters.name, characters.age FROM characters WHERE characters.status = ?",
+            ins.compile(bind=self.engine),
         )

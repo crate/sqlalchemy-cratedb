@@ -38,8 +38,8 @@ except ImportError:
 
 from crate.client.cursor import Cursor
 
-from sqlalchemy_cratedb import SA_VERSION, SA_1_4
 from sqlalchemy_cratedb import FloatVector, knn_match
+from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
 from sqlalchemy_cratedb.type.vector import from_db, to_db
 
 fake_cursor = MagicMock(name="fake_cursor")
@@ -48,7 +48,10 @@ FakeCursor.return_value = fake_cursor
 
 
 if SA_VERSION < SA_1_4:
-    pytest.skip(reason="The FloatVector type is not supported on SQLAlchemy 1.3 and earlier", allow_module_level=True)
+    pytest.skip(
+        reason="The FloatVector type is not supported on SQLAlchemy 1.3 and earlier",
+        allow_module_level=True,
+    )
 
 
 @patch("crate.client.connection.Cursor", FakeCursor)
@@ -56,6 +59,7 @@ class SqlAlchemyVectorTypeTest(TestCase):
     """
     Verify compilation of SQL statements where the schema includes the `FloatVector` type.
     """
+
     def setUp(self):
         self.engine = sa.create_engine("crate://")
         metadata = sa.MetaData()
@@ -68,23 +72,17 @@ class SqlAlchemyVectorTypeTest(TestCase):
         self.session = Session(bind=self.engine)
 
     def assertSQL(self, expected_str, actual_expr):
-        self.assertEqual(expected_str, str(actual_expr).replace('\n', ''))
+        self.assertEqual(expected_str, str(actual_expr).replace("\n", ""))
 
     def test_create_invoke(self):
         self.table.create(self.engine)
         fake_cursor.execute.assert_called_with(
-            (
-                "\nCREATE TABLE testdrive (\n\t"
-                "name STRING, \n\t"
-                "data FLOAT_VECTOR(3)\n)\n\n"
-            ),
+            ("\nCREATE TABLE testdrive (\n\t" "name STRING, \n\t" "data FLOAT_VECTOR(3)\n)\n\n"),
             (),
         )
 
     def test_insert_invoke(self):
-        stmt = self.table.insert().values(
-            name="foo", data=[42.42, 43.43, 44.44]
-        )
+        stmt = self.table.insert().values(name="foo", data=[42.42, 43.43, 44.44])
         with self.engine.connect() as conn:
             conn.execute(stmt)
         fake_cursor.execute.assert_called_with(
@@ -102,16 +100,16 @@ class SqlAlchemyVectorTypeTest(TestCase):
         )
 
     def test_sql_select(self):
-        self.assertSQL(
-            "SELECT testdrive.data FROM testdrive", select(self.table.c.data)
-        )
+        self.assertSQL("SELECT testdrive.data FROM testdrive", select(self.table.c.data))
 
     def test_sql_match(self):
-        query = self.session.query(self.table.c.name) \
-                    .filter(knn_match(self.table.c.data, [42.42, 43.43], 3))
+        query = self.session.query(self.table.c.name).filter(
+            knn_match(self.table.c.data, [42.42, 43.43], 3)
+        )
         self.assertSQL(
-            "SELECT testdrive.name AS testdrive_name FROM testdrive WHERE KNN_MATCH(testdrive.data, ?, ?)",
-            query
+            "SELECT testdrive.name AS testdrive_name "
+            "FROM testdrive WHERE KNN_MATCH(testdrive.data, ?, ?)",
+            query,
         )
 
 
@@ -121,8 +119,8 @@ def test_from_db_success():
     """
     np = pytest.importorskip("numpy")
     assert from_db(None) is None
-    assert np.array_equal(from_db(False), np.array(0., dtype=np.float32))
-    assert np.array_equal(from_db(True), np.array(1., dtype=np.float32))
+    assert np.array_equal(from_db(False), np.array(0.0, dtype=np.float32))
+    assert np.array_equal(from_db(True), np.array(1.0, dtype=np.float32))
     assert np.array_equal(from_db(42), np.array(42, dtype=np.float32))
     assert np.array_equal(from_db(42.42), np.array(42.42, dtype=np.float32))
     assert np.array_equal(from_db([42.42, 43.43]), np.array([42.42, 43.43], dtype=np.float32))
@@ -227,7 +225,7 @@ def test_float_vector_integration(cratedb_service):
 
     # Define DDL.
     class SearchIndex(Base):
-        __tablename__ = 'search'
+        __tablename__ = "search"
         name = sa.Column(sa.String, primary_key=True)
         embedding = sa.Column(FloatVector(3))
 
@@ -241,8 +239,9 @@ def test_float_vector_integration(cratedb_service):
     session.execute(sa.text("REFRESH TABLE search"))
 
     # Query record.
-    query = session.query(SearchIndex.embedding) \
-                   .filter(knn_match(SearchIndex.embedding, [42.42, 43.43, 41.41], 3))
+    query = session.query(SearchIndex.embedding).filter(
+        knn_match(SearchIndex.embedding, [42.42, 43.43, 41.41], 3)
+    )
     result = query.first()
 
     # Compare outcome.

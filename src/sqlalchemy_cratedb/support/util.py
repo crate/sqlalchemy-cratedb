@@ -10,7 +10,9 @@ if t.TYPE_CHECKING:
         pass
 
 
-def refresh_table(connection, target: t.Union[str, "DeclarativeBase", "sa.sql.selectable.TableClause"]):
+def refresh_table(
+    connection, target: t.Union[str, "DeclarativeBase", "sa.sql.selectable.TableClause"]
+):
     """
     Invoke a `REFRESH TABLE` statement.
     """

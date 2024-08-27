@@ -24,5 +24,5 @@ from verlib2 import Version
 
 SA_VERSION = Version(sa.__version__)
 
-SA_1_4 = Version('1.4.0b1')
-SA_2_0 = Version('2.0.0')
+SA_1_4 = Version("1.4.0b1")
+SA_2_0 = Version("2.0.0")

@@ -21,18 +21,21 @@
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql.base import PGCompiler
-from sqlalchemy.sql.crud import (REQUIRED, _create_bind_param,
-                                 _extend_values_for_multiparams,
-                                 _get_multitable_params,
-                                 _get_stmt_parameters_params,
-                                 _key_getters_for_crud_column, _scan_cols,
-                                 _scan_insert_from_select_cols)
+from sqlalchemy.sql.crud import (
+    REQUIRED,
+    _create_bind_param,
+    _extend_values_for_multiparams,
+    _get_multitable_params,
+    _get_stmt_parameters_params,
+    _key_getters_for_crud_column,
+    _scan_cols,
+    _scan_insert_from_select_cols,
+)
 
 from sqlalchemy_cratedb.compiler import CrateCompiler
 
 
 class CrateCompilerSA10(CrateCompiler):
-
     def returning_clause(self, stmt, returning_cols):
         """
         Generate RETURNING clause, PostgreSQL-compatible.
@@ -46,70 +49,58 @@ class CrateCompilerSA10(CrateCompiler):
         """
 
         # [10] CrateDB patch.
-        if not update_stmt.parameters and \
-                not hasattr(update_stmt, '_crate_specific'):
+        if not update_stmt.parameters and not hasattr(update_stmt, "_crate_specific"):
             return super().visit_update(update_stmt, **kw)
 
         self.isupdate = True
 
         extra_froms = update_stmt._extra_froms
 
-        text = 'UPDATE '
+        text = "UPDATE "
 
         if update_stmt._prefixes:
-            text += self._generate_prefixes(update_stmt,
-                                            update_stmt._prefixes, **kw)
+            text += self._generate_prefixes(update_stmt, update_stmt._prefixes, **kw)
 
-        table_text = self.update_tables_clause(update_stmt, update_stmt.table,
-                                               extra_froms, **kw)
+        table_text = self.update_tables_clause(update_stmt, update_stmt.table, extra_froms, **kw)
 
         dialect_hints = None
         if update_stmt._hints:
-            dialect_hints, table_text = self._setup_crud_hints(
-                update_stmt, table_text
-            )
+            dialect_hints, table_text = self._setup_crud_hints(update_stmt, table_text)
 
         # [10] CrateDB patch.
         crud_params = _get_crud_params(self, update_stmt, **kw)
 
         text += table_text
 
-        text += ' SET '
+        text += " SET "
 
         # [10] CrateDB patch begin.
-        include_table = \
-            extra_froms and self.render_table_with_column_in_update_from
+        include_table = extra_froms and self.render_table_with_column_in_update_from
 
         set_clauses = []
 
         for k, v in crud_params:
-            clause = k._compiler_dispatch(self,
-                                          include_table=include_table) + \
-                ' = ' + v
+            clause = k._compiler_dispatch(self, include_table=include_table) + " = " + v
             set_clauses.append(clause)
 
         for k, v in update_stmt.parameters.items():
-            if isinstance(k, str) and '[' in k:
+            if isinstance(k, str) and "[" in k:
                 bindparam = sa.sql.bindparam(k, v)
-                set_clauses.append(k + ' = ' + self.process(bindparam))
+                set_clauses.append(k + " = " + self.process(bindparam))
 
-        text += ', '.join(set_clauses)
+        text += ", ".join(set_clauses)
         # [10] CrateDB patch end.
 
         if self.returning or update_stmt._returning:
             if not self.returning:
                 self.returning = update_stmt._returning
             if self.returning_precedes_values:
-                text += " " + self.returning_clause(
-                    update_stmt, self.returning)
+                text += " " + self.returning_clause(update_stmt, self.returning)
 
         if extra_froms:
             extra_from_text = self.update_from_clause(
-                update_stmt,
-                update_stmt.table,
-                extra_froms,
-                dialect_hints,
-                **kw)
+                update_stmt, update_stmt.table, extra_froms, dialect_hints, **kw
+            )
             if extra_from_text:
                 text += " " + extra_from_text
 
@@ -123,8 +114,7 @@ class CrateCompilerSA10(CrateCompiler):
             text += " " + limit_clause
 
         if self.returning and not self.returning_precedes_values:
-            text += " " + self.returning_clause(
-                update_stmt, self.returning)
+            text += " " + self.returning_clause(update_stmt, self.returning)
 
         return text
 
@@ -149,8 +139,7 @@ def _get_crud_params(compiler, stmt, **kw):
     # compiled params - return binds for all columns
     if compiler.column_keys is None and stmt.parameters is None:
         return [
-            (c, _create_bind_param(compiler, c, None, required=True))
-            for c in stmt.table.columns
+            (c, _create_bind_param(compiler, c, None, required=True)) for c in stmt.table.columns
         ]
 
     if stmt._has_multi_parameters:
