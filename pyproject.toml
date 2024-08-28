@@ -259,7 +259,7 @@ tasks.lint = [
   { cmd = "ruff format --check" },
   { cmd = "ruff check" },
   { cmd = "validate-pyproject pyproject.toml" },
-  # { cmd = "mypy" },
+  { cmd = "mypy" },
 ]
 tasks.release = [
   { cmd = "python -m build" },
