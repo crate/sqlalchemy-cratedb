@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Added utility support wrapping CrateDB's special table options
 
 ## 2024/08/29 0.39.0
 Added `quote_relation_name` support utility function
