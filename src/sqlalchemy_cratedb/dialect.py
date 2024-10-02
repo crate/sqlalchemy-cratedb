@@ -233,6 +233,30 @@ class CrateDialect(default.DefaultDialect):
             return self.dbapi.connect(servers=servers, **kwargs)
         return self.dbapi.connect(**kwargs)
 
+    def do_execute(self, cursor, statement, parameters, context=None):
+        """
+        Slightly amended to store its response into the request context instance.
+        """
+        result = cursor.execute(statement, parameters)
+        if context is not None:
+            context.last_result = result
+
+    def do_execute_no_params(self, cursor, statement, context=None):
+        """
+        Slightly amended to store its response into the request context instance.
+        """
+        result = cursor.execute(statement)
+        if context is not None:
+            context.last_result = result
+
+    def do_executemany(self, cursor, statement, parameters, context=None):
+        """
+        Slightly amended to store its response into the request context instance.
+        """
+        result = cursor.executemany(statement, parameters)
+        if context is not None:
+            context.last_result = result
+
     def _get_default_schema_name(self, connection):
         return "doc"
 
