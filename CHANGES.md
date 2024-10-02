@@ -1,9 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Propagate error traces properly, using the `error_trace` `connect_args` option,
+  by using `crate-1.0.0dev1`
 
 ## 2024/08/29 0.39.0
-Added `quote_relation_name` support utility function
+- Added `quote_relation_name` support utility function
 
 ## 2024/06/25 0.38.0
 - Added/reactivated documentation as `sqlalchemy-cratedb`
