@@ -3,6 +3,8 @@
 ## Unreleased
 - Propagate error traces properly, using the `error_trace` `connect_args` option,
   by using `crate-1.0.0dev1`
+- Use slightly amended `do_execute`, `do_execute_no_params`, `do_executemany`
+  to store their responses into the request context instance
 
 ## 2024/08/29 0.39.0
 - Added `quote_relation_name` support utility function
