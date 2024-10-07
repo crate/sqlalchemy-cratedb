@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+
+## 2024/10/07 0.40.0
 - Propagate error traces properly, using the `error_trace` `connect_args` option,
   by using `crate-1.0.0dev1`
 - Use slightly amended `do_execute`, `do_execute_no_params`, `do_executemany`
