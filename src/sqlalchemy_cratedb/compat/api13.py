@@ -34,6 +34,7 @@ many of the test cases already. Please note that the patch for
 """
 
 import collections.abc as collections_abc
+import typing as t
 
 from sqlalchemy import exc
 from sqlalchemy.sql import Select
@@ -42,7 +43,7 @@ from sqlalchemy.util import immutabledict
 
 # `_distill_params_20` copied from SA14's `sqlalchemy.engine.{base,util}`.
 _no_tuple = ()
-_no_kw = immutabledict()
+_no_kw: immutabledict = immutabledict()
 
 
 def _distill_params_20(params):
@@ -87,11 +88,11 @@ def monkeypatch_add_exec_driver_sql():
     from sqlalchemy.engine.base import Connection, Engine
 
     # Add `exec_driver_sql` method to SA's `Connection` and `Engine` classes.
-    Connection.exec_driver_sql = exec_driver_sql
-    Engine.exec_driver_sql = exec_driver_sql
+    Connection.exec_driver_sql = exec_driver_sql  # type: ignore[method-assign]
+    Engine.exec_driver_sql = exec_driver_sql  # type: ignore[attr-defined]
 
 
-def select_sa14(*columns, **kw) -> Select:
+def select_sa14(*columns, **kw) -> Select[t.Any]:
     """
     Adapt SA14/SA20's calling semantics of `sql.select()` to SA13.
 
