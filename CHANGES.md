@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Added support for `psycopg` and `asyncpg` drivers, by introducing the
+  `crate+psycopg://`, `crate+asyncpg://`, and `crate+urllib3://` dialect
+  identifiers. The asynchronous variant of `psycopg` is also supported.
 
 ## 2024/10/07 0.40.0
 - Propagate error traces properly, using the `error_trace` `connect_args` option,
