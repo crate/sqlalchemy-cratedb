@@ -91,7 +91,7 @@ optional-dependencies.all = [
   "sqlalchemy-cratedb[vector]",
 ]
 optional-dependencies.develop = [
-  "mypy<1.12",
+  "mypy<1.13",
   "poethepoet<0.30",
   "pyproject-fmt<2.3",
   "ruff<0.7",
