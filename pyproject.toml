@@ -50,6 +50,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
   "Programming Language :: SQL",
@@ -107,7 +108,7 @@ optional-dependencies.release = [
 ]
 optional-dependencies.test = [
   "cratedb-toolkit[testing]",
-  "dask[dataframe]",
+  "dask[dataframe]; python_version<'3.13'",
   "pandas<2.3",
   "pueblo>=0.0.7",
   "pytest<9",

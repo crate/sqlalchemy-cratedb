@@ -206,6 +206,7 @@ class SqlAlchemyBulkTest(TestCase):
         # Verify number of batches.
         self.assertEqual(effective_op_count, OPCOUNT)
 
+    @skipIf(sys.version_info >= (3, 13), "SQLAlchemy/Dask is not supported on Python >=3.13 yet")
     @skipIf(sys.version_info < (3, 8), "SQLAlchemy/Dask is not supported on Python <3.8")
     @skipIf(SA_VERSION < SA_2_0, "SQLAlchemy 1.4 is no longer supported by pandas 2.2")
     @patch("crate.client.connection.Cursor", mock_cursor=FakeCursor)
