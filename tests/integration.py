@@ -185,7 +185,7 @@ def create_test_suite():
     ]
 
     # Don't run DataFrame integration tests on SQLAlchemy 1.3 and Python 3.7.
-    skip_dataframe = SA_VERSION < SA_2_0 or sys.version_info < (3, 8)
+    skip_dataframe = SA_VERSION < SA_2_0 or sys.version_info < (3, 8) or sys.version_info >= (3, 13)
     if not skip_dataframe:
         sqlalchemy_integration_tests += [
             "docs/dataframe.rst",

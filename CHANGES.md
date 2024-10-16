@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- CI: Verified support on Python 3.13
 
 ## 2024/10/07 0.40.0
 - Propagate error traces properly, using the `error_trace` `connect_args` option,
