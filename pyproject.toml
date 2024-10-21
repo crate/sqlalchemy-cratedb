@@ -96,7 +96,7 @@ optional-dependencies.develop = [
   "poethepoet<0.30",
   "pyproject-fmt<2.4",
   "ruff<0.7",
-  "validate-pyproject<0.21",
+  "validate-pyproject<0.22",
 ]
 optional-dependencies.doc = [
   "crate-docs-theme>=0.26.5",
