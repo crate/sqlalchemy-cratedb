@@ -24,7 +24,6 @@ from __future__ import absolute_import
 from unittest import TestCase, skipIf
 
 import sqlalchemy as sa
-from crate.testing.settings import crate_host
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.operators import eq
 
@@ -35,6 +34,8 @@ try:
     from sqlalchemy.orm import declarative_base
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
+
+from tests.settings import crate_host
 
 
 class SqlAlchemyQueryCompilationCaching(TestCase):
