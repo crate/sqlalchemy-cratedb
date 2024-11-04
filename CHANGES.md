@@ -1,12 +1,14 @@
 # Changelog
 
 ## Unreleased
+
+## 2024/11/04 0.40.1
 - CI: Verified support on Python 3.13
-- Dependencies: Updated to `crate-1.0.0`
+- Dependencies: Updated to `crate-1.0.0.dev2`
 
 ## 2024/10/07 0.40.0
 - Propagate error traces properly, using the `error_trace` `connect_args` option,
-  by using `crate-1.0.0dev1`
+  by using `crate-1.0.0.dev1`
 - Use slightly amended `do_execute`, `do_execute_no_params`, `do_executemany`
   to store their responses into the request context instance
 
