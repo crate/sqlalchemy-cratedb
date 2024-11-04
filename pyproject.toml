@@ -94,7 +94,7 @@ optional-dependencies.all = [
 optional-dependencies.develop = [
   "mypy<1.14",
   "poethepoet<0.30",
-  "pyproject-fmt<2.5",
+  "pyproject-fmt<2.6",
   "ruff<0.8",
   "validate-pyproject<0.23",
 ]
