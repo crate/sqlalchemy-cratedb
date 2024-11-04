@@ -112,7 +112,7 @@ optional-dependencies.test = [
   "pandas<2.3",
   "pueblo>=0.0.7",
   "pytest<9",
-  "pytest-cov<6",
+  "pytest-cov<7",
   "pytest-mock<4",
 ]
 optional-dependencies.vector = [
