@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Added `quote_relation_name` support utility function
 
 ## 2024/11/04 0.40.1
 - CI: Verified support on Python 3.13
