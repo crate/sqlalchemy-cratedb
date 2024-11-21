@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Added utility support wrapping CrateDB's special table options
 
 ## 2024/11/04 0.40.1
 - CI: Verified support on Python 3.13
