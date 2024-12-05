@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Added support for `psycopg` and `asyncpg` drivers, by introducing the
+  `crate+psycopg://`, `crate+asyncpg://`, and `crate+urllib3://` dialect
+  identifiers. The asynchronous variant of `psycopg` is also supported.
 
 ## 2024/11/04 0.40.1
 - CI: Verified support on Python 3.13
