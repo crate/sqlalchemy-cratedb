@@ -58,9 +58,7 @@ def provision_database():
         with open(docs_path("tests/assets/locations.sql")) as s:
             stmt = s.read()
             cursor.execute(stmt)
-            stmt = (
-                "SELECT COUNT(*) FROM information_schema.tables " "WHERE table_name = 'locations'"
-            )
+            stmt = "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'locations'"
             cursor.execute(stmt)
             assert cursor.fetchall()[0][0] == 1
 

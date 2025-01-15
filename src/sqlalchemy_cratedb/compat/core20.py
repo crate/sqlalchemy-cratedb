@@ -19,7 +19,7 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 
-# ruff: noqa: S101 Use of `assert` detected
+# ruff: noqa: S101  # Use of `assert` detected
 
 from typing import Any, Dict, List, MutableMapping, Optional, Tuple, Union
 
@@ -232,8 +232,7 @@ def _get_crud_params(
 
     if stmt._returning and stmt._return_defaults:
         raise exc.CompileError(
-            "Can't compile statement that includes returning() and "
-            "return_defaults() simultaneously"
+            "Can't compile statement that includes returning() and return_defaults() simultaneously"
         )
 
     if compile_state.isdelete:

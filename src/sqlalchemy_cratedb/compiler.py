@@ -146,7 +146,7 @@ class CrateDDLCompiler(compiler.DDLCompiler):
     def visit_computed_column(self, generated):
         if generated.persisted is False:
             raise sa.exc.CompileError(
-                "Virtual computed columns are not supported, set " "'persisted' to None or True"
+                "Virtual computed columns are not supported, set 'persisted' to None or True"
             )
 
         return "GENERATED ALWAYS AS (%s)" % self.sql_compiler.process(

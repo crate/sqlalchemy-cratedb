@@ -74,7 +74,7 @@ class SqlAlchemyUpdateTest(TestCase):
         char.age = 40
         self.session.commit()
 
-        expected_stmt = "UPDATE characters SET age = ?, " "ts = ? WHERE characters.name = ?"
+        expected_stmt = "UPDATE characters SET age = ?, ts = ? WHERE characters.name = ?"
         args, kwargs = fake_cursor.execute.call_args
         stmt = args[0]
         args = args[1]
@@ -103,7 +103,7 @@ class SqlAlchemyUpdateTest(TestCase):
 
         self.session.commit()
 
-        expected_stmt = "UPDATE characters SET " "name = ?, obj = ?, ts = ?"
+        expected_stmt = "UPDATE characters SET name = ?, obj = ?, ts = ?"
         args, kwargs = fake_cursor.execute.call_args
         stmt = args[0]
         args = args[1]

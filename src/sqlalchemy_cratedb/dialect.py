@@ -291,7 +291,7 @@ class CrateDialect(default.DefaultDialect):
     @reflection.cache
     def get_schema_names(self, connection, **kw):
         cursor = connection.exec_driver_sql(
-            "select schema_name " "from information_schema.schemata " "order by schema_name asc"
+            "select schema_name from information_schema.schemata order by schema_name asc"
         )
         return [row[0] for row in cursor.fetchall()]
 

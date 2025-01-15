@@ -68,11 +68,7 @@ class SqlAlchemyArrayTypeTest(TestCase):
         )
         t1.create(self.engine)
         fake_cursor.execute.assert_called_with(
-            (
-                "\nCREATE TABLE t (\n\t"
-                "int_array ARRAY(INT), \n\t"
-                "str_array ARRAY(STRING)\n)\n\n"
-            ),
+            ("\nCREATE TABLE t (\n\tint_array ARRAY(INT), \n\tstr_array ARRAY(STRING)\n)\n\n"),
             (),
         )
 
@@ -88,16 +84,14 @@ class SqlAlchemyArrayTypeTest(TestCase):
     def test_any(self):
         s = self.session.query(self.User.name).filter(self.User.friends.any("arthur"))
         self.assertSQL(
-            "SELECT users.name AS users_name FROM users " "WHERE ? = ANY (users.friends)", s
+            "SELECT users.name AS users_name FROM users WHERE ? = ANY (users.friends)", s
         )
 
     def test_any_with_operator(self):
         s = self.session.query(self.User.name).filter(
             self.User.scores.any(6, operator=operators.lt)
         )
-        self.assertSQL(
-            "SELECT users.name AS users_name FROM users " "WHERE ? < ANY (users.scores)", s
-        )
+        self.assertSQL("SELECT users.name AS users_name FROM users WHERE ? < ANY (users.scores)", s)
 
     def test_multidimensional_arrays(self):
         t1 = sa.Table(
