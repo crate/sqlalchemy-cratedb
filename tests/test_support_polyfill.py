@@ -143,9 +143,9 @@ def test_refresh_after_dml(cratedb_service, mode):
     result = query.first()
 
     # Sanity checks.
-    assert (
-        result is not None
-    ), "Database result is empty. Most probably, `REFRESH TABLE` wasn't issued."
+    assert result is not None, (
+        "Database result is empty. Most probably, `REFRESH TABLE` wasn't issued."
+    )
 
     # Compare outcome.
     assert result[0] == "foo"

@@ -16,7 +16,7 @@ class SqlAlchemyWarningsTest(TestCase, ExtraAssertions):
 
     @skipIf(
         SA_VERSION >= SA_1_4,
-        "There is no deprecation warning for " "SQLAlchemy 1.3 on higher versions",
+        "There is no deprecation warning for SQLAlchemy 1.3 on higher versions",
     )
     def test_sa13_deprecation_warning(self):
         """

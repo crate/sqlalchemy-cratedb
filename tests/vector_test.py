@@ -77,7 +77,7 @@ class SqlAlchemyVectorTypeTest(TestCase):
     def test_create_invoke(self):
         self.table.create(self.engine)
         fake_cursor.execute.assert_called_with(
-            ("\nCREATE TABLE testdrive (\n\t" "name STRING, \n\t" "data FLOAT_VECTOR(3)\n)\n\n"),
+            ("\nCREATE TABLE testdrive (\n\tname STRING, \n\tdata FLOAT_VECTOR(3)\n)\n\n"),
             (),
         )
 

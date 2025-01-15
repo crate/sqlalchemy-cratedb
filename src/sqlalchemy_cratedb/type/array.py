@@ -19,6 +19,8 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 
+# ruff: noqa: A005  # Module `array` shadows a Python standard-library module
+
 import sqlalchemy.types as sqltypes
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.sql import default_comparator, expression, operators

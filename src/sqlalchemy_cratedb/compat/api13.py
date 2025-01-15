@@ -71,7 +71,7 @@ def exec_driver_sql(self, statement, parameters=None, execution_options=None):
     """
     if execution_options is not None:
         raise ValueError(
-            "SA13 backward-compatibility: " "`exec_driver_sql` does not support `execution_options`"
+            "SA13 backward-compatibility: `exec_driver_sql` does not support `execution_options`"
         )
     args_10style, kwargs_10style = _distill_params_20(parameters)
     return self.execute(statement, *args_10style, **kwargs_10style)
@@ -106,7 +106,7 @@ def select_sa14(*columns, **kw) -> Select:
     if isinstance(columns, tuple) and isinstance(columns[0], list):
         if "whereclause" in kw:
             raise ValueError(
-                "SA13 backward-compatibility: " "`whereclause` is both in kwargs and columns tuple"
+                "SA13 backward-compatibility: `whereclause` is both in kwargs and columns tuple"
             )
         columns, whereclause = columns
         kw["whereclause"] = whereclause

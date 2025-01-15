@@ -177,12 +177,12 @@ class SqlAlchemyDictTypeTest(TestCase):
         # first isn't deterministic
         try:
             fake_cursor.execute.assert_called_with(
-                ("UPDATE characters SET data['y'] = ?, data['x'] = ? " "WHERE characters.name = ?"),
+                ("UPDATE characters SET data['y'] = ?, data['x'] = ? WHERE characters.name = ?"),
                 (2, 1, "Trillian"),
             )
         except AssertionError:
             fake_cursor.execute.assert_called_with(
-                ("UPDATE characters SET data['x'] = ?, data['y'] = ? " "WHERE characters.name = ?"),
+                ("UPDATE characters SET data['x'] = ?, data['y'] = ? WHERE characters.name = ?"),
                 (1, 2, "Trillian"),
             )
 
@@ -204,7 +204,7 @@ class SqlAlchemyDictTypeTest(TestCase):
         char.data["y"] = 3
         session.commit()
         fake_cursor.execute.assert_called_with(
-            ("UPDATE characters SET data['y'] = ? " "WHERE characters.name = ?"), (3, "Trillian")
+            ("UPDATE characters SET data['y'] = ? WHERE characters.name = ?"), (3, "Trillian")
         )
 
     @patch("crate.client.connection.Cursor", FakeCursor)
@@ -218,7 +218,7 @@ class SqlAlchemyDictTypeTest(TestCase):
         char.age = 20
         session.commit()
         fake_cursor.execute.assert_called_with(
-            ("UPDATE characters SET age = ?, data['x'] = ? " "WHERE characters.name = ?"),
+            ("UPDATE characters SET age = ?, data['x'] = ? WHERE characters.name = ?"),
             (20, 1, "Trillian"),
         )
 
@@ -234,7 +234,7 @@ class SqlAlchemyDictTypeTest(TestCase):
         self.assertIn(char, session.dirty)
         session.commit()
         fake_cursor.execute.assert_called_with(
-            ("UPDATE characters SET data['x'] = ? " "WHERE characters.name = ?"), (None, "Trillian")
+            ("UPDATE characters SET data['x'] = ? WHERE characters.name = ?"), (None, "Trillian")
         )
 
     @patch("crate.client.connection.Cursor", FakeCursor)
@@ -255,7 +255,7 @@ class SqlAlchemyDictTypeTest(TestCase):
         self.assertIn(char, session.dirty)
         session.commit()
         fake_cursor.execute.assert_called_with(
-            ("UPDATE characters SET data['x'] = ? " "WHERE characters.name = ?"), (4, "Trillian")
+            ("UPDATE characters SET data['x'] = ? WHERE characters.name = ?"), (4, "Trillian")
         )
 
     @patch("crate.client.connection.Cursor", FakeCursor)
@@ -275,7 +275,7 @@ class SqlAlchemyDictTypeTest(TestCase):
         self.assertIn(char, session.dirty)
         session.commit()
         fake_cursor.execute.assert_called_with(
-            ("UPDATE characters SET data['x'] = ? " "WHERE characters.name = ?"), (None, "Trillian")
+            ("UPDATE characters SET data['x'] = ? WHERE characters.name = ?"), (None, "Trillian")
         )
 
     @patch("crate.client.connection.Cursor", FakeCursor)
@@ -296,7 +296,7 @@ class SqlAlchemyDictTypeTest(TestCase):
         self.assertIn(char, session.dirty)
         session.commit()
         fake_cursor.execute.assert_called_with(
-            ("UPDATE characters SET data['x'] = ? " "WHERE characters.name = ?"), (3, "Trillian")
+            ("UPDATE characters SET data['x'] = ? WHERE characters.name = ?"), (3, "Trillian")
         )
 
     def set_up_character_and_cursor_data_list(self, return_value=None):
@@ -333,7 +333,7 @@ class SqlAlchemyDictTypeTest(TestCase):
         self.assertIn(char, session.dirty)
         session.commit()
         fake_cursor.execute.assert_called_with(
-            ("UPDATE characters SET data_list = ? " "WHERE characters.name = ?"),
+            ("UPDATE characters SET data_list = ? WHERE characters.name = ?"),
             ([{"1": 1}, {"3": 3}], "Trillian"),
         )
 
@@ -354,7 +354,7 @@ class SqlAlchemyDictTypeTest(TestCase):
         self.assertIn(char, session.dirty)
         session.commit()
         fake_cursor.execute.assert_called_with(
-            ("UPDATE characters SET data['nested'] = ? " "WHERE characters.name = ?"),
+            ("UPDATE characters SET data['nested'] = ? WHERE characters.name = ?"),
             ({"y": {"z": 2}, "x": 3}, "Trillian"),
         )
 
@@ -366,7 +366,7 @@ class SqlAlchemyDictTypeTest(TestCase):
         self.assertIn(char, session.dirty)
         session.commit()
         fake_cursor.execute.assert_called_with(
-            ("UPDATE characters SET data['nested'] = ? " "WHERE characters.name = ?"),
+            ("UPDATE characters SET data['nested'] = ? WHERE characters.name = ?"),
             ({"y": {"z": 5}, "x": 1}, "Trillian"),
         )
 
@@ -378,7 +378,7 @@ class SqlAlchemyDictTypeTest(TestCase):
         self.assertIn(char, session.dirty)
         session.commit()
         fake_cursor.execute.assert_called_with(
-            ("UPDATE characters SET data['nested'] = ? " "WHERE characters.name = ?"),
+            ("UPDATE characters SET data['nested'] = ? WHERE characters.name = ?"),
             ({"y": {}, "x": 1}, "Trillian"),
         )
 
