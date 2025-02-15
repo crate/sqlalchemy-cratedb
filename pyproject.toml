@@ -86,7 +86,7 @@ dependencies = [
   "geojson<4,>=2.5",
   "importlib-resources; python_version<'3.9'",
   "sqlalchemy<2.1,>=1",
-  "verlib2==0.2",
+  "verlib2<0.3",
 ]
 optional-dependencies.all = [
   "sqlalchemy-cratedb[vector]",
