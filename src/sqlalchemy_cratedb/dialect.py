@@ -239,8 +239,12 @@ class CrateDialect(default.DefaultDialect):
         servers = to_list(server)
         if servers:
             use_ssl = asbool(kwargs.pop("ssl", False))
-            if use_ssl:
+            # TODO: Switch to the canonical default `sslmode=prefer` later.
+            sslmode = kwargs.pop("sslmode", "disable")
+            if use_ssl or sslmode in ["allow", "prefer", "require", "verify-ca", "verify-full"]:
                 servers = ["https://" + server for server in servers]
+            if sslmode == "require":
+                kwargs["verify_ssl_cert"] = False
             return self.dbapi.connect(servers=servers, **kwargs)
         return self.dbapi.connect(**kwargs)
 
