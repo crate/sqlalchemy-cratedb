@@ -227,9 +227,8 @@ class CrateDialect(default.DefaultDialect):
             server = kwargs.pop("servers")
         servers = to_list(server)
         if servers:
-            use_ssl = asbool(kwargs.pop("ssl", False))
-            # TODO: Switch to the canonical default `sslmode=prefer` later.
-            sslmode = kwargs.pop("sslmode", "disable")
+            use_ssl = asbool(kwargs.pop("ssl", True))
+            sslmode = kwargs.pop("sslmode", "prefer")
             if use_ssl or sslmode in ["allow", "prefer", "require", "verify-ca", "verify-full"]:
                 servers = ["https://" + server for server in servers]
             if sslmode == "require":
