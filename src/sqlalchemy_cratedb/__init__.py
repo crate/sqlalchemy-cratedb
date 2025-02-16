@@ -52,7 +52,22 @@ if SA_VERSION < SA_1_4:
     monkeypatch_add_exec_driver_sql()
 
 
+try:
+    from importlib.metadata import PackageNotFoundError, version
+except (ImportError, ModuleNotFoundError):  # pragma:nocover
+    from importlib_metadata import (  # type: ignore[assignment,no-redef,unused-ignore]
+        PackageNotFoundError,
+        version,
+    )
+
+try:
+    __version__ = version("sqlalchemy-cratedb")
+except PackageNotFoundError:  # pragma: no cover
+    __version__ = "unknown"
+
+
 __all__ = [
+    __version__,
     dialect,
     FloatVector,
     Geopoint,
