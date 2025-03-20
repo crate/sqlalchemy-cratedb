@@ -90,7 +90,7 @@ dependencies = [
   "verlib2<0.4",
 ]
 optional-dependencies.all = [
-  "sqlalchemy-cratedb[vector]",
+  "sqlalchemy-cratedb[postgresql,vector]",
 ]
 optional-dependencies.develop = [
   "mypy<1.16",
@@ -103,6 +103,9 @@ optional-dependencies.doc = [
   "crate-docs-theme>=0.26.5",
   "sphinx>=3.5,<9",
 ]
+optional-dependencies.postgresql = [
+  "sqlalchemy-postgresql-relaxed",
+]
 optional-dependencies.release = [
   "build<2",
   "twine<7",
@@ -113,6 +116,7 @@ optional-dependencies.test = [
   "pandas<2.3",
   "pueblo>=0.0.7",
   "pytest<9",
+  "pytest-asyncio<0.24",
   "pytest-cov<7",
   "pytest-mock<4",
 ]
@@ -123,7 +127,11 @@ urls.changelog = "https://github.com/crate/sqlalchemy-cratedb/blob/main/CHANGES.
 urls.documentation = "https://cratedb.com/docs/sqlalchemy-cratedb/"
 urls.homepage = "https://cratedb.com/docs/sqlalchemy-cratedb/"
 urls.repository = "https://github.com/crate/sqlalchemy-cratedb"
-entry-points."sqlalchemy.dialects".crate = "sqlalchemy_cratedb:dialect"
+entry-points."sqlalchemy.dialects"."crate" = "sqlalchemy_cratedb:dialect"
+entry-points."sqlalchemy.dialects"."crate.asyncpg" = "sqlalchemy_cratedb.dialect_more:dialect_asyncpg"
+entry-points."sqlalchemy.dialects"."crate.psycopg" = "sqlalchemy_cratedb.dialect_more:dialect_psycopg"
+entry-points."sqlalchemy.dialects"."crate.psycopg_async" = "sqlalchemy_cratedb.dialect_more:dialect_psycopg_async"
+entry-points."sqlalchemy.dialects"."crate.urllib3" = "sqlalchemy_cratedb.dialect_more:dialect_urllib3"
 
 [tool.black]
 line-length = 100
