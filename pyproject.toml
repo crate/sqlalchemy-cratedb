@@ -109,7 +109,7 @@ optional-dependencies.release = [
 ]
 optional-dependencies.test = [
   "cratedb-toolkit[testing]",
-  "dask[dataframe]; python_version<'3.13'",
+  "dask[dataframe]",
   "pandas<2.3",
   "pueblo>=0.0.7",
   "pytest<9",
