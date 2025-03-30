@@ -83,10 +83,10 @@ dynamic = [
 dependencies = [
   "backports.zoneinfo<1; python_version<'3.9'",
   "crate>=2,<3",
-  "geojson<4,>=2.5",
+  "geojson>=2.5,<4",
   "importlib-metadata; python_version<'3.8'",
   "importlib-resources; python_version<'3.9'",
-  "sqlalchemy<2.1,>=1",
+  "sqlalchemy>=1,<2.1",
   "verlib2<0.4",
 ]
 optional-dependencies.all = [
