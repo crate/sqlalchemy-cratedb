@@ -317,11 +317,7 @@ def _get_crud_params(compiler, stmt, compile_state, **kw):
             _column_as_key,
             kw,
         )
-    elif (
-        not values
-        and compiler.for_executemany  # noqa: W503
-        and compiler.dialect.supports_default_metavalue  # noqa: W503
-    ):
+    elif not values and compiler.for_executemany and compiler.dialect.supports_default_metavalue:
         # convert an "INSERT DEFAULT VALUES"
         # into INSERT (firstcol) VALUES (DEFAULT) which can be turned
         # into an in-place multi values.  This supports
