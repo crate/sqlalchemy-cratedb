@@ -7,6 +7,10 @@ requires = [
 
 [project]
 name = "sqlalchemy-cratedb"
+#dynamic = [
+#  "version",
+#]
+version = "0.42.0.dev0"
 description = "SQLAlchemy dialect for CrateDB."
 readme = "README.md"
 keywords = [
@@ -76,9 +80,6 @@ classifiers = [
   "Topic :: System :: Systems Administration",
   "Topic :: Text Processing",
   "Topic :: Utilities",
-]
-dynamic = [
-  "version",
 ]
 dependencies = [
   "backports.zoneinfo<1; python_version<'3.9'",
