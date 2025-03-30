@@ -511,3 +511,35 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
 
         """),
         )  # noqa: W291, W293
+
+    def test_ddl_with_create_index(self):
+        """
+        Verify the CrateDB dialect properly ignores `CREATE INDEX` statements.
+        """
+
+        Base = declarative_base(metadata=self.metadata)
+
+        class FooBar(Base):
+            """The entity."""
+
+            __tablename__ = "foobar"
+
+            id = sa.Column(sa.Integer, primary_key=True)
+            name = sa.Column(sa.String, index=True)
+
+        with warnings.catch_warnings(record=True) as w:
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+
+            # Verify SQL DDL statement.
+            self.metadata.create_all(self.engine, tables=[FooBar.__table__], checkfirst=False)
+            self.assertEqual(self.executed_statement, "SELECT 1")
+
+        # Verify if corresponding warning is emitted.
+        self.assertEqual(len(w), 1)
+        self.assertIsSubclass(w[-1].category, UserWarning)
+        self.assertIn(
+            "CrateDB does not support `CREATE INDEX` statements, "
+            "they will be omitted when generating DDL statements.",
+            str(w[-1].message),
+        )

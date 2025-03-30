@@ -200,6 +200,17 @@ class CrateDDLCompiler(compiler.DDLCompiler):
         )
         return
 
+    def visit_create_index(self, create, **kw) -> str:
+        """
+        CrateDB does not support `CREATE INDEX` statements.
+        """
+        warnings.warn(
+            "CrateDB does not support `CREATE INDEX` statements, "
+            "they will be omitted when generating DDL statements.",
+            stacklevel=2,
+        )
+        return "SELECT 1"
+
 
 class CrateTypeCompiler(compiler.GenericTypeCompiler):
     def visit_string(self, type_, **kw):
