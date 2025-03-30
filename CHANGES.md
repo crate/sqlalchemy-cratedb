@@ -1,4 +1,5 @@
 # Changelog
+- Types: Improved support for FLOAT type, converging to FLOAT vs. DOUBLE
 
 ## 2026/05/28 0.42.0
 - Added support for SQL Alchemy 2.1
