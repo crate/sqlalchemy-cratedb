@@ -182,7 +182,9 @@ lint.extend-ignore = [
 ]
 
 lint.per-file-ignores."examples/*" = [
-  "T201", # Allow `print`
+  "E501",   # Line too long
+  "ERA001", # Found commented-out code
+  "T201",   # Allow `print`
 ]
 
 lint.per-file-ignores."tests/*" = [
