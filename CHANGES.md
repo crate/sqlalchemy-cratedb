@@ -10,6 +10,7 @@
 - Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
   'visit_on_conflict_do_update'` by forwarding calls to
   `PGCompiler.visit_on_conflict_do_update`
+- Dialect: Added methods concerned with isolation levels as no-ops
 
 ## 2026/05/28 0.42.0
 - Added support for SQL Alchemy 2.1
