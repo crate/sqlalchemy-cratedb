@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Added canonical [PostgreSQL client parameter `sslmode`], implementing
+  `sslmode=prefer` to connect to SSL-enabled CrateDB instances without
+  verifying the host name.
+
+[PostgreSQL client parameter `sslmode`]: https://www.postgresql.org/docs/current/libpq-ssl.html#LIBPQ-SSL-PROTECTION
 
 ## 2025/01/30 0.41.0
 - Dependencies: Updated to `crate-2.0.0`, which uses `orjson` for JSON marshalling
