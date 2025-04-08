@@ -254,6 +254,12 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         """
         return "TIMESTAMP %s" % ((type_.timezone and "WITH" or "WITHOUT") + " TIME ZONE",)
 
+    def visit_JSON(self, type_, **kw):
+        return "OBJECT"
+
+    def visit_JSONB(self, type_, **kw):
+        return "OBJECT"
+
 
 class CrateCompiler(compiler.SQLCompiler):
     def visit_getitem_binary(self, binary, operator, **kw):
