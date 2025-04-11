@@ -1,8 +1,12 @@
+from unittest import skipIf
+
 import sqlalchemy as sa
 
+from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
 from tests.conftest import TESTDRIVE_DATA_SCHEMA
 
 
+@skipIf(SA_VERSION < SA_1_4, "Does not work correctly on SQLAlchemy 1.3")
 def test_correct_schema(cratedb_service):
     """
     Tests that the correct schema is being picked up.
