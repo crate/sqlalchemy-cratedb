@@ -10,7 +10,7 @@ name = "sqlalchemy-cratedb"
 #dynamic = [
 #  "version",
 #]
-version = "0.42.0.dev0"
+version = "0.42.0.dev1"
 description = "SQLAlchemy dialect for CrateDB."
 readme = "README.md"
 keywords = [
