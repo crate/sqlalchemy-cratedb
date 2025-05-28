@@ -184,7 +184,7 @@ use of the SQLAlchemy dialect.
 - The `Apache Superset`_ and `FIWARE QuantumLeap data historian`_ projects.
 
 
-. seealso::
+.. seealso::
 
     The CrateDB SQLAlchemy dialect for SQLAlchemy is an open source project and
     is `managed on GitHub`_. Contributions, feedback, or patches are highly
