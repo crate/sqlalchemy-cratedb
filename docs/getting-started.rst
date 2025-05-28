@@ -16,12 +16,6 @@ Subsequent sections of the documentation will cover:
 - :ref:`inspection-reflection`
 
 
-.. rubric:: Table of Contents
-
-.. contents::
-   :local:
-
-
 Introduction
 ============
 
