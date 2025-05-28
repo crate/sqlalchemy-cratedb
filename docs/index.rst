@@ -4,12 +4,6 @@
 SQLAlchemy dialect for CrateDB
 ##############################
 
-.. rubric:: Table of contents
-
-.. contents::
-    :local:
-    :depth: 1
-
 
 *****
 About
@@ -58,12 +52,7 @@ Install package from PyPI.
 
     pip install --upgrade sqlalchemy-cratedb
 
-More installation details can be found over here.
-
-.. toctree::
-    :titlesonly:
-
-    install
+See also the :ref:`install` page for details.
 
 
 .. _features:

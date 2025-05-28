@@ -7,11 +7,6 @@ Install
 Learn how to install and get started with the SQLAlchemy dialect for
 `CrateDB`_. The package is available from `PyPI`_ at `sqlalchemy-cratedb`_.
 
-.. rubric:: Table of contents
-
-.. contents::
-   :local:
-
 Install
 =======
 
