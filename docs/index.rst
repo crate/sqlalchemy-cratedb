@@ -54,6 +54,11 @@ Install package from PyPI.
 
 See also the :ref:`install` page for details.
 
+.. toctree::
+    :hidden:
+    :maxdepth: 1
+
+    install
 
 .. _features:
 
