@@ -13,12 +13,6 @@ like:
 - Inserts and updates with default values
 
 
-.. rubric:: Table of Contents
-
-.. contents::
-   :local:
-
-
 Introduction
 ============
 

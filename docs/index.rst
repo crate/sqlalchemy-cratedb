@@ -4,12 +4,6 @@
 SQLAlchemy dialect for CrateDB
 ##############################
 
-.. rubric:: Table of contents
-
-.. contents::
-    :local:
-    :depth: 1
-
 
 *****
 About
@@ -58,13 +52,13 @@ Install package from PyPI.
 
     pip install --upgrade sqlalchemy-cratedb
 
-More installation details can be found over here.
+See also the :ref:`install` page for details.
 
 .. toctree::
-    :titlesonly:
+    :hidden:
+    :maxdepth: 1
 
     install
-
 
 .. _features:
 
@@ -98,7 +92,7 @@ Connect to CrateDB instance running on ``localhost``.
 
     dburi = "crate://localhost:4200"
     query = "SELECT country, mountain, coordinates, height FROM sys.summits ORDER BY country;"
-    
+
     engine = sa.create_engine(dburi, echo=True)
     with engine.connect() as connection:
         with connection.execute(sa.text(query)) as result:
@@ -124,10 +118,10 @@ Load results into `pandas`_ DataFrame.
     # Connect using SQLAlchemy Core and pandas.
     import pandas as pd
     import sqlalchemy as sa
-    
+
     dburi = "crate://localhost:4200"
     query = "SELECT * FROM sys.summits ORDER BY country;"
-    
+
     engine = sa.create_engine(dburi, echo=True)
     with engine.connect() as connection:
         df = pd.read_sql(sql=sa.text(query), con=connection)
@@ -195,52 +189,19 @@ use of the SQLAlchemy dialect.
 - The `Apache Superset`_ and `FIWARE QuantumLeap data historian`_ projects.
 
 
+.. seealso::
 
-*******************
-Project information
-*******************
-
-Resources
-=========
-- `Source code <https://github.com/crate/sqlalchemy-cratedb>`_
-- `Documentation <https://github.com/crate/sqlalchemy-cratedb>`_
-- `Python Package Index (PyPI) <https://pypi.org/project/sqlalchemy-cratedb/>`_
-
-Contributions
-=============
-The SQLAlchemy dialect for CrateDB is an open source project, and is `managed on
-GitHub`_.
-Every kind of contribution, feedback, or patch, is much welcome. `Create an
-issue`_ or submit a patch if you think we should include a new feature, or to
-report or fix a bug.
-
-Development
-===========
-In order to setup a development environment on your workstation, please head
-over to the `development sandbox`_ documentation. When you see the software
-tests succeed, you should be ready to start hacking.
-
-Page index
-==========
-The full index for all documentation pages can be inspected at :ref:`index-all`.
-
-License
-=======
-The project is licensed under the terms of the Apache 2.0 license, like
-`CrateDB itself <CrateDB source_>`_, see `LICENSE`_.
-
+    The CrateDB SQLAlchemy dialect for SQLAlchemy is an open source project and
+    is `managed on GitHub`_. Contributions, feedback, or patches are highly
+    welcome!
 
 .. _Apache Superset: https://github.com/apache/superset
 .. _CrateDB: https://cratedb.com/database
 .. _CrateDB Cloud: https://console.cratedb.cloud/
-.. _CrateDB source: https://github.com/crate/crate
-.. _Create an issue: https://github.com/crate/sqlalchemy-cratedb/issues
-.. _development sandbox: https://github.com/crate/sqlalchemy-cratedb/blob/main/DEVELOP.md
 .. _cratedb-examples repository: https://github.com/crate/cratedb-examples/tree/main/by-language
 .. _FIWARE QuantumLeap data historian: https://github.com/orchestracities/ngsi-timeseries-api
 .. _GeoJSON: https://geojson.org/
 .. _GeoJSON geometry objects: https://tools.ietf.org/html/rfc7946#section-3.1
-.. _LICENSE: https://github.com/crate/sqlalchemy-cratedb/blob/main/LICENSE
 .. _managed on GitHub: https://github.com/crate/sqlalchemy-cratedb
 .. _pandas: https://pandas.pydata.org/
 .. _PEP 249: https://peps.python.org/pep-0249/

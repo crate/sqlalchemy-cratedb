@@ -5,11 +5,6 @@
 DataFrame operations
 ====================
 
-.. rubric:: Table of Contents
-
-.. contents::
-   :local:
-
 
 About
 =====

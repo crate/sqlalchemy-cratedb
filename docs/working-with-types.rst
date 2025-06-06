@@ -12,12 +12,6 @@ from the CrateDB SQLAlchemy dialect. Currently, these are:
 - Vector data type ``FloatVector``.
 
 
-.. rubric:: Table of Contents
-
-.. contents::
-   :local:
-
-
 Introduction
 ============
 

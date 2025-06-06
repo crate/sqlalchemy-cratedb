@@ -10,12 +10,6 @@ the ``INSERT...FROM SELECT`` and ``INSERT...RETURNING`` constructs, all using th
 CrateDB SQLAlchemy dialect.
 
 
-.. rubric:: Table of Contents
-
-.. contents::
-   :local:
-
-
 Introduction
 ============
 
