@@ -30,7 +30,7 @@ from pprint import pprint
 
 from crate.client import connect
 
-from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
+from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_0, SA_VERSION
 from tests.settings import crate_host
 
 log = logging.getLogger()
@@ -179,14 +179,20 @@ def create_test_suite():
         "docs/crud.rst",
         "docs/working-with-types.rst",
         "docs/advanced-querying.rst",
-        "docs/inspection-reflection.rst",
     ]
 
-    # Don't run DataFrame integration tests on SQLAlchemy 1.3 and Python 3.7.
-    skip_dataframe = SA_VERSION < SA_2_0 or sys.version_info < (3, 8) or sys.version_info >= (3, 13)
+    # Don't run DataFrame integration tests on SQLAlchemy 1.4 and earlier, or Python 3.7.
+    skip_dataframe = SA_VERSION < SA_2_0 or sys.version_info < (3, 8)
     if not skip_dataframe:
         sqlalchemy_integration_tests += [
             "docs/dataframe.rst",
+        ]
+
+    # Don't run reflection integration tests on SQLAlchemy 1.3 and earlier and Python 3.10 and 3.11.
+    skip_reflection = SA_VERSION < SA_1_4 and (3, 10) <= sys.version_info < (3, 12)
+    if not skip_reflection:
+        sqlalchemy_integration_tests += [
+            "docs/inspection-reflection.rst",
         ]
 
     s = doctest.DocFileSuite(
