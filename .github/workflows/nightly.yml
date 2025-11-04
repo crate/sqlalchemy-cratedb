@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         os: ['ubuntu-22.04']
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
         cratedb-version: ['nightly']
         sqla-version: ['latest']
         pip-allow-prerelease: ['false']
@@ -25,7 +25,7 @@ jobs:
         # Another CI test matrix slot to test against prerelease versions of Python packages.
         include:
           - os: 'ubuntu-latest'
-            python-version: '3.13'
+            python-version: '3.14'
             cratedb-version: 'nightly'
             sqla-version: 'latest'
             pip-allow-prerelease: 'true'
