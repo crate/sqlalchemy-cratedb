@@ -113,7 +113,7 @@ optional-dependencies.test = [
   "dask[dataframe]",
   "pandas<2.4",
   "pueblo>=0.0.7",
-  "pytest<9",
+  "pytest<10",
   "pytest-cov<8",
   "pytest-mock<4",
 ]
