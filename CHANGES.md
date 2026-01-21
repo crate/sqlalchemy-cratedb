@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Added `quote_relation_name` support utility function
 
 ## 2025/01/30 0.41.0
 - Dependencies: Updated to `crate-2.0.0`, which uses `orjson` for JSON marshalling
