@@ -21,3 +21,5 @@ From dialect split-off.
   - https://docs.sqlalchemy.org/en/20/core/connections.html#sqlalchemy.engine.Connection.execution_options.params.stream_results
   - https://docs.sqlalchemy.org/en/20/core/connections.html#sqlalchemy.engine.Result.yield_per
 - https://github.com/jamescasbon/vertica-sqlalchemy
+- pandas: `index=True`
+- @cratedb: test_table_kwargs_unknown => ColumnUnknownException[Column bazqux unknown]

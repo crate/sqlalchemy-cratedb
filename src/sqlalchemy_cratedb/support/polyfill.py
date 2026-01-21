@@ -39,7 +39,10 @@ def check_uniqueness_factory(sa_entity, *attribute_names):
 
     This is used by CrateDB's MLflow adapter.
 
+    TODO: Maybe add to some helper function?
     TODO: Maybe enable through a dialect parameter `crate_polyfill_unique` or such.
+    TODO: Maybe derive from the model definition itself?
+          __table_args__ = (sa.UniqueConstraint("name", "user_id", name="unique_name_user"),)
     """  # noqa: E501
 
     # Synthesize a canonical "name" for the constraint,
