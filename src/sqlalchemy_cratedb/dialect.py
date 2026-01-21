@@ -206,6 +206,15 @@ class CrateDialect(default.DefaultDialect):
         # start with _. Adding it here causes sqlalchemy to quote such columns.
         self.identifier_preparer.illegal_initial_characters.add("_")
 
+    def get_isolation_level_values(self, dbapi_conn):
+        return ()
+
+    def set_isolation_level(self, dbapi_connection, level):
+        pass
+
+    def get_isolation_level(self, dbapi_connection):
+        return "NONE"
+
     def initialize(self, connection):
         # get lowest server version
         self.server_version_info = self._get_server_version_info(connection)
