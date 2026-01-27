@@ -116,6 +116,7 @@ optional-dependencies.test = [
   "pytest<10",
   "pytest-cov<8",
   "pytest-mock<4",
+  "wrapt<2.1",
 ]
 optional-dependencies.vector = [
   "numpy",
