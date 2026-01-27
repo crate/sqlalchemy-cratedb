@@ -13,7 +13,7 @@ concurrency:
 jobs:
   test:
     name: "
-    Python: ${{ matrix.python-version }}
+    Python: ${{ matrix.python-version }} (prerelease: ${{ matrix.pip-allow-prerelease }})
     SQLAlchemy: ${{ matrix.sqla-version }}
     "
     runs-on: ${{ matrix.os }}

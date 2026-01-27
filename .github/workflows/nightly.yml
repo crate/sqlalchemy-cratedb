@@ -9,7 +9,7 @@ on:
 jobs:
   nightly:
     name: "
-    Python: ${{ matrix.python-version }}
+    Python: ${{ matrix.python-version }} (prerelease: ${{ matrix.pip-allow-prerelease }})
     SQLAlchemy: ${{ matrix.sqla-version }}
     CrateDB: ${{ matrix.cratedb-version }}
     "
