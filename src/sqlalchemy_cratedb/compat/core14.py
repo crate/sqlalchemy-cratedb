@@ -199,7 +199,7 @@ def _get_crud_params(compiler, stmt, compile_state, **kw):
     if compile_state._has_multi_parameters:
         spd = compile_state._multi_parameters[0]
         stmt_parameter_tuples = list(spd.items())
-    elif compile_state._ordered_values:
+    elif hasattr(compile_state, '_ordered_values') and compile_state._ordered_values:
         spd = compile_state._dict_parameters
         stmt_parameter_tuples = compile_state._ordered_values
     elif compile_state._dict_parameters:
