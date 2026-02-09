@@ -275,7 +275,7 @@ def _get_crud_params(
         assert mp is not None
         spd = mp[0]
         stmt_parameter_tuples = list(spd.items())
-    elif hasattr(compile_state, '_ordered_values') and compile_state._ordered_values:
+    elif hasattr(compile_state, "_ordered_values") and compile_state._ordered_values:
         spd = compile_state._dict_parameters
         stmt_parameter_tuples = compile_state._ordered_values
     elif compile_state._dict_parameters:
