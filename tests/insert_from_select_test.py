@@ -18,7 +18,7 @@
 # However, if you have executed another commercial license agreement
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest import TestCase, skipIf
 from unittest.mock import MagicMock, patch
 
@@ -54,7 +54,7 @@ class SqlAlchemyInsertFromSelectTest(TestCase):
 
             name = sa.Column(sa.String, primary_key=True)
             age = sa.Column(sa.Integer)
-            ts = sa.Column(sa.DateTime, onupdate=datetime.utcnow)
+            ts = sa.Column(sa.DateTime, onupdate=lambda: datetime.now(timezone.utc))
             status = sa.Column(sa.String)
 
         class CharacterArchive(Base):
@@ -62,7 +62,7 @@ class SqlAlchemyInsertFromSelectTest(TestCase):
 
             name = sa.Column(sa.String, primary_key=True)
             age = sa.Column(sa.Integer)
-            ts = sa.Column(sa.DateTime, onupdate=datetime.utcnow)
+            ts = sa.Column(sa.DateTime, onupdate=lambda: datetime.now(timezone.utc))
             status = sa.Column(sa.String)
 
         self.character = Character

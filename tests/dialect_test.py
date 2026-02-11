@@ -19,7 +19,7 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest import TestCase, skipIf
 from unittest.mock import MagicMock, patch
 
@@ -66,7 +66,7 @@ class SqlAlchemyDialectTest(TestCase):
             name = sa.Column(sa.String, primary_key=True)
             age = sa.Column(sa.Integer, primary_key=True)
             obj = sa.Column(ObjectType)
-            ts = sa.Column(sa.DateTime, onupdate=datetime.utcnow)
+            ts = sa.Column(sa.DateTime, onupdate=lambda: datetime.now(timezone.utc))
 
         self.session = Session(bind=self.engine)
 

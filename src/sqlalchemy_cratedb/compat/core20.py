@@ -275,9 +275,15 @@ def _get_crud_params(
         assert mp is not None
         spd = mp[0]
         stmt_parameter_tuples = list(spd.items())
-    elif hasattr(compile_state, "_ordered_values") and compile_state._ordered_values:
+    elif (hasattr(compile_state, "_ordered_values") and 
+          getattr(compile_state, "_ordered_values", None) is not None):
         spd = compile_state._dict_parameters
-        stmt_parameter_tuples = compile_state._ordered_values
+        try:
+            stmt_parameter_tuples = compile_state._ordered_values
+        except AttributeError:
+            # Fallback for newer SQLAlchemy versions where _ordered_values might not be accessible
+            spd = compile_state._dict_parameters
+            stmt_parameter_tuples = list(spd.items()) if spd else None
     elif compile_state._dict_parameters:
         spd = compile_state._dict_parameters
         stmt_parameter_tuples = list(spd.items())

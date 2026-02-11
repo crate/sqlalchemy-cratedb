@@ -20,7 +20,7 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from sqlalchemy import types as sqltypes
 from sqlalchemy.engine import default, reflection
@@ -96,7 +96,8 @@ class Date(sqltypes.Date):
             if not value:
                 return None
             try:
-                return datetime.utcfromtimestamp(value / 1e3).date()
+                # Always return timezone-naive dates for backward compatibility
+                return datetime.fromtimestamp(value / 1e3, timezone.utc).replace(tzinfo=None).date()
             except TypeError:
                 pass
 
@@ -132,7 +133,12 @@ class DateTime(sqltypes.DateTime):
             if not value:
                 return None
             try:
-                return datetime.utcfromtimestamp(value / 1e3)
+                # Check if timezone information is requested
+                if getattr(coltype, 'timezone', False):
+                    return datetime.fromtimestamp(value / 1e3, timezone.utc)
+                else:
+                    # For timezone-naive columns, remove timezone info for backward compatibility
+                    return datetime.fromtimestamp(value / 1e3, timezone.utc).replace(tzinfo=None)
             except TypeError:
                 pass
 

@@ -56,11 +56,10 @@ def check_uniqueness_factory(sa_entity, *attribute_names):
                 stmt = stmt.filter(
                     getattr(sa_entity, attribute_name) == getattr(target, attribute_name)
                 )
-            stmt = stmt.compile(bind=connection.engine)
             results = connection.execute(stmt)
             if results.rowcount > 0:
                 raise IntegrityError(
-                    statement=stmt,
+                    statement=str(stmt),
                     params=[],
                     orig=Exception(
                         f"DuplicateKeyException in table '{target.__tablename__}' "

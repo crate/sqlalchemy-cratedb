@@ -18,7 +18,7 @@
 # However, if you have executed another commercial license agreement
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest import TestCase, skipIf
 from unittest.mock import MagicMock, patch
 
@@ -53,7 +53,7 @@ class SqlAlchemyUpdateTest(TestCase):
             name = sa.Column(sa.String, primary_key=True)
             age = sa.Column(sa.Integer)
             obj = sa.Column(ObjectType)
-            ts = sa.Column(sa.DateTime, onupdate=datetime.utcnow)
+            ts = sa.Column(sa.DateTime, onupdate=lambda: datetime.now(timezone.utc))
 
         self.character = Character
         self.session = Session(bind=self.engine)
@@ -63,7 +63,7 @@ class SqlAlchemyUpdateTest(TestCase):
         char = self.character(name="Arthur")
         self.session.add(char)
         self.session.commit()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         fake_cursor.fetchall.return_value = [("Arthur", None)]
         fake_cursor.description = (
@@ -80,9 +80,12 @@ class SqlAlchemyUpdateTest(TestCase):
         args = args[1]
         self.assertEqual(expected_stmt, stmt)
         self.assertEqual(40, args[0])
-        dt = datetime.strptime(args[1], "%Y-%m-%dT%H:%M:%S.%f")
+        dt = datetime.fromisoformat(args[1].replace('+0000', '+00:00'))
         self.assertIsInstance(dt, datetime)
-        self.assertGreater(dt, now)
+        # Make now timezone-naive for comparison since dt is timezone-aware
+        now_naive = now.replace(tzinfo=None)
+        dt_naive = dt.replace(tzinfo=None) 
+        self.assertGreater(dt_naive, now_naive)
         self.assertEqual("Arthur", args[2])
 
     @patch("crate.client.connection.Cursor", FakeCursor)
@@ -91,7 +94,7 @@ class SqlAlchemyUpdateTest(TestCase):
         Checks whether bulk updates work correctly
         on native types and Crate types.
         """
-        before_update_time = datetime.utcnow()
+        before_update_time = datetime.now(timezone.utc)
 
         self.session.query(self.character).update(
             {
@@ -110,6 +113,9 @@ class SqlAlchemyUpdateTest(TestCase):
         self.assertEqual(expected_stmt, stmt)
         self.assertEqual("Julia", args[0])
         self.assertEqual({"favorite_book": "Romeo & Juliet"}, args[1])
-        dt = datetime.strptime(args[2], "%Y-%m-%dT%H:%M:%S.%f")
+        dt = datetime.fromisoformat(args[2].replace('+0000', '+00:00'))
         self.assertIsInstance(dt, datetime)
-        self.assertGreater(dt, before_update_time)
+        # Make before_update_time timezone-naive for comparison since dt is timezone-aware
+        before_update_time_naive = before_update_time.replace(tzinfo=None)
+        dt_naive = dt.replace(tzinfo=None) 
+        self.assertGreater(dt_naive, before_update_time_naive)

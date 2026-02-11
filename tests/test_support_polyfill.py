@@ -1,4 +1,5 @@
 import datetime as dt
+from datetime import timezone
 
 import pytest
 import sqlalchemy as sa
@@ -58,7 +59,7 @@ def test_autoincrement_timestamp(cratedb_service):
     )
 
     # Compare outcome.
-    assert result["date"].year == dt.datetime.now().year
+    assert result["date"].year == dt.datetime.now(timezone.utc).year
     assert result["number"] >= 1718846016235
     assert result["string"] >= "1718846016235"
 
