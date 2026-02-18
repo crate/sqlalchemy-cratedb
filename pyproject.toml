@@ -166,8 +166,6 @@ lint.extend-ignore = [
   "C402",
   # Unnecessary `map` usage (rewrite using a `set` comprehension)
   "C417",
-  # df is a bad variable name. Be kinder to your future self.
-  "PD901",
   # Unnecessary variable assignment before `return` statement
   "RET504",
   # Unnecessary `elif` after `return` statement
