@@ -131,10 +131,7 @@ line-length = 100
 
 [tool.ruff]
 line-length = 100
-
-extend-exclude = [
-]
-
+extend-exclude = []
 lint.select = [
   # Builtins
   "A",
@@ -162,7 +159,6 @@ lint.select = [
   # flake8-2020
   "YTT",
 ]
-
 lint.extend-ignore = [
   # zip() without an explicit strict= parameter
   "B905",
@@ -181,13 +177,11 @@ lint.extend-ignore = [
   # Possible SQL injection vector through string-based query construction
   "S608",
 ]
-
 lint.per-file-ignores."examples/*" = [
   "E501",   # Line too long
   "ERA001", # Found commented-out code
   "T201",   # Allow `print`
 ]
-
 lint.per-file-ignores."tests/*" = [
   "S101", # Allow use of `assert`, and `print`
   "S608", # Possible SQL injection vector through string-based query construction
@@ -195,55 +189,49 @@ lint.per-file-ignores."tests/*" = [
   "W293", # Blank line contains whitespace
 ]
 
-[tool.pytest.ini_options]
-addopts = """
+[tool.pytest]
+ini_options.addopts = """
   -rfEXs -p pytester --strict-markers --verbosity=3
   --cov --cov-report=term-missing --cov-report=xml
   """
-minversion = "2.0"
-log_level = "DEBUG"
-log_cli_level = "DEBUG"
-log_format = "%(asctime)-15s [%(name)-36s] %(levelname)-8s: %(message)s"
-pythonpath = [
+ini_options.minversion = "2.0"
+ini_options.log_level = "DEBUG"
+ini_options.log_cli_level = "DEBUG"
+ini_options.log_format = "%(asctime)-15s [%(name)-36s] %(levelname)-8s: %(message)s"
+ini_options.pythonpath = [
   "src",
 ]
-testpaths = [
+ini_options.testpaths = [
   "examples",
   "sqlalchemy_cratedb",
   "tests",
 ]
-python_files = [
+ini_options.python_files = [
   "test_*.py",
   "*_test.py",
 ]
-xfail_strict = true
-markers = [
-]
+ini_options.xfail_strict = true
+ini_options.markers = []
 
-[tool.coverage.paths]
-source = [
-  "src/",
-]
-
-[tool.coverage.run]
-branch = false
-omit = [
+[tool.coverage]
+run.branch = false
+run.omit = [
   "tests/*",
 ]
-
-[tool.coverage.report]
-fail_under = 0
-show_missing = true
-exclude_lines = [
+paths.source = [
+  "src/",
+]
+report.exclude_lines = [
   "# pragma: no cover",
   "raise NotImplemented",
 ]
+report.fail_under = 0
+report.show_missing = true
 
 [tool.mypy]
 mypy_path = "src"
 packages = [ "sqlalchemy_cratedb" ]
-exclude = [
-]
+exclude = []
 check_untyped_defs = true
 explicit_package_bases = true
 ignore_missing_imports = true
@@ -251,50 +239,41 @@ implicit_optional = true
 install_types = true
 namespace_packages = true
 non_interactive = true
-# Needed until `mypy-0.990` for `ConverterDefinition` in `converter.py`.
-# https://github.com/python/mypy/issues/731#issuecomment-1260976955
-# enable_recursive_aliases = true
 
-[tool.versioningit.vcs]
-method = "git-archive"
-default-tag = "0.0.0"
-describe-subst = "$Format:%(describe:tags)$"
-
+[tool.poe]
 # ===================
 # Tasks configuration
 # ===================
 
-[tool.poe.tasks]
-
-check = [
+tasks.check = [
   "lint",
   "test",
 ]
-
-format = [
+tasks.format = [
   # Format project metadata.
   { cmd = "pyproject-fmt --keep-full-version pyproject.toml" },
-
   # Format code.
   # Configure Ruff not to auto-fix a few items that are useful in workbench mode.
   # e.g.: unused imports (F401), unused variables (F841), `print` statements (T201), commented-out code (ERA001)
   { cmd = "ruff format" },
   { cmd = "ruff check --fix --ignore=ERA --ignore=F401 --ignore=F841 --ignore=T20 --ignore=ERA001" },
 ]
-
-lint = [
+tasks.lint = [
   { cmd = "ruff format --check" },
   { cmd = "ruff check" },
   { cmd = "validate-pyproject pyproject.toml" },
   # { cmd = "mypy" },
 ]
-
-release = [
+tasks.release = [
   { cmd = "python -m build" },
   { cmd = "twine upload --skip-existing dist/*" },
 ]
-
-test = [
+tasks.test = [
   { cmd = "pytest" },
   { cmd = "python -m unittest -vvv tests/integration.py" },
 ]
+
+[tool.versioningit]
+vcs.method = "git-archive"
+vcs.default-tag = "0.0.0"
+vcs.describe-subst = "$Format:%(describe:tags)$"
