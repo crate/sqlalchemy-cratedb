@@ -20,6 +20,7 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 import logging
+import warnings
 from datetime import date, datetime
 
 from sqlalchemy import types as sqltypes
@@ -226,14 +227,26 @@ class CrateDialect(default.DefaultDialect):
         if "servers" in kwargs:
             server = kwargs.pop("servers")
         servers = to_list(server)
+
+        # Process SSL options, old and new.
+        # TODO: Switch to the canonical default `sslmode=prefer` later.
+        if "ssl" in kwargs:
+            warnings.warn(
+                "The `ssl=true` option will be deprecated, "
+                "please use `sslmode=require` going forward.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        use_ssl = asbool(kwargs.pop("ssl", False))
+        sslmode = kwargs.pop("sslmode", "disable")
+        if sslmode in ["allow", "prefer", "require", "verify-ca", "verify-full"]:
+            use_ssl = True
+        if sslmode in ["allow", "prefer", "require"]:
+            kwargs["verify_ssl_cert"] = False
+
         if servers:
-            use_ssl = asbool(kwargs.pop("ssl", False))
-            # TODO: Switch to the canonical default `sslmode=prefer` later.
-            sslmode = kwargs.pop("sslmode", "disable")
-            if use_ssl or sslmode in ["allow", "prefer", "require", "verify-ca", "verify-full"]:
+            if use_ssl:
                 servers = ["https://" + server for server in servers]
-            if sslmode == "require":
-                kwargs["verify_ssl_cert"] = False
             return self.dbapi.connect(servers=servers, **kwargs)
         return self.dbapi.connect(**kwargs)
 
