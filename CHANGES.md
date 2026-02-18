@@ -2,8 +2,10 @@
 
 ## Unreleased
 - Added canonical [PostgreSQL client parameter `sslmode`], implementing
-  `sslmode=prefer` to connect to SSL-enabled CrateDB instances without
-  verifying the host name.
+  `sslmode=require` to connect to SSL-enabled CrateDB instances without
+  verifying the host name. The previous `ssl=true` parameter is flagged
+  for deprecation, therefore `sslmode` takes precedence while both
+  options coexist.
 
 [PostgreSQL client parameter `sslmode`]: https://www.postgresql.org/docs/current/libpq-ssl.html#LIBPQ-SSL-PROTECTION
 
