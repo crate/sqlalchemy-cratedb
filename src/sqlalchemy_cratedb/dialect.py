@@ -244,11 +244,11 @@ class CrateDialect(default.DefaultDialect):
         if sslmode in ["allow", "prefer", "require"]:
             kwargs["verify_ssl_cert"] = False
 
-        if servers:
-            if use_ssl:
-                servers = ["https://" + server for server in servers]
-            return self.dbapi.connect(servers=servers, **kwargs)
-        return self.dbapi.connect(**kwargs)
+        if not servers:
+            servers = [self.dbapi.http.Client.default_server.replace("http://", "")]
+        if use_ssl:
+            servers = ["https://" + server for server in servers]
+        return self.dbapi.connect(servers=servers, **kwargs)
 
     def do_execute(self, cursor, statement, parameters, context=None):
         """
