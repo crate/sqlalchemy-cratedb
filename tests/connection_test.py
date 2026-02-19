@@ -24,7 +24,7 @@ from unittest import TestCase
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.exc import NoSuchModuleError
+from sqlalchemy.exc import NoSuchModuleError, SQLAlchemyError
 
 from sqlalchemy_cratedb import SA_1_4, SA_VERSION
 from tests.util import ExtraAssertions
@@ -103,6 +103,15 @@ class SqlAlchemyConnectionTest(TestCase, ExtraAssertions):
         servers = engine.raw_connection().driver_connection.client._active_servers
         self.assertEqual(["http://otherhost:19201"], servers)
         engine.dispose()
+
+    def test_connection_server_uri_https_sslmode_invalid(self):
+        with pytest.raises(SQLAlchemyError) as exc_info:
+            engine = sa.create_engine("crate://otherhost:19201/?sslmode=foo")
+            engine.raw_connection()
+        exc_info.match(
+            "`sslmode` parameter must be one of: "
+            "disable, allow, prefer, require, verify-ca, verify-full"
+        )
 
     def test_connection_server_uri_invalid_port(self):
         with self.assertRaises(ValueError) as context:
