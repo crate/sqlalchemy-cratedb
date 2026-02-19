@@ -25,6 +25,7 @@ from datetime import date, datetime
 
 from sqlalchemy import types as sqltypes
 from sqlalchemy.engine import default, reflection
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import functions
 from sqlalchemy.util import asbool, to_list
 
@@ -35,6 +36,7 @@ from .compiler import (
 )
 from .sa_version import SA_1_4, SA_2_0, SA_VERSION
 from .type import FloatVector, ObjectArray, ObjectType
+from .util import SSLMode
 
 TYPES_MAP = {
     "boolean": sqltypes.Boolean,
@@ -228,8 +230,7 @@ class CrateDialect(default.DefaultDialect):
             server = kwargs.pop("servers")
         servers = to_list(server)
 
-        # Process SSL options, old and new.
-        # TODO: Switch to the canonical default `sslmode=prefer` later.
+        # Process legacy SSL option `ssl`.
         if "ssl" in kwargs:
             warnings.warn(
                 "The `ssl=true` option will be deprecated, "
@@ -238,11 +239,25 @@ class CrateDialect(default.DefaultDialect):
                 stacklevel=2,
             )
         use_ssl = asbool(kwargs.pop("ssl", False))
-        sslmode = kwargs.pop("sslmode", "disable")
-        if sslmode in ["allow", "prefer", "require", "verify-ca", "verify-full"]:
-            use_ssl = True
-        if sslmode in ["allow", "prefer", "require"]:
-            kwargs["verify_ssl_cert"] = False
+
+        # Process new SSL option `sslmode`.
+        # Please consult https://www.postgresql.org/docs/18/libpq-connect.html.
+        if "sslmode" in kwargs:
+            try:
+                sslmode = SSLMode.parse(kwargs.pop("sslmode"))
+            except AttributeError as exc:
+                modes = ", ".join(SSLMode.modes)
+                raise SQLAlchemyError(
+                    "`sslmode` parameter must be one of: {}".format(modes)
+                ) from exc
+            if sslmode < SSLMode.allow:
+                use_ssl = False
+            else:
+                use_ssl = True
+                if sslmode >= SSLMode.verify_ca:
+                    kwargs["verify_ssl_cert"] = True
+                else:
+                    kwargs["verify_ssl_cert"] = False
 
         if not servers:
             servers = [self.dbapi.http.Client.default_server.replace("http://", "")]
