@@ -60,13 +60,13 @@ Here, ``<HOST_ADDR>`` is the hostname or IP address of the CrateDB node and
 
 When authentication is needed, the credentials can be optionally supplied using
 ``<USERNAME>:<PASSWORD>@``. For connecting to an SSL-secured HTTP endpoint, you
-can add the query parameter ``?ssl=true`` to the database URI.
+can add the query parameter ``?sslmode=require`` to the database URI.
 
 Example database URIs:
 
 - ``crate://localhost:4200``
 - ``crate://crate-1.vm.example.com:4200``
-- ``crate://username:password@crate-2.vm.example.com:4200/?ssl=true``
+- ``crate://username:password@crate-2.vm.example.com:4200/?sslmode=require``
 - ``crate://198.51.100.1:4200``
 
 .. TIP::
@@ -154,11 +154,11 @@ Once you have an CrateDB ``engine`` set up, you can create and use an SQLAlchemy
 Connecting to CrateDB Cloud
 ...........................
 
-Connecting to `CrateDB Cloud`_ works like this. Please note the ``?ssl=true``
+Connecting to `CrateDB Cloud`_ works like this. Please note the ``?sslmode=require``
 query parameter at the end of the database URI.
 
     >>> import sqlalchemy as sa
-    >>> dburi = "crate://admin:<PASSWORD>@example.aks1.westeurope.azure.cratedb.net:4200?ssl=true"
+    >>> dburi = "crate://admin:<PASSWORD>@example.aks1.westeurope.azure.cratedb.net:4200?sslmode=require"
     >>> engine = sa.create_engine(dburi, echo=True)
 
 

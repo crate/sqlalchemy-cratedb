@@ -104,7 +104,7 @@ Connect to `CrateDB Cloud`_.
 
     # Connect using SQLAlchemy Core.
     import sqlalchemy as sa
-    dburi = "crate://admin:<PASSWORD>@example.aks1.westeurope.azure.cratedb.net:4200?ssl=true"
+    dburi = "crate://admin:<PASSWORD>@example.aks1.westeurope.azure.cratedb.net:4200?sslmode=require"
     engine = sa.create_engine(dburi, echo=True)
 
 Load results into `pandas`_ DataFrame.
