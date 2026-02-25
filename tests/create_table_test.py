@@ -26,12 +26,13 @@ try:
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
 
-from unittest import TestCase
+from unittest import TestCase, skipIf
 from unittest.mock import MagicMock, patch
 
 from crate.client.cursor import Cursor
 
 from sqlalchemy_cratedb import Geopoint, ObjectArray, ObjectType
+from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
 
 fake_cursor = MagicMock(name="fake_cursor")
 FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
@@ -383,3 +384,12 @@ class SqlAlchemyCreateTableTest(TestCase):
             ),
             (),
         )
+
+    @skipIf(SA_VERSION < SA_2_0, "sa.Double was introduced in SA 2.0")
+    def test_visit_double(self):
+        """
+        Verify ``CrateTypeCompiler.visit_double()`` compiles ``sa.Double``
+        to the CrateDB ``DOUBLE`` type keyword.
+        """
+        result = sa.Double().compile(dialect=self.engine.dialect)
+        self.assertEqual(str(result), "DOUBLE")

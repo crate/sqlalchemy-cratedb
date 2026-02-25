@@ -65,9 +65,10 @@ class SqlAlchemyUpdateTest(TestCase):
         self.session.commit()
         now = datetime.utcnow()
 
-        fake_cursor.fetchall.return_value = [("Arthur", None)]
+        fake_cursor.fetchall.return_value = [("Arthur", None, None)]
         fake_cursor.description = (
             ("characters_name", None, None, None, None, None, None),
+            ("characters_obj", None, None, None, None, None, None),
             ("characters_ts", None, None, None, None, None, None),
         )
 

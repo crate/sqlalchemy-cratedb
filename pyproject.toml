@@ -87,7 +87,7 @@ dependencies = [
   "geojson>=2.5,<4",
   "importlib-metadata; python_version<'3.8'",
   "importlib-resources; python_version<'3.9'",
-  "sqlalchemy>=1,<2.1",
+  "sqlalchemy>=1,<2.2",
   "verlib2<0.4",
 ]
 optional-dependencies.all = [

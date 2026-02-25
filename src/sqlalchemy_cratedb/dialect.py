@@ -32,7 +32,7 @@ from .compiler import (
     CrateIdentifierPreparer,
     CrateTypeCompiler,
 )
-from .sa_version import SA_1_4, SA_2_0, SA_VERSION
+from .sa_version import SA_1_4, SA_2_0, SA_2_1, SA_VERSION
 from .type import FloatVector, ObjectArray, ObjectType
 
 TYPES_MAP = {
@@ -160,8 +160,11 @@ colspecs = {
     sqltypes.TIMESTAMP: DateTime,
 }
 
+if SA_VERSION >= SA_2_1:
+    from .compat.core21 import CrateCompilerSA21
 
-if SA_VERSION >= SA_2_0:
+    statement_compiler = CrateCompilerSA21
+elif SA_VERSION >= SA_2_0:
     from .compat.core20 import CrateCompilerSA20
 
     statement_compiler = CrateCompilerSA20
