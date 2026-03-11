@@ -22,7 +22,7 @@ jobs:
         os: ['ubuntu-22.04']
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
         cratedb-version: ['nightly']
-        sqla-version: ['<1.4', '<1.5', '<2.1']
+        sqla-version: ['<1.4', '<1.5', '<2.1', '<2.2']
         pip-allow-prerelease: ['false']
 
         exclude:
@@ -33,6 +33,12 @@ jobs:
             sqla-version: '<1.4'
           - python-version: '3.14'
             sqla-version: '<1.4'
+
+          # SQLAlchemy 2.1 requires Python 3.9+.
+          - python-version: '3.7'
+            sqla-version: '<2.2'
+          - python-version: '3.8'
+            sqla-version: '<2.2'
 
         # Another CI test matrix slot to test against prerelease versions of Python packages.
         include:
