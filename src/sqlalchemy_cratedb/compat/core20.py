@@ -46,18 +46,31 @@ from sqlalchemy.sql.dml import DMLState, _DMLColumnElement
 from sqlalchemy.sql.dml import isinsert as _compile_state_isinsert
 
 from sqlalchemy_cratedb.compiler import CrateCompiler
+from sqlalchemy_cratedb.sa_version import SA_VERSION, SA_2_1
 
 
 class CrateCompilerSA20(CrateCompiler):
-    def visit_update(self, update_stmt, **kw):
+    def visit_update(self, update_stmt, visiting_cte=None, **kw):
         compile_state = update_stmt._compile_state_factory(update_stmt, self, **kw)
         update_stmt = compile_state.statement
 
-        # [20] CrateDB patch.
+        # CrateDB patch.
         if not compile_state._dict_parameters and not hasattr(update_stmt, "_crate_specific"):
-            return super().visit_update(update_stmt, **kw)
+            if SA_VERSION >= SA_2_1:
+                return super().visit_update(update_stmt, visiting_cte=visiting_cte, **kw)
+            else:
+                return super().visit_update(update_stmt, **kw)
 
-        toplevel = not self.stack
+        # SA 2.1 introduced visiting_cte for CTE support.
+        if SA_VERSION >= SA_2_1:
+            if visiting_cte is not None:
+                kw["visiting_cte"] = visiting_cte
+                toplevel = False
+            else:
+                toplevel = not self.stack
+        else:
+            toplevel = not self.stack
+
         if toplevel:
             self.isupdate = True
             if not self.dml_compile_state:
@@ -152,7 +165,11 @@ class CrateCompilerSA20(CrateCompiler):
             if t:
                 text += " WHERE " + t
 
-        limit_clause = self.update_limit_clause(update_stmt)
+        # SA 2.1 renamed update_limit_clause to update_post_criteria_clause.
+        if SA_VERSION >= SA_2_1:
+            limit_clause = self.update_post_criteria_clause(update_stmt, **kw)
+        else:
+            limit_clause = self.update_limit_clause(update_stmt)
         if limit_clause:
             text += " " + limit_clause
 
@@ -275,7 +292,8 @@ def _get_crud_params(
         assert mp is not None
         spd = mp[0]
         stmt_parameter_tuples = list(spd.items())
-    elif compile_state._ordered_values:
+    elif SA_VERSION < SA_2_1 and compile_state._ordered_values:
+        # _ordered_values was removed in SA 2.1.
         spd = compile_state._dict_parameters
         stmt_parameter_tuples = compile_state._ordered_values
     elif compile_state._dict_parameters:
