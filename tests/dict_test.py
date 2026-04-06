@@ -21,6 +21,7 @@
 
 from __future__ import absolute_import
 
+import re
 from unittest import TestCase, skipIf
 from unittest.mock import MagicMock, patch
 
@@ -29,14 +30,17 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import select
 
 try:
-    from sqlalchemy.orm import declarative_base
+    from sqlalchemy.orm import Mapped, declarative_base, mapped_column
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
+
+    Mapped = None
+    mapped_column = None
 
 from crate.client.cursor import Cursor
 
 from sqlalchemy_cratedb import ObjectArray, ObjectType
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
+from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_1, SA_VERSION
 
 fake_cursor = MagicMock(name="fake_cursor")
 FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
@@ -96,21 +100,83 @@ class SqlAlchemyDictTypeTest(TestCase):
         self.assertSQL("UPDATE mytable SET data['x'] = ? WHERE mytable.name = ?", stmt)
 
     def set_up_character_and_cursor(self, return_value=None):
-        return_value = return_value or [("Trillian", {})]
-        fake_cursor.fetchall.return_value = return_value
-        fake_cursor.description = (
-            ("characters_name", None, None, None, None, None, None),
-            ("characters_data", None, None, None, None, None, None),
-        )
+        """
+        Set up a ``Character`` model and a fake cursor, compatible with all
+        supported SQLAlchemy versions.
+
+        **SA 2.1+** may issue SELECTs for different subsets of columns
+        depending on which attributes have been expired after a flush.  A
+        dynamic ``execute`` side-effect is installed on the fake cursor so that
+        ``cursor.description`` and ``cursor.fetchall`` are adjusted to return
+        exactly the columns present in each SELECT statement.  The model uses
+        ``mapped_column`` / ``Mapped`` annotations available since SA 2.0.
+
+        **SA < 2.1** always selects the same fixed set of columns after a
+        flush.  A static cursor mock with a two-column description
+        (``name``, ``data``) is used, matching the behaviour of those
+        versions.  The model uses plain ``sa.Column`` declarations.
+        """
         fake_cursor.rowcount = 1
         Base = declarative_base()
 
-        class Character(Base):
-            __tablename__ = "characters"
-            name = sa.Column(sa.String, primary_key=True)
-            age = sa.Column(sa.Integer)
-            data = sa.Column(ObjectType)
-            data_list = sa.Column(ObjectArray)
+        if SA_VERSION >= SA_2_1:
+            # SA 2.1 may fire SELECTs for different subsets of columns depending
+            # on what is expired. Use a dynamic mock that adjusts description and
+            # return value to match exactly the columns present in each SELECT.
+            data_rows = return_value or [("Trillian", {})]
+            col_order = [
+                "characters_name",
+                "characters_age",
+                "characters_data",
+                "characters_data_list",
+            ]
+            full_rows = [(r[0], None, r[1], None) for r in data_rows]
+
+            def _col_in_sql(col, sql):
+                # Match 'characters.<attr>' where attr does not bleed into another column name.
+                attr = col.replace("characters_", "")
+                return bool(re.search(rf"characters\.{attr}(?!\w)", sql))
+
+            def execute_side_effect(sql, *args, **kwargs):
+                sql_str = str(sql)
+                if "SELECT" in sql_str.upper():
+                    cols = [c for c in col_order if _col_in_sql(c, sql_str)]
+                    if cols:
+                        indices = [col_order.index(c) for c in cols]
+                        fake_cursor.description = tuple(
+                            (c, None, None, None, None, None, None) for c in cols
+                        )
+                        fake_cursor.fetchall.return_value = [
+                            tuple(row[i] for i in indices) for row in full_rows
+                        ]
+
+            fake_cursor.execute.side_effect = execute_side_effect
+            # Set defaults so non-SELECT calls (INSERT/UPDATE) don't need description.
+            fake_cursor.fetchall.return_value = []
+            fake_cursor.description = ()
+
+            class Character(Base):
+                __tablename__ = "characters"
+                name: Mapped[str] = mapped_column(primary_key=True)
+                age = sa.Column(sa.Integer)
+                data = sa.Column(ObjectType)
+                data_list = sa.Column(ObjectArray)
+
+        else:
+            # Older SA always selects a fixed set of columns; use a static mock.
+            fake_cursor.execute.side_effect = None
+            fake_cursor.fetchall.return_value = return_value or [("Trillian", {})]
+            fake_cursor.description = (
+                ("characters_name", None, None, None, None, None, None),
+                ("characters_data", None, None, None, None, None, None),
+            )
+
+            class Character(Base):
+                __tablename__ = "characters"
+                name = sa.Column(sa.String, primary_key=True)
+                age = sa.Column(sa.Integer)
+                data = sa.Column(ObjectType)
+                data_list = sa.Column(ObjectArray)
 
         session = Session(bind=self.engine)
         return session, Character
@@ -301,6 +367,9 @@ class SqlAlchemyDictTypeTest(TestCase):
 
     def set_up_character_and_cursor_data_list(self, return_value=None):
         return_value = return_value or [("Trillian", {})]
+        # Clear any side_effect installed by set_up_character_and_cursor so the
+        # static description below is used as-is for this 2-column model.
+        fake_cursor.execute.side_effect = None
         fake_cursor.fetchall.return_value = return_value
         fake_cursor.description = (
             ("characters_name", None, None, None, None, None, None),
