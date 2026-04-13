@@ -46,7 +46,7 @@ from sqlalchemy.sql.dml import DMLState, _DMLColumnElement
 from sqlalchemy.sql.dml import isinsert as _compile_state_isinsert
 
 from sqlalchemy_cratedb.compiler import CrateCompiler
-from sqlalchemy_cratedb.sa_version import SA_VERSION, SA_2_1
+from sqlalchemy_cratedb.sa_version import SA_2_1, SA_VERSION
 
 
 class CrateCompilerSA20(CrateCompiler):
