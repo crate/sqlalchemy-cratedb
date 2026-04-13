@@ -163,7 +163,6 @@ colspecs = {
     sqltypes.TIMESTAMP: DateTime,
 }
 
-
 if SA_VERSION >= SA_2_0:
     from .compat.core20 import CrateCompilerSA20
 
