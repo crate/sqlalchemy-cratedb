@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Added support for SQL Alchemy 2.1
+- Added support for Python 3.14
 - Added canonical [PostgreSQL client parameter `sslmode`], implementing
   `sslmode=require` to connect to SSL-enabled CrateDB instances without
   verifying the host name. The previous `ssl=true` parameter is flagged
