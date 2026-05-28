@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026/05/28 0.42.0
 - Added support for SQL Alchemy 2.1
 - Added support for Python 3.14
 - Added canonical [PostgreSQL client parameter `sslmode`], implementing
