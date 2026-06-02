@@ -167,7 +167,7 @@ class CrateCompilerSA20(CrateCompiler):
 
         # SA 2.1 renamed update_limit_clause to update_post_criteria_clause.
         if SA_VERSION >= SA_2_1:
-            limit_clause = self.update_post_criteria_clause(update_stmt, **kw)
+            limit_clause = self.update_post_criteria_clause(update_stmt, **kw)  # ty: ignore[unresolved-attribute]
         else:
             limit_clause = self.update_limit_clause(update_stmt)
         if limit_clause:
@@ -416,14 +416,14 @@ def _get_crud_params(
             compiler,
             stmt,
             compile_state,
-            cast(
+            cast(  # ty: ignore[invalid-argument-type]
                 "Sequence[_CrudParamElementStr]",
-                values,
+                values,  # ty: ignore[invalid-argument-type]
             ),
-            cast("Callable[..., str]", _column_as_key),
+            cast("Callable[..., str]", _column_as_key),  # ty: ignore[invalid-argument-type]
             kw,
         )
-        return _CrudParams(values, multi_extended_values)
+        return _CrudParams(values, multi_extended_values)  # ty: ignore[invalid-argument-type]
     elif not values and compiler.for_executemany and compiler.dialect.supports_default_metavalue:
         # convert an "INSERT DEFAULT VALUES"
         # into INSERT (firstcol) VALUES (DEFAULT) which can be turned
@@ -438,4 +438,4 @@ def _get_crud_params(
             )
         ]
 
-    return _CrudParams(values, [])
+    return _CrudParams(values, [])  # ty: ignore[invalid-argument-type]

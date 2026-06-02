@@ -2,6 +2,7 @@ import itertools
 import typing as t
 
 import sqlalchemy as sa
+import sqlalchemy.sql.selectable
 
 from sqlalchemy_cratedb.dialect import CrateDialect
 
@@ -46,7 +47,7 @@ def refresh_dirty(session, flush_context=None):
     dirty_entities = itertools.chain(session.new, session.dirty, session.deleted)
     dirty_classes = {entity.__class__ for entity in dirty_entities}
     for class_ in dirty_classes:
-        refresh_table(session, class_)
+        refresh_table(session, class_)  # ty: ignore[invalid-argument-type]
 
 
 def quote_relation_name(ident: str) -> str:

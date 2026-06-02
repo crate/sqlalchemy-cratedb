@@ -24,4 +24,4 @@ class SSLMode(enum.IntEnum):
 
     @classproperty
     def modes(cls):
-        return [m.name.replace("_", "-") for m in cls]
+        return [m.name.replace("_", "-") for m in cls]  # ty: ignore[not-iterable]

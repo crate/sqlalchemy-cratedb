@@ -22,7 +22,9 @@
 import logging
 import warnings
 from datetime import date, datetime
+from typing import TYPE_CHECKING, Any, List, Optional, cast
 
+from sqlalchemy import Connection
 from sqlalchemy import types as sqltypes
 from sqlalchemy.engine import default, reflection
 from sqlalchemy.exc import SQLAlchemyError
@@ -37,6 +39,9 @@ from .compiler import (
 from .sa_version import SA_1_4, SA_2_0, SA_VERSION
 from .type import FloatVector, ObjectArray, ObjectType
 from .util import SSLMode
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine.interfaces import ReflectedIndex, ReflectedPrimaryKeyConstraint
 
 TYPES_MAP = {
     "boolean": sqltypes.Boolean,
@@ -99,7 +104,7 @@ class Date(sqltypes.Date):
             if not value:
                 return None
             try:
-                return datetime.utcfromtimestamp(value / 1e3).date()
+                return datetime.utcfromtimestamp(value / 1e3).date()  # ty: ignore[deprecated]
             except TypeError:
                 pass
 
@@ -135,7 +140,7 @@ class DateTime(sqltypes.DateTime):
             if not value:
                 return None
             try:
-                return datetime.utcfromtimestamp(value / 1e3)
+                return datetime.utcfromtimestamp(value / 1e3)  # ty: ignore[deprecated]
             except TypeError:
                 pass
 
@@ -214,7 +219,7 @@ class CrateDialect(default.DefaultDialect):
         # get default schema name
         self.default_schema_name = self._get_default_schema_name(connection)
 
-    def do_rollback(self, connection):
+    def do_rollback(self, dbapi_connection):
         # if any exception is raised by the dbapi, sqlalchemy by default
         # attempts to do a rollback crate doesn't support rollbacks.
         # implementing this as noop seems to cause sqlalchemy to propagate the
@@ -259,10 +264,10 @@ class CrateDialect(default.DefaultDialect):
                     kwargs["verify_ssl_cert"] = False
 
         if not servers:
-            servers = [self.dbapi.http.Client.default_server.replace("http://", "")]
+            servers = [self.dbapi.http.Client.default_server.replace("http://", "")]  # ty: ignore[unresolved-attribute]
         if use_ssl:
             servers = ["https://" + server for server in servers]
-        return self.dbapi.connect(servers=servers, **kwargs)
+        return self.dbapi.connect(servers=servers, **kwargs)  # ty: ignore[unresolved-attribute]
 
     def do_execute(self, cursor, statement, parameters, context=None):
         """
@@ -313,8 +318,8 @@ class CrateDialect(default.DefaultDialect):
     def dbapi(cls):
         return cls.import_dbapi()
 
-    def has_schema(self, connection, schema, **kw):
-        return schema in self.get_schema_names(connection, **kw)
+    def has_schema(self, connection: Connection, schema_name: str, **kw: Any) -> bool:
+        return schema_name in self.get_schema_names(connection, **kw)
 
     def has_table(self, connection, table_name, schema=None, **kw):
         return table_name in self.get_table_names(connection, schema=schema, **kw)
@@ -367,8 +372,15 @@ class CrateDialect(default.DefaultDialect):
         return [self._create_column_info(row) for row in cursor.fetchall()]
 
     @reflection.cache
-    def get_pk_constraint(self, engine, table_name, schema=None, **kw):
-        if self.server_version_info >= (3, 0, 0):
+    def get_pk_constraint(
+        self,
+        connection: Connection,
+        table_name: str,
+        schema: Optional[str] = None,
+        **kw: Any,
+    ) -> "ReflectedPrimaryKeyConstraint":
+        server_version_info = cast(tuple, self.server_version_info)
+        if server_version_info >= (3, 0, 0):
             query = """SELECT column_name
                     FROM information_schema.key_column_usage
                     WHERE table_name = ? AND table_schema = ?"""
@@ -377,7 +389,7 @@ class CrateDialect(default.DefaultDialect):
                 rows = result.fetchall()
                 return set(map(lambda el: el[0], rows))
 
-        elif self.server_version_info >= (2, 3, 0):
+        elif server_version_info >= (2, 3, 0):
             query = """SELECT column_name
                     FROM information_schema.key_column_usage
                     WHERE table_name = ? AND table_catalog = ?"""
@@ -397,7 +409,9 @@ class CrateDialect(default.DefaultDialect):
                 rows = result.fetchone()
                 return set(rows[0] if rows else [])
 
-        pk_result = engine.exec_driver_sql(query, (table_name, schema or self.default_schema_name))
+        pk_result = connection.exec_driver_sql(
+            query, (table_name, schema or self.default_schema_name)
+        )
         pks = result_fun(pk_result)
         return {"constrained_columns": sorted(pks), "name": "PRIMARY KEY"}
 
@@ -409,7 +423,13 @@ class CrateDialect(default.DefaultDialect):
         return []
 
     @reflection.cache
-    def get_indexes(self, connection, table_name, schema, **kw):
+    def get_indexes(
+        self,
+        connection: Connection,
+        table_name: str,
+        schema: Optional[str] = None,
+        **kw: Any,
+    ) -> List["ReflectedIndex"]:
         return []
 
     @property

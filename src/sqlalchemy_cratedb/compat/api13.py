@@ -88,8 +88,8 @@ def monkeypatch_add_exec_driver_sql():
     from sqlalchemy.engine.base import Connection, Engine
 
     # Add `exec_driver_sql` method to SA's `Connection` and `Engine` classes.
-    Connection.exec_driver_sql = exec_driver_sql  # type: ignore[method-assign]
-    Engine.exec_driver_sql = exec_driver_sql  # type: ignore[attr-defined]
+    Connection.exec_driver_sql = exec_driver_sql  # ty: ignore[invalid-assignment]
+    Engine.exec_driver_sql = exec_driver_sql  # ty: ignore[unresolved-attribute]
 
 
 def select_sa14(*columns, **kw) -> Select[t.Any]:
@@ -111,7 +111,7 @@ def select_sa14(*columns, **kw) -> Select[t.Any]:
             )
         columns, whereclause = columns
         kw["whereclause"] = whereclause
-    return original_select(columns, **kw)
+    return original_select(columns, **kw)  # ty: ignore[no-matching-overload]
 
 
 def monkeypatch_amend_select_sa14():
@@ -124,9 +124,9 @@ def monkeypatch_amend_select_sa14():
     """
     import sqlalchemy
 
-    sqlalchemy.select = select_sa14
-    sqlalchemy.sql.select = select_sa14
-    sqlalchemy.sql.expression.select = select_sa14
+    sqlalchemy.select = select_sa14  # ty: ignore[invalid-assignment]
+    sqlalchemy.sql.select = select_sa14  # ty: ignore[invalid-assignment]
+    sqlalchemy.sql.expression.select = select_sa14  # ty: ignore[invalid-assignment]
 
 
 @property
@@ -150,4 +150,4 @@ def connectionfairy_driver_connection_sa14(self):
 def monkeypatch_add_connectionfairy_driver_connection():
     import sqlalchemy.pool.base
 
-    sqlalchemy.pool.base._ConnectionFairy.driver_connection = connectionfairy_driver_connection_sa14
+    sqlalchemy.pool.base._ConnectionFairy.driver_connection = connectionfairy_driver_connection_sa14  # ty: ignore[invalid-assignment]

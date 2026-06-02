@@ -53,9 +53,9 @@ if SA_VERSION < SA_1_4:
 
 
 try:
-    from importlib.metadata import PackageNotFoundError, version
+    from importlib.metadata import PackageNotFoundError, version  # ty: ignore[unresolved-import]
 except (ImportError, ModuleNotFoundError):  # pragma:nocover
-    from importlib_metadata import (  # type: ignore[assignment,no-redef,unused-ignore]
+    from importlib_metadata import (  # ty: ignore[unresolved-import]
         PackageNotFoundError,
         version,
     )

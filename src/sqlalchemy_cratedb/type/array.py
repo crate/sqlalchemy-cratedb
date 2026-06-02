@@ -24,6 +24,7 @@
 import sqlalchemy.types as sqltypes
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.sql import default_comparator, expression, operators
+from sqlalchemy.sql.operators import ColumnOperators
 
 
 class MutableList(Mutable, list):
@@ -100,8 +101,8 @@ class _ObjectArray(sqltypes.UserDefinedType):
     cache_ok = True
 
     class Comparator(sqltypes.TypeEngine.Comparator):
-        def __getitem__(self, key):
-            return default_comparator._binary_operate(self.expr, operators.getitem, key)
+        def __getitem__(self, index: Any) -> ColumnOperators:
+            return default_comparator._binary_operate(self.expr, operators.getitem, index)
 
         def any(self, other, operator=operators.eq):
             """Return ``other operator ANY (array)`` clause.
