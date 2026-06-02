@@ -187,29 +187,41 @@ lint.per-file-ignores."tests/*" = [
   "W293", # Blank line contains whitespace
 ]
 
+[tool.mypy]
+mypy_path = "src"
+packages = [ "sqlalchemy_cratedb" ]
+exclude = []
+namespace_packages = true
+explicit_package_bases = true
+ignore_missing_imports = true
+check_untyped_defs = true
+implicit_optional = true
+install_types = true
+non_interactive = true
+
 [tool.pytest]
-ini_options.addopts = """
-  -rfEXs -p pytester --strict-markers --verbosity=3
-  --cov --cov-report=term-missing --cov-report=xml
-  """
 ini_options.minversion = "2.0"
-ini_options.log_level = "DEBUG"
-ini_options.log_cli_level = "DEBUG"
-ini_options.log_format = "%(asctime)-15s [%(name)-36s] %(levelname)-8s: %(message)s"
-ini_options.pythonpath = [
-  "src",
-]
 ini_options.testpaths = [
   "examples",
   "sqlalchemy_cratedb",
   "tests",
 ]
-ini_options.python_files = [
-  "test_*.py",
-  "*_test.py",
+ini_options.pythonpath = [
+  "src",
 ]
-ini_options.xfail_strict = true
+ini_options.python_files = [
+  "*_test.py",
+  "test_*.py",
+]
+ini_options.addopts = """
+  -rfEXs -p pytester --strict-markers --verbosity=3
+  --cov --cov-report=term-missing --cov-report=xml
+  """
 ini_options.markers = []
+ini_options.xfail_strict = true
+ini_options.log_format = "%(asctime)-15s [%(name)-36s] %(levelname)-8s: %(message)s"
+ini_options.log_level = "DEBUG"
+ini_options.log_cli_level = "DEBUG"
 
 [tool.coverage]
 run.branch = false
@@ -226,23 +238,10 @@ report.exclude_lines = [
 report.fail_under = 0
 report.show_missing = true
 
-[tool.mypy]
-mypy_path = "src"
-packages = [ "sqlalchemy_cratedb" ]
-exclude = []
-check_untyped_defs = true
-explicit_package_bases = true
-ignore_missing_imports = true
-implicit_optional = true
-install_types = true
-namespace_packages = true
-non_interactive = true
-
 [tool.poe]
 # ===================
 # Tasks configuration
 # ===================
-
 tasks.check = [
   "lint",
   "test",
