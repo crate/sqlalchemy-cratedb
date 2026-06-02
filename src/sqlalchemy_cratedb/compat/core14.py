@@ -19,6 +19,8 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 
+import typing as t
+
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql.base import PGCompiler
 from sqlalchemy.sql import selectable
@@ -37,13 +39,13 @@ from sqlalchemy_cratedb.compiler import CrateCompiler
 
 
 class CrateCompilerSA14(CrateCompiler):
-    def returning_clause(self, stmt, returning_cols):
+    def returning_clause(self, stmt, returning_cols):  # ty: ignore[invalid-method-override]
         """
         Generate RETURNING clause, PostgreSQL-compatible.
         """
-        return PGCompiler.returning_clause(self, stmt, returning_cols)
+        return PGCompiler.returning_clause(self, stmt, returning_cols)  # ty: ignore[missing-argument]
 
-    def visit_update(self, update_stmt, **kw):
+    def visit_update(self, update_stmt, **kw):  # ty: ignore[invalid-method-override]
         compile_state = update_stmt._compile_state_factory(update_stmt, self, **kw)
         update_stmt = compile_state.statement
 
@@ -196,6 +198,7 @@ def _get_crud_params(compiler, stmt, compile_state, **kw):
             for c in stmt.table.columns
         ]
 
+    spd: t.Iterable
     if compile_state._has_multi_parameters:
         spd = compile_state._multi_parameters[0]
         stmt_parameter_tuples = list(spd.items())
@@ -206,7 +209,7 @@ def _get_crud_params(compiler, stmt, compile_state, **kw):
         spd = compile_state._dict_parameters
         stmt_parameter_tuples = list(spd.items())
     else:
-        stmt_parameter_tuples = spd = None
+        stmt_parameter_tuples = spd = []
 
     # if we have statement parameters - set defaults in the
     # compiled params
@@ -251,7 +254,7 @@ def _get_crud_params(compiler, stmt, compile_state, **kw):
         )
 
     if compile_state.isinsert and stmt._select_names:
-        _scan_insert_from_select_cols(
+        _scan_insert_from_select_cols(  # ty: ignore[missing-argument]
             compiler,
             stmt,
             compile_state,
@@ -264,7 +267,7 @@ def _get_crud_params(compiler, stmt, compile_state, **kw):
             kw,
         )
     else:
-        _scan_cols(
+        _scan_cols(  # ty: ignore[missing-argument]
             compiler,
             stmt,
             compile_state,
@@ -314,7 +317,7 @@ def _get_crud_params(compiler, stmt, compile_state, **kw):
             stmt,
             compile_state,
             values,
-            _column_as_key,
+            _column_as_key,  # ty: ignore[invalid-argument-type]
             kw,
         )
     elif not values and compiler.for_executemany and compiler.dialect.supports_default_metavalue:

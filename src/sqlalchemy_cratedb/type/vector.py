@@ -101,7 +101,7 @@ class FloatVector(sa.TypeDecorator):
 
     impl = sa.ARRAY
 
-    def __init__(self, dimensions: int = None):
+    def __init__(self, dimensions: t.Optional[int] = None):
         super().__init__(sa.FLOAT, dimensions=dimensions)
 
     def as_generic(self, allow_nulltype=False):

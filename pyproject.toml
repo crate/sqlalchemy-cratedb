@@ -94,10 +94,10 @@ optional-dependencies.all = [
   "sqlalchemy-cratedb[vector]",
 ]
 optional-dependencies.develop = [
-  "mypy<1.20",
   "poethepoet<1",
   "pyproject-fmt<3",
   "ruff<0.16",
+  "ty==0.0.42",
   "validate-pyproject<1",
 ]
 optional-dependencies.doc = [
@@ -187,18 +187,6 @@ lint.per-file-ignores."tests/*" = [
   "W293", # Blank line contains whitespace
 ]
 
-[tool.mypy]
-mypy_path = "src"
-packages = [ "sqlalchemy_cratedb" ]
-exclude = []
-namespace_packages = true
-explicit_package_bases = true
-ignore_missing_imports = true
-check_untyped_defs = true
-implicit_optional = true
-install_types = true
-non_interactive = true
-
 [tool.pytest]
 ini_options.minversion = "2.0"
 ini_options.testpaths = [
@@ -259,7 +247,7 @@ tasks.lint = [
   { cmd = "ruff format --check" },
   { cmd = "ruff check" },
   { cmd = "validate-pyproject pyproject.toml" },
-  # { cmd = "mypy" },
+  { cmd = "ty check src/" },
 ]
 tasks.release = [
   { cmd = "python -m build" },

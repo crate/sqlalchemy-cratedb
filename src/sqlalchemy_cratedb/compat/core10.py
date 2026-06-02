@@ -25,8 +25,8 @@ from sqlalchemy.sql.crud import (
     REQUIRED,
     _create_bind_param,
     _extend_values_for_multiparams,
-    _get_multitable_params,
-    _get_stmt_parameters_params,
+    _get_multitable_params,  # ty: ignore[unresolved-import]
+    _get_stmt_parameters_params,  # ty: ignore[unresolved-import]
     _key_getters_for_crud_column,
     _scan_cols,
     _scan_insert_from_select_cols,
@@ -36,13 +36,13 @@ from sqlalchemy_cratedb.compiler import CrateCompiler
 
 
 class CrateCompilerSA10(CrateCompiler):
-    def returning_clause(self, stmt, returning_cols):
+    def returning_clause(self, stmt, returning_cols):  # ty: ignore[invalid-method-override]
         """
         Generate RETURNING clause, PostgreSQL-compatible.
         """
-        return PGCompiler.returning_clause(self, stmt, returning_cols)
+        return PGCompiler.returning_clause(self, stmt, returning_cols)  # ty: ignore[missing-argument]
 
-    def visit_update(self, update_stmt, **kw):
+    def visit_update(self, update_stmt, **kw):  # ty: ignore[invalid-method-override]
         """
         used to compile <sql.expression.Update> expressions
         Parts are taken from the SQLCompiler base class.
@@ -93,7 +93,7 @@ class CrateCompilerSA10(CrateCompiler):
 
         if self.returning or update_stmt._returning:
             if not self.returning:
-                self.returning = update_stmt._returning
+                self.returning = update_stmt._returning  # ty: ignore[invalid-assignment]
             if self.returning_precedes_values:
                 text += " " + self.returning_clause(update_stmt, self.returning)
 
@@ -154,7 +154,7 @@ def _get_crud_params(compiler, stmt, **kw):
         _column_as_key,
         _getattr_col_key,
         _col_bind_name,
-    ) = _key_getters_for_crud_column(compiler, stmt)
+    ) = _key_getters_for_crud_column(compiler, stmt)  # ty: ignore[missing-argument]
 
     # if we have statement parameters - set defaults in the
     # compiled params
@@ -192,7 +192,7 @@ def _get_crud_params(compiler, stmt, **kw):
         )
 
     if compiler.isinsert and stmt.select_names:
-        _scan_insert_from_select_cols(
+        _scan_insert_from_select_cols(  # ty: ignore[missing-argument]
             compiler,
             stmt,
             parameters,
@@ -204,7 +204,7 @@ def _get_crud_params(compiler, stmt, **kw):
             kw,
         )
     else:
-        _scan_cols(
+        _scan_cols(  # ty: ignore[missing-argument]
             compiler,
             stmt,
             parameters,
@@ -248,6 +248,6 @@ def _get_crud_params(compiler, stmt, **kw):
     """
 
     if stmt._has_multi_parameters:
-        values = _extend_values_for_multiparams(compiler, stmt, values, kw)
+        values = _extend_values_for_multiparams(compiler, stmt, values, kw)  # ty: ignore[invalid-argument-type,missing-argument]
 
     return values

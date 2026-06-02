@@ -1,6 +1,8 @@
 import typing as t
 
 import sqlalchemy as sa
+import sqlalchemy.event
+import sqlalchemy.orm
 from sqlalchemy.event import listen
 
 from sqlalchemy_cratedb.support.util import refresh_dirty, refresh_table
@@ -26,7 +28,7 @@ def patch_autoincrement_timestamp():
                 kwargs["default"] = sa.func.now()
         init_dist(self, *args, **kwargs)
 
-    schema.Column.__init__ = __init__  # type: ignore[method-assign]
+    schema.Column.__init__ = __init__  # ty: ignore[invalid-assignment]
 
 
 def check_uniqueness_factory(sa_entity, *attribute_names):

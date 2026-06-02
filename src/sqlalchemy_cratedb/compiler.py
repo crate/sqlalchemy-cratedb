@@ -24,6 +24,8 @@ import warnings
 from collections import defaultdict
 
 import sqlalchemy as sa
+import sqlalchemy.event
+import sqlalchemy.exc
 from sqlalchemy.dialects.postgresql.base import RESERVED_WORDS as POSTGRESQL_RESERVED_WORDS
 from sqlalchemy.dialects.postgresql.base import PGCompiler
 from sqlalchemy.sql import compiler
@@ -143,7 +145,7 @@ class CrateDDLCompiler(compiler.DDLCompiler):
 
         return colspec
 
-    def visit_computed_column(self, generated):
+    def visit_computed_column(self, generated):  # ty: ignore[invalid-method-override]
         if generated.persisted is False:
             raise sa.exc.CompileError(
                 "Virtual computed columns are not supported, set 'persisted' to None or True"
@@ -276,7 +278,7 @@ class CrateCompiler(compiler.SQLCompiler):
         """
         Use native `ILIKE` operator, like PostgreSQL's `PGCompiler`.
         """
-        if self.dialect.has_ilike_operator():
+        if self.dialect.has_ilike_operator():  # ty: ignore[unresolved-attribute]
             return element.element._compiler_dispatch(self, **kw)
         else:
             return super().visit_ilike_case_insensitive_operand(element, **kw)
@@ -290,7 +292,7 @@ class CrateCompiler(compiler.SQLCompiler):
         """
         if binary.modifiers.get("escape", None) is not None:
             raise NotImplementedError("Unsupported feature: ESCAPE is not supported")
-        if self.dialect.has_ilike_operator():
+        if self.dialect.has_ilike_operator():  # ty: ignore[unresolved-attribute]
             return "%s ILIKE %s" % (
                 self.process(binary.left, **kw),
                 self.process(binary.right, **kw),
@@ -307,7 +309,7 @@ class CrateCompiler(compiler.SQLCompiler):
         """
         if binary.modifiers.get("escape", None) is not None:
             raise NotImplementedError("Unsupported feature: ESCAPE is not supported")
-        if self.dialect.has_ilike_operator():
+        if self.dialect.has_ilike_operator():  # ty: ignore[unresolved-attribute]
             return "%s NOT ILIKE %s" % (
                 self.process(binary.left, **kw),
                 self.process(binary.right, **kw),
@@ -319,7 +321,7 @@ class CrateCompiler(compiler.SQLCompiler):
         """
         Generate OFFSET / LIMIT clause, PostgreSQL-compatible.
         """
-        return PGCompiler.limit_clause(self, select, **kw)
+        return PGCompiler.limit_clause(self, select, **kw)  # ty: ignore[invalid-argument-type]
 
     def for_update_clause(self, select, **kw):
         # CrateDB does not support the `INSERT ... FOR UPDATE` clause.

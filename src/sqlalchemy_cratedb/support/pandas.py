@@ -24,6 +24,7 @@ from typing import Any
 from unittest.mock import patch
 
 import sqlalchemy as sa
+import sqlalchemy.sql.schema
 
 from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
 
@@ -89,7 +90,7 @@ def table_kwargs(**kwargs):
     """
 
     if SA_VERSION < SA_2_0:
-        _init_dist = sa.sql.schema.Table._init
+        _init_dist = sa.sql.schema.Table._init  # ty: ignore[unresolved-attribute]
 
         def _init(self, name, metadata, *args, **kwargs_effective):
             kwargs_effective.update(kwargs)
