@@ -213,6 +213,9 @@ class CrateDDLCompiler(compiler.DDLCompiler):
 
 
 class CrateTypeCompiler(compiler.GenericTypeCompiler):
+    visit_on_conflict_do_update = PGCompiler.visit_on_conflict_do_update
+    _on_conflict_target = PGCompiler._on_conflict_target
+
     def visit_string(self, type_, **kw):
         return "STRING"
 
