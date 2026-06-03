@@ -7,6 +7,9 @@
     newly introduced `sqltypes.{DOUBLE,DOUBLE_PRECISION}` types
 - Compiler: Made `CREATE INDEX` a no-op, only emitting `SELECT 1`, because CrateDB
   does not support that statement
+- Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
+  'visit_on_conflict_do_update'` by forwarding calls to
+  `PGCompiler.visit_on_conflict_do_update`
 
 ## 2026/05/28 0.42.0
 - Added support for SQL Alchemy 2.1
