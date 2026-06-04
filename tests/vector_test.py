@@ -78,7 +78,7 @@ class SqlAlchemyVectorTypeTest(TestCase):
         self.table.create(self.engine)
         fake_cursor.execute.assert_called_with(
             ("\nCREATE TABLE testdrive (\n\tname STRING, \n\tdata FLOAT_VECTOR(3)\n)\n\n"),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_insert_invoke(self):
@@ -86,8 +86,8 @@ class SqlAlchemyVectorTypeTest(TestCase):
         with self.engine.connect() as conn:
             conn.execute(stmt)
         fake_cursor.execute.assert_called_with(
-            ("INSERT INTO testdrive (name, data) VALUES (?, ?)"),
-            ("foo", [42.42, 43.43, 44.44]),
+            ("INSERT INTO testdrive (name, data) VALUES (%(name)s, %(data)s)"),
+            {"name": "foo", "data": [42.42, 43.43, 44.44]},
         )
 
     def test_select_invoke(self):
@@ -96,7 +96,7 @@ class SqlAlchemyVectorTypeTest(TestCase):
             conn.execute(stmt)
         fake_cursor.execute.assert_called_with(
             ("SELECT testdrive.data \nFROM testdrive"),
-            (),
+            {},
         )
 
     def test_sql_select(self):
@@ -108,7 +108,7 @@ class SqlAlchemyVectorTypeTest(TestCase):
         )
         self.assertSQL(
             "SELECT testdrive.name AS testdrive_name "
-            "FROM testdrive WHERE KNN_MATCH(testdrive.data, ?, ?)",
+            "FROM testdrive WHERE KNN_MATCH(testdrive.data, %(param_1)s, %(param_2)s)",
             query,
         )
 

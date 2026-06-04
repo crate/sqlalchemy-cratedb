@@ -98,10 +98,14 @@ class SqlAlchemyBulkTest(TestCase):
         self.session.bulk_save_objects(chars)
         (stmt, bulk_args), _ = fake_cursor.executemany.call_args
 
-        expected_stmt = "INSERT INTO characters (name, age) VALUES (?, ?)"
+        expected_stmt = "INSERT INTO characters (name, age) VALUES (%(name)s, %(age)s)"
         self.assertEqual(expected_stmt, stmt)
 
-        expected_bulk_args = (("Arthur", 35), ("Banshee", 26), ("Callisto", 37))
+        expected_bulk_args = (
+            {"age": 35, "name": "Arthur"},
+            {"age": 26, "name": "Banshee"},
+            {"age": 37, "name": "Callisto"},
+        )
         self.assertSequenceEqual(expected_bulk_args, bulk_args)
 
     @skipIf(SA_VERSION < SA_2_0, "SQLAlchemy 1.x uses legacy bulk INSERT mode")
@@ -153,17 +157,20 @@ class SqlAlchemyBulkTest(TestCase):
         self.session.commit()
         (stmt, bulk_args), _ = fake_cursor.execute.call_args
 
-        expected_stmt = "INSERT INTO characters (name, age) VALUES (?, ?), (?, ?), (?, ?)"
+        expected_stmt = (
+            "INSERT INTO characters (name, age) "
+            "VALUES (%(name__0)s, %(age__0)s), (%(name__1)s, %(age__1)s), (%(name__2)s, %(age__2)s)"
+        )
         self.assertEqual(expected_stmt, stmt)
 
-        expected_bulk_args = (
-            "Arthur",
-            35,
-            "Banshee",
-            26,
-            "Callisto",
-            37,
-        )
+        expected_bulk_args = {
+            "age__0": 35,
+            "name__0": "Arthur",
+            "age__1": 26,
+            "name__1": "Banshee",
+            "age__2": 37,
+            "name__2": "Callisto",
+        }
         self.assertSequenceEqual(expected_bulk_args, bulk_args)
 
     @skipIf(sys.version_info < (3, 8), "SQLAlchemy/pandas is not supported on Python <3.8")

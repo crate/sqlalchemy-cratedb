@@ -1,4 +1,5 @@
 # Changelog
+- Migrated to `paramstyle="pyformat"`, following crate-python 2.2.0
 
 ## 2026/05/28 0.42.0
 - Added support for SQL Alchemy 2.1

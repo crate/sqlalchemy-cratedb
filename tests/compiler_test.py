@@ -97,7 +97,7 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
                 dedent("""
                 SELECT mytable.name, mytable.data 
                 FROM mytable 
-                WHERE mytable.name ILIKE ?
+                WHERE mytable.name ILIKE %(name_1)s
             """).strip(),
             )  # noqa: W291
         else:
@@ -106,7 +106,7 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
                 dedent("""
                 SELECT mytable.name, mytable.data 
                 FROM mytable 
-                WHERE lower(mytable.name) LIKE lower(?)
+                WHERE lower(mytable.name) LIKE lower(%(name_1)s)
             """).strip(),
             )  # noqa: W291
 
@@ -122,7 +122,7 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
                 dedent("""
                 SELECT mytable.name, mytable.data 
                 FROM mytable 
-                WHERE lower(mytable.name) NOT LIKE lower(?)
+                WHERE lower(mytable.name) NOT LIKE lower(%(name_1)s)
             """).strip(),
             )  # noqa: W291
         else:
@@ -131,7 +131,7 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
                 dedent("""
                 SELECT mytable.name, mytable.data 
                 FROM mytable 
-                WHERE mytable.name NOT ILIKE ?
+                WHERE mytable.name NOT ILIKE %(name_1)s
             """).strip(),
             )  # noqa: W291
 
@@ -167,11 +167,13 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         statement = str(selectable.compile(bind=self.crate_engine))
         if SA_VERSION >= SA_1_4:
             self.assertEqual(
-                statement, "SELECT mytable.name, mytable.data \nFROM mytable\n LIMIT ALL OFFSET ?"
+                statement,
+                "SELECT mytable.name, mytable.data \nFROM mytable\n LIMIT ALL OFFSET %(param_1)s",
             )
         else:
             self.assertEqual(
-                statement, "SELECT mytable.name, mytable.data \nFROM mytable \n LIMIT ALL OFFSET ?"
+                statement,
+                "SELECT mytable.name, mytable.data \nFROM mytable \n LIMIT ALL OFFSET %(param_1)s",
             )
 
     def test_select_with_limit(self):
@@ -180,7 +182,9 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         """
         selectable = self.mytable.select().limit(42)
         statement = str(selectable.compile(bind=self.crate_engine))
-        self.assertEqual(statement, "SELECT mytable.name, mytable.data \nFROM mytable \n LIMIT ?")
+        self.assertEqual(
+            statement, "SELECT mytable.name, mytable.data \nFROM mytable \n LIMIT %(param_1)s"
+        )
 
     def test_select_with_offset_and_limit(self):
         """
@@ -189,7 +193,9 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         selectable = self.mytable.select().offset(5).limit(42)
         statement = str(selectable.compile(bind=self.crate_engine))
         self.assertEqual(
-            statement, "SELECT mytable.name, mytable.data \nFROM mytable \n LIMIT ? OFFSET ?"
+            statement,
+            "SELECT mytable.name, mytable.data \n"
+            "FROM mytable \n LIMIT %(param_1)s OFFSET %(param_2)s",
         )
 
     def test_insert_multivalues(self):
@@ -220,7 +226,10 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         records = [{"name": f"foo_{i}"} for i in range(3)]
         insertable = self.mytable.insert().values(records)
         statement = str(insertable.compile(bind=self.crate_engine))
-        self.assertEqual(statement, "INSERT INTO mytable (name) VALUES (?), (?), (?)")
+        self.assertEqual(
+            statement,
+            "INSERT INTO mytable (name) VALUES (%(name_m0)s), (%(name_m1)s), (%(name_m2)s)",
+        )
 
     @skipIf(
         SA_VERSION < SA_2_0,
@@ -263,7 +272,7 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         records = [{"name": f"foo_{i}"} for i in range(record_count)]
         insertable = self.mytable.insert()
         statement = str(insertable.compile(bind=self.crate_engine))
-        self.assertEqual(statement, "INSERT INTO mytable (name, data) VALUES (?, ?)")
+        self.assertEqual(statement, "INSERT INTO mytable (name, data) VALUES (%(name)s, %(data)s)")
 
         with mock.patch(
             "crate.client.http.Client.sql", autospec=True, return_value={"cols": []}
@@ -278,12 +287,18 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
             client_mock.mock_calls,
             [
                 mock.call(
-                    mock.ANY, "INSERT INTO mytable (name) VALUES (?), (?)", ("foo_0", "foo_1"), None
+                    mock.ANY,
+                    "INSERT INTO mytable (name) VALUES ($1), ($2)",
+                    ["foo_0", "foo_1"],
+                    None,
                 ),
                 mock.call(
-                    mock.ANY, "INSERT INTO mytable (name) VALUES (?), (?)", ("foo_2", "foo_3"), None
+                    mock.ANY,
+                    "INSERT INTO mytable (name) VALUES ($1), ($2)",
+                    ["foo_2", "foo_3"],
+                    None,
                 ),
-                mock.call(mock.ANY, "INSERT INTO mytable (name) VALUES (?)", ("foo_4",), None),
+                mock.call(mock.ANY, "INSERT INTO mytable (name) VALUES ($1)", ["foo_4"], None),
             ],
         )
 
