@@ -156,3 +156,10 @@ class SqlAlchemyDialectTest(TestCase):
         assert self.engine.dialect.get_isolation_level(self.connection) == "AUTOCOMMIT"
         assert self.engine.dialect.get_isolation_level_values(self.connection) == ()
         self.engine.execution_options(isolation_level="AUTOCOMMIT")
+        
+    def test_default_paramstyle_is_pyformat(self):
+        """
+        Verify CrateDialect.default_paramstyle must be "pyformat" 
+        so that SQLAlchemy generates %(name)s placeholders.
+        """
+        eq_(self.engine.dialect.default_paramstyle, "pyformat")

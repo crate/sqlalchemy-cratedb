@@ -108,6 +108,53 @@ class SqlAlchemyBulkTest(TestCase):
         )
         self.assertSequenceEqual(expected_bulk_args, bulk_args)
 
+    @skipIf(SA_VERSION >= SA_2_0, "SQLAlchemy 2.x uses modern bulk INSERT mode")
+    def test_executemany_pyformat_dicts_arrive_positional_at_client(self):
+        """
+        Verify the full pipeline for legacy bulk INSERT:
+          SA generates %(name)s SQL + dict rows  →  cursor.executemany()
+          →  crate-python _convert_named_bulk_params()
+          →  Client.sql() receives $N SQL + list-of-lists bulk_parameters
+
+        test_bulk_save_legacy uses FakeCursor and only verifies what SA passes
+        to the cursor interface.  This test patches Client.sql instead, letting
+        the real cursor code run, and asserts the wire-format conversion.
+        """
+        chars = [
+            self.character(name="Arthur", age=35),
+            self.character(name="Banshee", age=26),
+            self.character(name="Callisto", age=37),
+        ]
+
+        with patch(
+            "crate.client.http.Client.sql",
+            autospec=True,
+            return_value={
+                "cols": [],
+                "rows": [],
+                "rowcount": -1,
+                "results": [{"rowcount": 1}, {"rowcount": 1}, {"rowcount": 1}],
+                "duration": 0,
+            },
+        ) as client_mock:
+            self.session.bulk_save_objects(chars)
+
+        self.assertTrue(client_mock.called, "Client.sql was never called")
+        _self_arg, stmt, parameters, bulk_parameters = client_mock.call_args[0]
+
+        # crate-python must have converted %(name)s → $N before sending
+        self.assertNotIn("%(", stmt, f"stmt still contains %(name)s placeholders: {stmt!r}")
+        self.assertRegex(stmt, r"\$\d", f"stmt should contain $N positional markers: {stmt!r}")
+
+        # parameters (single-row) must be None for a bulk call
+        self.assertIsNone(parameters)
+
+        # bulk_parameters must be a list of positional lists, not dicts
+        self.assertIsInstance(bulk_parameters, list)
+        self.assertEqual(len(bulk_parameters), 3)
+        for row in bulk_parameters:
+            self.assertIsInstance(row, list, f"expected positional list, got {type(row)}: {row!r}")
+
     @skipIf(SA_VERSION < SA_2_0, "SQLAlchemy 1.x uses legacy bulk INSERT mode")
     @patch("crate.client.connection.Cursor", FakeCursor)
     def test_bulk_save_modern(self):
