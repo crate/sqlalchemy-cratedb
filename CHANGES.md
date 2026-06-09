@@ -1,4 +1,18 @@
 # Changelog
+
+## Unreleased
+- Types: Added method `ObjectArray.as_generic` for better reverse type lookups
+- Types: Improved type mappings for better reverse type lookups / reflections
+  - Consequently used upper-case type definitions from `sqlalchemy.types`
+  - Added `timestamp without time zone` types (scalar and array)
+  - On SQLAlchemy 2, mapped `real` and `double{_precision}` types to the
+    newly introduced `sqltypes.{DOUBLE,DOUBLE_PRECISION}` types
+- Compiler: Made `CREATE INDEX` a no-op, only emitting `SELECT 1`, because CrateDB
+  does not support that statement
+- Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
+  'visit_on_conflict_do_update'` by forwarding calls to
+  `PGCompiler.visit_on_conflict_do_update`
+- Dialect: Added methods concerned with isolation levels as no-ops
 - Migrated to `paramstyle="pyformat"`, following crate-python 2.2.0
 
 ## 2026/05/28 0.42.0

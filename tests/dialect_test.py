@@ -150,3 +150,9 @@ class SqlAlchemyDialectTest(TestCase):
             self.executed_statement,
             "select schema_name from information_schema.schemata order by schema_name asc",
         )
+
+    def test_isolation_level(self):
+        self.engine.dialect.set_isolation_level(self.connection, "FOO")
+        assert self.engine.dialect.get_isolation_level(self.connection) == "AUTOCOMMIT"
+        assert self.engine.dialect.get_isolation_level_values(self.connection) == ()
+        self.engine.execution_options(isolation_level="AUTOCOMMIT")
