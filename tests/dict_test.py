@@ -251,7 +251,7 @@ class SqlAlchemyDictTypeTest(TestCase):
                     "UPDATE characters SET data['y'] = %(data_'y'_)s, data['x'] = %(data_'x'_)s "
                     "WHERE characters.name = %(characters_name)s"
                 ),
-                (2, 1, "Trillian"),
+                {"characters_name": "Trillian", "data_'y'_": 2, "data_'x'_": 1},
             )
         except AssertionError:
             fake_cursor.execute.assert_called_with(
