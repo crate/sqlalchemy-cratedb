@@ -16,6 +16,6 @@ def cratedb_service():
     Provide a CrateDB service instance to the test suite.
     """
     db = CrateDBTestAdapter()
-    db.start()
+    db.start(ports={4200: None, 5432: None})
     yield db
     db.stop()
