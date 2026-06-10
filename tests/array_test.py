@@ -101,8 +101,7 @@ class SqlAlchemyArrayTypeTest(TestCase):
         # SA 1.4+ uses the column name as the bind param; SA 1.3 uses a generic "param_1".
         param = "friends_1" if SA_VERSION >= SA_1_4 else "param_1"
         self.assertSQL(
-            "SELECT users.name AS users_name FROM users "
-            f"WHERE %({param})s = ANY (users.friends)",
+            f"SELECT users.name AS users_name FROM users WHERE %({param})s = ANY (users.friends)",
             s,
         )
 
@@ -113,8 +112,7 @@ class SqlAlchemyArrayTypeTest(TestCase):
         # SA 1.4+ uses the column name as the bind param; SA 1.3 uses a generic "param_1".
         param = "scores_1" if SA_VERSION >= SA_1_4 else "param_1"
         self.assertSQL(
-            "SELECT users.name AS users_name FROM users "
-            f"WHERE %({param})s < ANY (users.scores)",
+            f"SELECT users.name AS users_name FROM users WHERE %({param})s < ANY (users.scores)",
             s,
         )
 
