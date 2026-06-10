@@ -98,18 +98,33 @@ class SqlAlchemyArrayTypeTest(TestCase):
 
     def test_any(self):
         s = self.session.query(self.User.name).filter(self.User.friends.any("arthur"))
-        self.assertSQL(
-            "SELECT users.name AS users_name FROM users WHERE %(friends_1)s = ANY (users.friends)",
-            s,
-        )
+        # SA 1.4+ uses the column name as the bind param name; SA 1.3 uses a generic "param_1".
+        if SA_VERSION >= SA_1_4:
+            self.assertSQL(
+                "SELECT users.name AS users_name FROM users WHERE %(friends_1)s = ANY (users.friends)",
+                s,
+            )
+        else:
+            self.assertSQL(
+                "SELECT users.name AS users_name FROM users WHERE %(param_1)s = ANY (users.friends)",
+                s,
+            )
 
     def test_any_with_operator(self):
         s = self.session.query(self.User.name).filter(
             self.User.scores.any(6, operator=operators.lt)
         )
-        self.assertSQL(
-            "SELECT users.name AS users_name FROM users WHERE %(scores_1)s < ANY (users.scores)", s
-        )
+        # SA 1.4+ uses the column name as the bind param name; SA 1.3 uses a generic "param_1".
+        if SA_VERSION >= SA_1_4:
+            self.assertSQL(
+                "SELECT users.name AS users_name FROM users WHERE %(scores_1)s < ANY (users.scores)",
+                s,
+            )
+        else:
+            self.assertSQL(
+                "SELECT users.name AS users_name FROM users WHERE %(param_1)s < ANY (users.scores)",
+                s,
+            )
 
     def test_multidimensional_arrays(self):
         t1 = sa.Table(
