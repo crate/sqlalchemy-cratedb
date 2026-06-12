@@ -24,7 +24,7 @@ license = { text = "Apache License 2.0" }
 authors = [
   { name = "Crate.io", email = "office@crate.io" },
 ]
-requires-python = ">=3.6"
+requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Plugins",
@@ -43,10 +43,6 @@ classifiers = [
   "Operating System :: Unix",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.6",
-  "Programming Language :: Python :: 3.7",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -83,7 +79,7 @@ dynamic = [
 ]
 dependencies = [
   "backports.zoneinfo<1; python_version<'3.9'",
-  "crate>=2,<3",
+  "crate>=2.2.1b3,<3",
   "geojson>=2.5,<4",
   "importlib-metadata; python_version<'3.8'",
   "importlib-resources; python_version<'3.9'",
