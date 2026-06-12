@@ -51,6 +51,8 @@ CrateDB           SQLAlchemy
 `string`__        `String`__
 `array`__         `ARRAY`__
 `object`__        :ref:`object` |nbsp| (extension type)
+`object`__        ``JSON``
+`object`__        ``JSONB``
 `array(object)`__ :ref:`objectarray` |nbsp| (extension type)
 `geo_point`__     :ref:`geopoint` |nbsp| (extension type)
 `geo_shape`__     :ref:`geoshape` |nbsp| (extension type)
@@ -78,6 +80,8 @@ __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.htm
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.String
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#array
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.ARRAY
+__ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#object
+__ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#object
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#object
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#array
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#geo-point

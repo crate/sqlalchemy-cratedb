@@ -200,8 +200,22 @@ class CrateDDLCompiler(compiler.DDLCompiler):
         )
         return
 
+    def visit_create_index(self, create, **kw) -> str:
+        """
+        CrateDB does not support `CREATE INDEX` statements.
+        """
+        warnings.warn(
+            "CrateDB does not support `CREATE INDEX` statements, "
+            "they will be omitted when generating DDL statements.",
+            stacklevel=2,
+        )
+        return "SELECT 1"
+
 
 class CrateTypeCompiler(compiler.GenericTypeCompiler):
+    visit_on_conflict_do_update = PGCompiler.visit_on_conflict_do_update
+    _on_conflict_target = PGCompiler._on_conflict_target
+
     def visit_string(self, type_, **kw):
         return "STRING"
 
@@ -277,6 +291,11 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
             return "FLOAT"
         else:
             return "DOUBLE"
+    def visit_JSON(self, type_, **kw):
+        return "OBJECT"
+
+    def visit_JSONB(self, type_, **kw):
+        return "OBJECT"
 
 
 class CrateCompiler(compiler.SQLCompiler):
