@@ -426,7 +426,7 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
                 )
     
             """),
-            )  # noqa: W291, W293
+            )
 
             # Verify SQL DDL statement.
             self.metadata.create_all(self.engine, tables=[ItemStore.__table__], checkfirst=False)
@@ -441,7 +441,7 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
                 )
     
             """),
-            )  # noqa: W291, W293
+            )
 
         # Verify if corresponding warning is emitted.
         self.assertEqual(len(w), 1)
@@ -483,7 +483,7 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
                 )
     
             """),
-            )  # noqa: W291, W293
+            )
 
         # Verify if corresponding warning is emitted.
         self.assertEqual(len(w), 1)
@@ -525,7 +525,7 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
             )
 
         """),
-        )  # noqa: W291, W293
+        )
 
     def test_ddl_with_create_index(self):
         """
@@ -557,4 +557,32 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
             "CrateDB does not support `CREATE INDEX` statements, "
             "they will be omitted when generating DDL statements.",
             str(w[-1].message),
+        )
+
+    def test_ddl_with_json_columns(self):
+        mytable = sa.Table("json_table", self.metadata, sa.Column("json", sa.JSON))
+        self.metadata.create_all(self.engine, tables=[mytable], checkfirst=False)
+        self.assertEqual(
+            self.executed_statement,
+            dedent("""
+            CREATE TABLE testdrive.json_table (
+            \tjson OBJECT
+            )
+
+        """),
+        )
+
+    def test_ddl_with_jsonb_columns(self):
+        from sqlalchemy.dialects.postgresql import JSONB
+
+        mytable = sa.Table("jsonb_table", self.metadata, sa.Column("data", JSONB))
+        self.metadata.create_all(self.engine, tables=[mytable], checkfirst=False)
+        self.assertEqual(
+            self.executed_statement,
+            dedent("""
+            CREATE TABLE testdrive.jsonb_table (
+            \tdata OBJECT
+            )
+
+        """),
         )

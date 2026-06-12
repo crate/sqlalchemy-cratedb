@@ -13,6 +13,7 @@
   'visit_on_conflict_do_update'` by forwarding calls to
   `PGCompiler.visit_on_conflict_do_update`
 - Dialect: Added methods concerned with isolation levels as no-ops
+- Types: Started emulating PostgreSQL's `JSON(B)` types using CrateDB's `OBJECT`
 - Migrated to `paramstyle="pyformat"`, following crate-python 2.2.1.
 
   **Breaking change:** The dialect now generates `%(name)s` named placeholders

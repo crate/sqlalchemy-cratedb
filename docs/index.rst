@@ -158,6 +158,16 @@ found in other RDBMS systems.
 
     support
 
+General Notes
+=============
+
+Please note CrateDB, as an analytics database, does not provide the same
+features like traditional RDBMS.
+
+- Transactions are not supported. The transaction isolation level can not be
+  changed, relevant functions are implemented as no-ops. The default isolation
+  level is always ``AUTOCOMMIT``.
+- ``CREATE INDEX`` statements are not supported and implemented as a no-op
 
 .. _examples:
 .. _by-example:
