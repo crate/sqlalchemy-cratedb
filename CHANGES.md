@@ -1,4 +1,5 @@
 # Changelog
+- Types: Added support for BLOB type, per base64 encoding
 - Types: Added method `ObjectArray.as_generic` for better reverse type lookups
 - Types: Improved type mappings for better reverse type lookups / reflections
   - Consequently used upper-case type definitions from `sqlalchemy.types`

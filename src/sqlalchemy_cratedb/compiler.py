@@ -271,6 +271,8 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         """
         return "TIMESTAMP %s" % ((type_.timezone and "WITH" or "WITHOUT") + " TIME ZONE",)
 
+    def visit_BLOB(self, type_, **kw):
+        return "STRING"
     def visit_JSON(self, type_, **kw):
         return "OBJECT"
 
