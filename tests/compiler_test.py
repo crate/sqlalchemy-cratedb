@@ -556,3 +556,18 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
 
         """),
         )  # noqa: W291, W293
+
+    def test_ddl_with_jsonb_columns(self):
+        from sqlalchemy.dialects.postgresql import JSONB
+
+        mytable = sa.Table("jsonb_table", self.metadata, sa.Column("data", JSONB))
+        self.metadata.create_all(self.engine, tables=[mytable], checkfirst=False)
+        self.assertEqual(
+            self.executed_statement,
+            dedent("""
+            CREATE TABLE testdrive.jsonb_table (
+            \tdata OBJECT
+            )
+
+        """),
+        )  # noqa: W291, W293
