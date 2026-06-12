@@ -411,7 +411,7 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
                 )
     
             """),
-            )  # noqa: W291, W293
+            )
 
             # Verify SQL DDL statement.
             self.metadata.create_all(self.engine, tables=[ItemStore.__table__], checkfirst=False)
@@ -426,7 +426,7 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
                 )
     
             """),
-            )  # noqa: W291, W293
+            )
 
         # Verify if corresponding warning is emitted.
         self.assertEqual(len(w), 1)
@@ -468,7 +468,7 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
                 )
     
             """),
-            )  # noqa: W291, W293
+            )
 
         # Verify if corresponding warning is emitted.
         self.assertEqual(len(w), 1)
@@ -510,7 +510,7 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
             )
 
         """),
-        )  # noqa: W291, W293
+        )
 
     def test_ddl_with_create_index(self):
         """
@@ -555,7 +555,7 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
             )
 
         """),
-        )  # noqa: W291, W293
+        )
 
     def test_ddl_with_jsonb_columns(self):
         from sqlalchemy.dialects.postgresql import JSONB
@@ -570,4 +570,4 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
             )
 
         """),
-        )  # noqa: W291, W293
+        )
