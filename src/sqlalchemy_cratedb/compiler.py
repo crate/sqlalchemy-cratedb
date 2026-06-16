@@ -285,12 +285,10 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         ``DOUBLE PRECISION``. Other third party dialects may have similar
         behavior.
         """
-        if not type_.precision:
-            return "FLOAT"
-        elif type_.precision <= 24:
-            return "FLOAT"
-        else:
+        if type_.precision and type_.precision > 24:
             return "DOUBLE"
+        return "FLOAT"
+
     def visit_JSON(self, type_, **kw):
         return "OBJECT"
 
