@@ -29,6 +29,9 @@ float_double_data = {
 }
 float_double_df = pd.DataFrame.from_dict(float_double_data)
 
+float_nan_df = pd.DataFrame.from_dict({
+    "col_1": [float("nan"), float("inf"), float("-inf")],
+})
 
 @pytest.mark.skipif(
     sys.version_info < (3, 8), reason="Feature not supported on Python 3.7 and earlier"
@@ -127,6 +130,31 @@ def test_table_kwargs_unknown(cratedb_service):
                 "passed to [ALTER | CREATE] TABLE statement]"
             )
         )
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 8), reason="Feature not supported on Python 3.7 and earlier"
+)
+@pytest.mark.skipif(
+    SA_VERSION < SA_2_0, reason="Feature not supported on SQLAlchemy 1.4 and earlier"
+)
+def test_float_special_values(cratedb_service):
+    """
+    Validate CrateDB's handling of special float values: NaN, Inf, -Inf.
+
+    CrateDB stores all of them as NULL, so they all read back as NaN in pandas.
+    """
+    tablename = "pandas_float_special"
+    engine = cratedb_service.database.engine
+    float_nan_df.to_sql(
+        tablename,
+        engine,
+        if_exists="replace",
+        index=False,
+    )
+    cratedb_service.database.run_sql(f"REFRESH TABLE {tablename}")
+    df_load = pd.read_sql_table(tablename, engine)
+    assert df_load["col_1"].isna().all()
 
 
 @pytest.mark.skipif(
