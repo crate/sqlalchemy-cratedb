@@ -1,4 +1,5 @@
 # Changelog
+- Types: Improved support for FLOAT type, converging to FLOAT vs. DOUBLE
 - Types: Added method `ObjectArray.as_generic` for better reverse type lookups
 - Types: Improved type mappings for better reverse type lookups / reflections
   - Consequently used upper-case type definitions from `sqlalchemy.types`
