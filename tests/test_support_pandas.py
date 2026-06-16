@@ -29,9 +29,12 @@ float_double_data = {
 }
 float_double_df = pd.DataFrame.from_dict(float_double_data)
 
-float_nan_df = pd.DataFrame.from_dict({
-    "col_1": [float("nan"), float("inf"), float("-inf")],
-})
+float_nan_df = pd.DataFrame.from_dict(
+    {
+        "col_1": [float("nan"), float("inf"), float("-inf")],
+    }
+)
+
 
 @pytest.mark.skipif(
     sys.version_info < (3, 8), reason="Feature not supported on Python 3.7 and earlier"
