@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026/06/17 0.43.0
 - Types: Improved support for FLOAT type, converging to FLOAT vs. DOUBLE
 - Types: Added method `ObjectArray.as_generic` for better reverse type lookups
 - Types: Improved type mappings for better reverse type lookups / reflections
