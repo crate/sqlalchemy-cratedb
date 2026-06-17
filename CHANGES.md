@@ -1,5 +1,10 @@
 # Changelog
+
+## Unreleased
 - Types: Added support for BLOB type, per base64 encoding
+
+## 2026/06/17 0.43.0
+- Types: Improved support for FLOAT type, converging to FLOAT vs. DOUBLE
 - Types: Added method `ObjectArray.as_generic` for better reverse type lookups
 - Types: Improved type mappings for better reverse type lookups / reflections
   - Consequently used upper-case type definitions from `sqlalchemy.types`
@@ -13,6 +18,10 @@
   `PGCompiler.visit_on_conflict_do_update`
 - Dialect: Added methods concerned with isolation levels as no-ops
 - Types: Started emulating PostgreSQL's `JSON(B)` types using CrateDB's `OBJECT`
+- Dialect: now uses `paramstyle = "pyformat"` supported in crate-python 2.2.1.
+  Because of this the SQL statements logged or inspected will contain
+  `%(name)s` placeholders instead of `?`.
+- Removed support for Python versions < 3.10
 
 ## 2026/05/28 0.42.0
 - Added support for SQL Alchemy 2.1

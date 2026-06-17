@@ -75,7 +75,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "\n\tdouble_col DOUBLE, "
                 "\n\tPRIMARY KEY (string_col)\n)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_column_obj(self):
@@ -90,7 +90,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "\nCREATE TABLE dummy (\n\tpk STRING NOT NULL, \n\tobj_col OBJECT, "
                 "\n\tPRIMARY KEY (pk)\n)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_table_clustered_by(self):
@@ -109,7 +109,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "PRIMARY KEY (pk)\n"
                 ") CLUSTERED BY (p)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_column_computed(self):
@@ -127,7 +127,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "PRIMARY KEY (ts)\n"
                 ")\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_column_computed_virtual(self):
@@ -155,7 +155,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "PRIMARY KEY (pk)\n"
                 ") PARTITIONED BY (p)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_table_number_of_shards_and_replicas(self):
@@ -172,7 +172,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "PRIMARY KEY (pk)\n"
                 ") CLUSTERED INTO 3 SHARDS WITH (number_of_replicas = 2)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_table_clustered_by_and_number_of_shards(self):
@@ -191,7 +191,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "PRIMARY KEY (pk, p)\n"
                 ") CLUSTERED BY (p) INTO 3 SHARDS\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_table_translog_durability(self):
@@ -210,7 +210,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "PRIMARY KEY (pk)\n"
                 """) WITH ("translog.durability" = 'async')\n\n"""
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_column_object_array(self):
@@ -227,7 +227,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "tags ARRAY(OBJECT), \n\t"
                 "PRIMARY KEY (pk)\n)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_column_nullable(self):
@@ -246,7 +246,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "b INT NOT NULL, \n\t"
                 "PRIMARY KEY (pk)\n)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_column_pk_nullable(self):
@@ -273,7 +273,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "b INT, \n\t"
                 "PRIMARY KEY (pk)\n)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     @pytest.mark.skip("CompileError not raised")
@@ -305,7 +305,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "c STRING, \n\t"
                 "PRIMARY KEY (pk)\n)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_non_text_column_without_columnstore(self):
@@ -331,7 +331,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "a TIMESTAMP WITHOUT TIME ZONE DEFAULT now(), \n\t"
                 "PRIMARY KEY (pk)\n)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_column_server_default_string(self):
@@ -348,7 +348,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "a STRING DEFAULT 'Zaphod', \n\t"
                 "PRIMARY KEY (pk)\n)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_column_server_default_func(self):
@@ -365,7 +365,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "a TIMESTAMP WITHOUT TIME ZONE DEFAULT now(), \n\t"
                 "PRIMARY KEY (pk)\n)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_column_server_default_text_constant(self):
@@ -382,7 +382,7 @@ class SqlAlchemyCreateTableTest(TestCase):
                 "answer INT DEFAULT 42, \n\t"
                 "PRIMARY KEY (pk)\n)\n\n"
             ),
-            (),
+            sa.util.immutabledict({}),
         )
 
     @skipIf(SA_VERSION < SA_2_0, "sa.Double was introduced in SA 2.0")

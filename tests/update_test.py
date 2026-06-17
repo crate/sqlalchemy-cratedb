@@ -75,16 +75,19 @@ class SqlAlchemyUpdateTest(TestCase):
         char.age = 40
         self.session.commit()
 
-        expected_stmt = "UPDATE characters SET age = ?, ts = ? WHERE characters.name = ?"
+        expected_stmt = (
+            "UPDATE characters SET age = %(age)s, ts = %(ts)s "
+            "WHERE characters.name = %(characters_name)s"
+        )
         args, kwargs = fake_cursor.execute.call_args
         stmt = args[0]
         args = args[1]
         self.assertEqual(expected_stmt, stmt)
-        self.assertEqual(40, args[0])
-        dt = datetime.strptime(args[1], "%Y-%m-%dT%H:%M:%S.%f")
+        self.assertEqual(40, args["age"])
+        dt = datetime.strptime(args["ts"], "%Y-%m-%dT%H:%M:%S.%f")
         self.assertIsInstance(dt, datetime)
         self.assertGreater(dt, now)
-        self.assertEqual("Arthur", args[2])
+        self.assertEqual("Arthur", args["characters_name"])
 
     @patch("crate.client.connection.Cursor", FakeCursor)
     def test_bulk_update(self):
@@ -104,13 +107,13 @@ class SqlAlchemyUpdateTest(TestCase):
 
         self.session.commit()
 
-        expected_stmt = "UPDATE characters SET name = ?, obj = ?, ts = ?"
+        expected_stmt = "UPDATE characters SET name = %(name)s, obj = %(obj)s, ts = %(ts)s"
         args, kwargs = fake_cursor.execute.call_args
         stmt = args[0]
         args = args[1]
         self.assertEqual(expected_stmt, stmt)
-        self.assertEqual("Julia", args[0])
-        self.assertEqual({"favorite_book": "Romeo & Juliet"}, args[1])
-        dt = datetime.strptime(args[2], "%Y-%m-%dT%H:%M:%S.%f")
+        self.assertEqual("Julia", args["name"])
+        self.assertEqual({"favorite_book": "Romeo & Juliet"}, args["obj"])
+        dt = datetime.strptime(args["ts"], "%Y-%m-%dT%H:%M:%S.%f")
         self.assertIsInstance(dt, datetime)
         self.assertGreater(dt, before_update_time)

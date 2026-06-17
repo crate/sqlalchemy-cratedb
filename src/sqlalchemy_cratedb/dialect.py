@@ -192,7 +192,7 @@ else:
 class CrateDialect(default.DefaultDialect):
     name = "crate"
     driver = "crate-python"
-    default_paramstyle = "qmark"
+    default_paramstyle = "pyformat"
     statement_compiler = statement_compiler
     ddl_compiler = CrateDDLCompiler
     type_compiler = CrateTypeCompiler

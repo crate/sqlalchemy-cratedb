@@ -273,6 +273,25 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
 
     def visit_BLOB(self, type_, **kw):
         return "STRING"
+    
+    def visit_FLOAT(self, type_, **kw):
+        """
+        From `sqlalchemy.sql.sqltypes.Float`.
+
+        When a :paramref:`.Float.precision` is not provided in a
+        :class:`_types.Float` type some backend may compile this type as
+        an 8 bytes / 64 bit float datatype. To use a 4 bytes / 32 bit float
+        datatype a precision <= 24 can usually be provided or the
+        :class:`_types.REAL` type can be used.
+        This is known to be the case in the PostgreSQL and MSSQL dialects
+        that render the type as ``FLOAT`` that's in both an alias of
+        ``DOUBLE PRECISION``. Other third party dialects may have similar
+        behavior.
+        """
+        if type_.precision and type_.precision > 24:
+            return "DOUBLE"
+        return "FLOAT"
+
     def visit_JSON(self, type_, **kw):
         return "OBJECT"
 
