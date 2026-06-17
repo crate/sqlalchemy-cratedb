@@ -71,7 +71,7 @@ class SqlAlchemyMatchTest(TestCase):
         )
         self.assertSQL(
             "SELECT characters.name AS characters_name FROM characters "
-            + "WHERE match(characters.name, ?)",
+            + "WHERE match(characters.name, %(param_1)s)",
             query,
         )
 
@@ -81,7 +81,7 @@ class SqlAlchemyMatchTest(TestCase):
         )
         self.assertSQL(
             "SELECT characters.name AS characters_name FROM characters "
-            + "WHERE match((characters.name 0.5), ?)",
+            + "WHERE match((characters.name 0.5), %(param_1)s)",
             query,
         )
 
@@ -92,7 +92,7 @@ class SqlAlchemyMatchTest(TestCase):
         self.assertSQL(
             "SELECT characters.name AS characters_name FROM characters "
             + "WHERE match("
-            + "(characters.info['race'] 0.9, characters.name 0.5), ?"
+            + "(characters.info['race'] 0.9, characters.name 0.5), %(param_1)s"
             + ")",
             query,
         )
@@ -109,7 +109,7 @@ class SqlAlchemyMatchTest(TestCase):
         self.assertSQL(
             "SELECT characters.name AS characters_name FROM characters "
             + "WHERE match("
-            + "(characters.info['race'] 0.9, characters.name 0.5), ?"
+            + "(characters.info['race'] 0.9, characters.name 0.5), %(param_1)s"
             + ") using phrase with (analyzer=english, fuzziness=3)",
             query,
         )
@@ -120,7 +120,7 @@ class SqlAlchemyMatchTest(TestCase):
         )
         self.assertSQL(
             "SELECT characters.name AS characters_name, _score "
-            + "FROM characters WHERE match(characters.name, ?)",
+            + "FROM characters WHERE match(characters.name, %(param_1)s)",
             query,
         )
 

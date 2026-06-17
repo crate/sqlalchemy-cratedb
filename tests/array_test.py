@@ -81,7 +81,7 @@ class SqlAlchemyArrayTypeTest(TestCase):
         t1.create(self.engine)
         fake_cursor.execute.assert_called_with(
             ("\nCREATE TABLE t (\n\tint_array ARRAY(INT), \n\tstr_array ARRAY(STRING)\n)\n\n"),
-            (),
+            sa.util.immutabledict({}),
         )
 
     def test_array_insert(self):
@@ -89,21 +89,32 @@ class SqlAlchemyArrayTypeTest(TestCase):
         self.session.add(trillian)
         self.session.commit()
         fake_cursor.execute.assert_called_with(
-            ("INSERT INTO users (name, friends, scores) VALUES (?, ?, ?)"),
-            ("Trillian", ["Arthur", "Ford"], None),
+            (
+                "INSERT INTO users (name, friends, scores) "
+                "VALUES (%(name)s, %(friends)s, %(scores)s)"
+            ),
+            {"friends": ["Arthur", "Ford"], "name": "Trillian", "scores": None},
         )
 
     def test_any(self):
         s = self.session.query(self.User.name).filter(self.User.friends.any("arthur"))
+        # SA 1.4+ uses the column name as the bind param; SA 1.3 uses a generic "param_1".
+        param = "friends_1" if SA_VERSION >= SA_1_4 else "param_1"
         self.assertSQL(
-            "SELECT users.name AS users_name FROM users WHERE ? = ANY (users.friends)", s
+            f"SELECT users.name AS users_name FROM users WHERE %({param})s = ANY (users.friends)",
+            s,
         )
 
     def test_any_with_operator(self):
         s = self.session.query(self.User.name).filter(
             self.User.scores.any(6, operator=operators.lt)
         )
-        self.assertSQL("SELECT users.name AS users_name FROM users WHERE ? < ANY (users.scores)", s)
+        # SA 1.4+ uses the column name as the bind param; SA 1.3 uses a generic "param_1".
+        param = "scores_1" if SA_VERSION >= SA_1_4 else "param_1"
+        self.assertSQL(
+            f"SELECT users.name AS users_name FROM users WHERE %({param})s < ANY (users.scores)",
+            s,
+        )
 
     def test_multidimensional_arrays(self):
         t1 = sa.Table(
