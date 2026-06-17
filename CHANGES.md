@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Types: Improved support for FLOAT type, converging to FLOAT vs. DOUBLE
 - Types: Added method `ObjectArray.as_generic` for better reverse type lookups
 - Types: Improved type mappings for better reverse type lookups / reflections
   - Consequently used upper-case type definitions from `sqlalchemy.types`
@@ -14,28 +15,10 @@
   `PGCompiler.visit_on_conflict_do_update`
 - Dialect: Added methods concerned with isolation levels as no-ops
 - Types: Started emulating PostgreSQL's `JSON(B)` types using CrateDB's `OBJECT`
-- Migrated to `paramstyle="pyformat"`, following crate-python 2.2.1.
-
-  **Breaking change:** The dialect now generates `%(name)s` named placeholders
-  and passes a `dict` of parameters to the DBAPI cursor, instead of the previous
-  `?` positional placeholders with a `tuple`. crate-python converts these to
-  CrateDB's native `$N` positional markers before sending over HTTP, so no
-  server-side changes are required.
-
-  User impact:
-
-  - **ORM / Core users**: No action required. SQLAlchemy handles parameter
-    binding transparently; existing application code continues to work unchanged.
-  - **Direct cursor users** who log or inspect the SQL string passed to
-    `cursor.execute()` will observe `%(name)s` placeholders instead of `?`.
-  - **Partial `ObjectType` updates** generate subscript-assignment SQL with named
-    parameters, e.g. `SET data['x'] = %(data_'x'_)s`, replacing the previous
-    positional form `SET data['x'] = ?`.
-  - **`pandas` / Dask `DataFrame.to_sql(..., method=insert_bulk)`** continues to
-    work. The bulk-operations path sends `$N` positional SQL to CrateDB, with
-    conversion handled by crate-python ≥ 2.2.1.
-  - **Minimum Python version raised to 3.10.** crate-python 2.1.0+ requires
-    Python ≥ 3.10. Python 3.6–3.9 are no longer supported.
+- Dialect: now uses `paramstyle = "pyformat"` supported in crate-python 2.2.1.
+  Because of this the SQL statements logged or inspected will contain
+  `%(name)s` placeholders instead of `?`.
+- Removed support for Python versions < 3.10
 
 ## 2026/05/28 0.42.0
 - Added support for SQL Alchemy 2.1
