@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
+  'visit_on_conflict_do_update'` by forwarding calls to
+  `PGCompiler.visit_on_conflict_do_update`
+
 ## 2026/06/17 0.43.0
 - Types: Improved support for FLOAT type, converging to FLOAT vs. DOUBLE
 - Types: Added method `ObjectArray.as_generic` for better reverse type lookups
@@ -10,9 +15,6 @@
     newly introduced `sqltypes.{DOUBLE,DOUBLE_PRECISION}` types
 - Compiler: Made `CREATE INDEX` a no-op, only emitting `SELECT 1`, because CrateDB
   does not support that statement
-- Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
-  'visit_on_conflict_do_update'` by forwarding calls to
-  `PGCompiler.visit_on_conflict_do_update`
 - Dialect: Added methods concerned with isolation levels as no-ops
 - Types: Started emulating PostgreSQL's `JSON(B)` types using CrateDB's `OBJECT`
 - Dialect: now uses `paramstyle = "pyformat"` supported in crate-python 2.2.1.
