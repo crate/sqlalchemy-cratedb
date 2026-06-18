@@ -273,7 +273,7 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
 
     def visit_BLOB(self, type_, **kw):
         return "STRING"
-    
+
     def visit_FLOAT(self, type_, **kw):
         """
         From `sqlalchemy.sql.sqltypes.Float`.
