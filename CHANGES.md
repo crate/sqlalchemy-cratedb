@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Types: Added support for BLOB type, per base64 encoding
+
 ## 2026/06/17 0.43.0
 - Types: Improved support for FLOAT type, converging to FLOAT vs. DOUBLE
 - Types: Added method `ObjectArray.as_generic` for better reverse type lookups

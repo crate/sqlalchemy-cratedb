@@ -36,6 +36,7 @@ from .compiler import (
 )
 from .sa_version import SA_1_4, SA_2_0, SA_VERSION
 from .type import FloatVector, ObjectArray, ObjectType
+from .type.binary import LargeBinary
 from .util import SSLMode
 
 # For SQLAlchemy >= 1.1.
@@ -171,6 +172,7 @@ colspecs = {
     sqltypes.Date: Date,
     sqltypes.DateTime: DateTime,
     sqltypes.TIMESTAMP: DateTime,
+    sqltypes.LargeBinary: LargeBinary,
 }
 
 if SA_VERSION >= SA_2_0:
