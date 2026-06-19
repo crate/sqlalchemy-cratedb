@@ -25,6 +25,7 @@ from unittest.mock import MagicMock, patch
 
 import sqlalchemy as sa
 from crate.client.cursor import Cursor
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import Update, text
 
 from sqlalchemy_cratedb.compiler import crate_before_execute
@@ -331,6 +332,24 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
             "it will be omitted when generating SQL statements.",
             str(w[-1].message),
         )
+
+    @skipIf(
+        SA_VERSION < SA_2_0,
+        "on_conflict_do_update is only exercised via CrateCompilerSA20",
+    )
+    def test_insert_on_conflict_do_update(self):
+        """
+        Verify that INSERT ... ON CONFLICT DO UPDATE compiles without
+        an error.
+        """
+        stmt = pg_insert(self.mytable).values(name="foo", data={"x": 1})
+        upsert = stmt.on_conflict_do_update(
+            index_elements=["name"],
+            set_={"data": {"x": 2}},
+        )
+        sql = str(upsert.compile(bind=self.crate_engine))
+        self.assertIn("ON CONFLICT (name)", sql)
+        self.assertIn("DO UPDATE SET data =", sql)
 
 
 FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
