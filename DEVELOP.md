@@ -32,6 +32,19 @@ Format code:
 
     poe format
 
+## Pre-commit hooks
+
+The repository ships a `.pre-commit-config.yaml` that runs the same linters
+as CI (`ruff check` + `ruff format --check`) on every commit. To install:
+
+    pip install pre-commit
+    pre-commit install
+
+After that, linting runs automatically before each `git commit`. To run it
+manually across all files:
+
+    pre-commit run --all-files
+
 
 ## Preparing a release
 
