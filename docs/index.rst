@@ -198,6 +198,32 @@ use of the SQLAlchemy dialect.
   load and export data.
 - The `Apache Superset`_ and `FIWARE QuantumLeap data historian`_ projects.
 
+*******
+Used by
+*******
+
+Join the party!
+
+- `apache-superset <https://superset.apache.org/user-docs/databases/supported/cratedb/>`_
+- `commons-codec <https://pypi.org/project/commons-codec/>`_
+- `cratedb-fivetran-destination <https://pypi.org/project/cratedb-fivetran-destination/>`_
+- `cratedb-toolkit <https://pypi.org/project/cratedb-toolkit/>`_
+- `influxio <https://pypi.org/project/influxio/>`_
+- `ingestr <https://pypi.org/project/ingestr/>`_
+- `kotori <https://pypi.org/project/kotori/>`_
+- `langchain-cratedb <https://pypi.org/project/langchain-cratedb/>`_
+- `lorrystream <https://pypi.org/project/lorrystream/>`_
+- `omniload <https://pypi.org/project/omniload/>`_
+- `meltano-tap-cratedb <https://pypi.org/project/meltano-tap-cratedb/>`_
+- `meltano-target-cratedb <https://pypi.org/project/meltano-target-cratedb/>`_
+- `mindsdb <https://pypi.org/project/MindsDB/>`_
+- `mlflow-cratedb <https://pypi.org/project/mlflow-cratedb/>`_
+- `rdflib-sqlalchemy <https://github.com/crate-workbench/rdflib-sqlalchemy>`_
+- `records <https://github.com/crate/crate-clients-tools/discussions/161>`_
+- `skeem <https://pypi.org/project/skeem/>`_
+- `supertask <https://pypi.org/project/supertask/>`_
+- `testcontainers <https://pypi.org/project/testcontainers/>`_
+- `wetterdienst <https://pypi.org/project/wetterdienst/>`_
 
 .. seealso::
 
