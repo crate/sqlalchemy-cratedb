@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026/06/22 0.43.1
 - Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
   'visit_on_conflict_do_update'` by forwarding calls to
   `PGCompiler.visit_on_conflict_do_update`
