@@ -213,9 +213,6 @@ class CrateDDLCompiler(compiler.DDLCompiler):
 
 
 class CrateTypeCompiler(compiler.GenericTypeCompiler):
-    visit_on_conflict_do_update = PGCompiler.visit_on_conflict_do_update
-    _on_conflict_target = PGCompiler._on_conflict_target
-
     def visit_string(self, type_, **kw):
         return "STRING"
 
@@ -297,6 +294,9 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
 
 
 class CrateCompiler(compiler.SQLCompiler):
+    visit_on_conflict_do_update = PGCompiler.visit_on_conflict_do_update
+    _on_conflict_target = PGCompiler._on_conflict_target
+
     def visit_getitem_binary(self, binary, operator, **kw):
         return "{0}['{1}']".format(self.process(binary.left, **kw), binary.right.value)
 
