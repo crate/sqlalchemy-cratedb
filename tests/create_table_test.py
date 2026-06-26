@@ -78,6 +78,30 @@ class SqlAlchemyCreateTableTest(TestCase):
             sa.util.immutabledict({}),
         )
 
+    def test_table_time_type(self):
+        """
+        `sa.Time` has no native CrateDB counterpart and is stored as `STRING`.
+
+        Validates the fix for https://github.com/crate/sqlalchemy-cratedb/issues/206,
+        where `sa.Time` previously compiled to `TIME`, which CrateDB rejects with
+        `SQLParseException[Cannot find data type: time]`.
+        """
+
+        class Schedule(self.Base):
+            __tablename__ = "schedule"
+            name = sa.Column(sa.String, primary_key=True)
+            time_col = sa.Column(sa.Time)
+
+        self.Base.metadata.create_all(bind=self.engine)
+        fake_cursor.execute.assert_called_with(
+            (
+                "\nCREATE TABLE schedule (\n\tname STRING NOT NULL, "
+                "\n\ttime_col STRING, "
+                "\n\tPRIMARY KEY (name)\n)\n\n"
+            ),
+            sa.util.immutabledict({}),
+        )
+
     def test_column_obj(self):
         class DummyTable(self.Base):
             __tablename__ = "dummy"

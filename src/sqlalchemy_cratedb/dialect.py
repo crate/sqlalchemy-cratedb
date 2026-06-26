@@ -21,7 +21,7 @@
 
 import logging
 import warnings
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from sqlalchemy import types as sqltypes
 from sqlalchemy.engine import default, reflection
@@ -167,10 +167,31 @@ class DateTime(sqltypes.DateTime):
         return process
 
 
+class Time(sqltypes.Time):
+    def bind_processor(self, dialect):
+        def process(value):
+            if value is not None:
+                return value.isoformat()
+            return None
+
+        return process
+
+    def result_processor(self, dialect, coltype):
+        def process(value):
+            if value is None:
+                return None
+            if isinstance(value, time):
+                return value
+            return time.fromisoformat(value)
+
+        return process
+
+
 colspecs = {
     sqltypes.Date: Date,
     sqltypes.DateTime: DateTime,
     sqltypes.TIMESTAMP: DateTime,
+    sqltypes.Time: Time,
 }
 
 if SA_VERSION >= SA_2_0:
