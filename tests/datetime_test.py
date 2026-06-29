@@ -252,9 +252,7 @@ def test_time(session):
     session.execute(sa.text("REFRESH TABLE foobar"))
 
     # query
-    result = (
-        session.execute(sa.select(FooBar.name, FooBar.time)).mappings().first()
-    )
+    result = session.execute(sa.select(FooBar.name, FooBar.time)).mappings().first()
 
     # compare
     assert result["time"] == dt.time(19, 0, 30, 123456)
