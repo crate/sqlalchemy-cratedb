@@ -246,7 +246,7 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
     def visit_date(self, type_, **kw):
         return "TIMESTAMP"
 
-    def visit_time(self, type_, **kw):
+    def visit_TIME(self, type_, **kw):
         """
         CrateDB has no storable `TIME` column type. Plain `TIME` does not exist,
         and `TIME WITH TIME ZONE` (TIMETZ) is literal/cast-only ("does not support

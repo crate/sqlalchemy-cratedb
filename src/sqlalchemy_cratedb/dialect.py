@@ -171,6 +171,7 @@ class Time(sqltypes.Time):
     def bind_processor(self, dialect):
         def process(value):
             if value is not None:
+                assert isinstance(value, time)  # noqa: S101
                 return value.isoformat()
             return None
 
@@ -180,8 +181,6 @@ class Time(sqltypes.Time):
         def process(value):
             if value is None:
                 return None
-            if isinstance(value, time):
-                return value
             return time.fromisoformat(value)
 
         return process

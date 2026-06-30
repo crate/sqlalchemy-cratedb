@@ -84,19 +84,26 @@ class SqlAlchemyCreateTableTest(TestCase):
 
         Validates the fix for https://github.com/crate/sqlalchemy-cratedb/issues/206,
         where `sa.Time` previously compiled to `TIME`, which CrateDB rejects with
-        `SQLParseException[Cannot find data type: time]`.
+        `SQLParseException[Cannot find data type: time]`. Both the generic
+        `sa.Time` and the SQL-standard capitalised `sa.TIME` must render `STRING`.
         """
 
         class Schedule(self.Base):
             __tablename__ = "schedule"
             name = sa.Column(sa.String, primary_key=True)
-            time_col = sa.Column(sa.Time)
+            time_lower = sa.Column(sa.Time)
+            time_upper = sa.Column(sa.TIME())
+
+        # Exercise both spellings: `sa.TIME` is a subclass of `sa.Time`.
+        assert isinstance(Schedule.__table__.c.time_lower.type, sa.Time)
+        assert isinstance(Schedule.__table__.c.time_upper.type, sa.TIME)
 
         self.Base.metadata.create_all(bind=self.engine)
         fake_cursor.execute.assert_called_with(
             (
                 "\nCREATE TABLE schedule (\n\tname STRING NOT NULL, "
-                "\n\ttime_col STRING, "
+                "\n\ttime_lower STRING, "
+                "\n\ttime_upper STRING, "
                 "\n\tPRIMARY KEY (name)\n)\n\n"
             ),
             sa.util.immutabledict({}),
