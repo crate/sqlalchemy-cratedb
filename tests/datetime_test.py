@@ -256,9 +256,7 @@ def test_time(session):
 
     # query
     result = (
-        session.execute(sa.select(FooBar.name, FooBar.time, FooBar.time_upper))
-        .mappings()
-        .first()
+        session.execute(sa.select(FooBar.name, FooBar.time, FooBar.time_upper)).mappings().first()
     )
 
     # compare
