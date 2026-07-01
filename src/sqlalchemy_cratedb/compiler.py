@@ -246,6 +246,15 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
     def visit_date(self, type_, **kw):
         return "TIMESTAMP"
 
+    def visit_TIME(self, type_, **kw):
+        """
+        CrateDB has no storable `TIME` column type. Plain `TIME` does not exist,
+        and `TIME WITH TIME ZONE` (TIMETZ) is literal/cast-only ("does not support
+        storage"). So store the time-of-day as a `STRING`, holding the value in
+        ISO 8601 format (e.g. ``19:00:30.123456``).
+        """
+        return "STRING"
+
     def visit_ARRAY(self, type_, **kw):
         if type_.dimensions is not None and type_.dimensions > 1:
             raise NotImplementedError("CrateDB doesn't support multidimensional arrays")

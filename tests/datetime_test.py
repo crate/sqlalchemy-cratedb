@@ -105,6 +105,8 @@ class FooBar(Base):
     date = sa.Column(sa.Date)
     datetime_notz = sa.Column(DateTime(timezone=False))
     datetime_tz = sa.Column(DateTime(timezone=True))
+    time = sa.Column(sa.Time)
+    time_upper = sa.Column(sa.TIME())
 
 
 @pytest.fixture
@@ -228,3 +230,37 @@ def test_datetime_date(session):
     # Compare outcome.
     assert result["datetime_notz"] == dt.datetime(2009, 5, 13, 0, 0, 0)
     assert result["datetime_tz"] == dt.datetime(2009, 5, 13, 0, 0, 0)
+
+
+@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
+def test_time(session):
+    """
+    An integration test for `sa.Time` and the SQL-standard `sa.TIME`.
+
+    CrateDB has no native `TIME` type, so the dialect stores it as a `STRING`
+    in ISO 8601 format and parses it back into a `dt.time` object on read. Both
+    spellings resolve to the same colspec, so both must round-trip.
+
+    Validates the fix for https://github.com/crate/sqlalchemy-cratedb/issues/206.
+    """
+
+    # insert
+    foo_item = FooBar(
+        name="foo",
+        time=dt.time(19, 0, 30, 123456),
+        time_upper=dt.time(19, 0, 30, 123456),
+    )
+    session.add(foo_item)
+    session.commit()
+    session.execute(sa.text("REFRESH TABLE foobar"))
+
+    # query
+    result = (
+        session.execute(sa.select(FooBar.name, FooBar.time, FooBar.time_upper)).mappings().first()
+    )
+
+    # compare
+    assert result["time"] == dt.time(19, 0, 30, 123456)
+    assert isinstance(result["time"], dt.time)
+    assert result["time_upper"] == dt.time(19, 0, 30, 123456)
+    assert isinstance(result["time_upper"], dt.time)
