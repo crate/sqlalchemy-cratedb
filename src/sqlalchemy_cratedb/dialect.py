@@ -144,6 +144,11 @@ class DateTime(sqltypes.DateTime):
         def process(value):
             if not value:
                 return None
+            # When the driver's `time_zone` is configured, the timestamp column
+            # has already been converted to `datetime` by the driver's data type converter.
+            # Pass it through unchanged so this processor stays idempotent.
+            if isinstance(value, datetime):
+                return value
             try:
                 return datetime.utcfromtimestamp(value / 1e3)
             except TypeError:

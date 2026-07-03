@@ -20,6 +20,26 @@ Data types
     ``date`` or ``datetime`` objects, timezone information will not be
     preserved. If you need to store it, you will need to use a separate column.
 
+.. NOTE::
+
+    Inserting timezone-aware ``datetime`` objects is supported; the value is
+    converted to a UTC instant on the way in, as outlined above. On the way
+    out, the dialect returns **naive** ``datetime`` objects in UTC by default.
+
+    To read values back as timezone-aware ``datetime`` objects instead,
+    configure the CrateDB driver's ``time_zone`` argument, for example::
+
+        from sqlalchemy import create_engine
+
+        engine = create_engine(
+            "crate://localhost:4200",
+            connect_args={"time_zone": "+0530"},
+        )
+
+    The driver then converts ``TIMESTAMP`` columns to timezone-aware
+    ``datetime`` objects transparently. See `TIMESTAMP conversion with time
+    zone`_ in the driver documentation for the accepted ``time_zone`` values.
+
 
 .. _data-types-sqlalchemy:
 
@@ -88,4 +108,5 @@ __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.htm
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#geo-shape
 
 
+.. _TIMESTAMP conversion with time zone: https://cratedb.com/docs/python/en/latest/query.html#timestamp-conversion-with-time-zone
 .. _Unix time: https://en.wikipedia.org/wiki/Unix_time

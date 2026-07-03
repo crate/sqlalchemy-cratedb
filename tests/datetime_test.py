@@ -233,6 +233,41 @@ def test_datetime_date(session):
 
 
 @pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
+def test_datetime_tz_aware_read(session, cratedb_service):
+    """
+    With the driver's `time_zone` configured, `TIMESTAMP` columns read back as
+    timezone-aware `datetime` objects through the dialect.
+
+    Regression test for https://github.com/crate/sqlalchemy-cratedb/issues/92:
+    when the driver converts the column to a `datetime` itself, the dialect's
+    result processor must pass it through unchanged
+    """
+    aware = dt.datetime(2020, 6, 23, 12, 0, 0, tzinfo=dt.timezone(dt.timedelta(hours=2)))
+
+    # Write
+    session.add(FooBar(name="tz", datetime_tz=aware))
+    session.commit()
+    session.execute(sa.text("REFRESH TABLE foobar"))
+
+    # Read via an engine whose driver returns timezone-aware datetimes.
+    aware_engine = sa.create_engine(
+        cratedb_service.database.engine.url, connect_args={"time_zone": "+0530"}
+    )
+    try:
+        with aware_engine.connect() as conn:
+            result = conn.execute(
+                sa.select(FooBar.datetime_tz).where(FooBar.name == "tz")
+            ).scalar_one()
+    finally:
+        aware_engine.dispose()
+
+    # Same instant (10:00 UTC), now timezone-aware at the requested offset.
+    assert result.tzinfo is not None
+    assert result.utcoffset() == dt.timedelta(hours=5, minutes=30)
+    assert result == dt.datetime(2020, 6, 23, 10, 0, 0, tzinfo=dt.timezone.utc)
+
+
+@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_time(session):
     """
     An integration test for `sa.Time` and the SQL-standard `sa.TIME`.
