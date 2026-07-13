@@ -84,7 +84,7 @@ dependencies = [
   "importlib-metadata; python_version<'3.8'",
   "importlib-resources; python_version<'3.9'",
   "sqlalchemy>=1,<2.2",
-  "verlib2<0.4",
+  "verlib2<26.3",
 ]
 optional-dependencies.all = [
   "sqlalchemy-cratedb[vector]",
