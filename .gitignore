@@ -1,0 +1,10 @@
+.idea/
+.installed.cfg
+.venv*
+*.DS_Store
+*.egg-info
+*.pyc
+.coverage
+coverage.xml
+/build
+/dist

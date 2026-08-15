@@ -1,0 +1,130 @@
+# -*- coding: utf-8; -*-
+#
+# Licensed to CRATE Technology GmbH ("Crate") under one or more contributor
+# license agreements.  See the NOTICE file distributed with this work for
+# additional information regarding copyright ownership.  Crate licenses
+# this file to you under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.  You may
+# obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+# However, if you have executed another commercial license agreement
+# with Crate these terms will supersede the license and you may use the
+# software solely pursuant to the terms of the relevant commercial agreement.
+
+
+from unittest import TestCase, skipIf
+from unittest.mock import MagicMock, patch
+
+import sqlalchemy as sa
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import operators
+
+from sqlalchemy_cratedb import SA_1_4, SA_VERSION
+
+try:
+    from sqlalchemy.orm import declarative_base
+except ImportError:
+    from sqlalchemy.ext.declarative import declarative_base
+
+from crate.client.cursor import Cursor
+
+fake_cursor = MagicMock(name="fake_cursor")
+FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
+FakeCursor.return_value = fake_cursor
+
+
+@patch("crate.client.connection.Cursor", FakeCursor)
+class SqlAlchemyArrayTypeTest(TestCase):
+    def setUp(self):
+        self.engine = sa.create_engine("crate://")
+        Base = declarative_base()
+        self.metadata = sa.MetaData()
+
+        class User(Base):
+            __tablename__ = "users"
+
+            name = sa.Column(sa.String, primary_key=True)
+            friends = sa.Column(sa.ARRAY(sa.String))
+            scores = sa.Column(sa.ARRAY(sa.Integer))
+
+        self.User = User
+        self.session = Session(bind=self.engine)
+
+    def assertSQL(self, expected_str, actual_expr):
+        self.assertEqual(expected_str, str(actual_expr).replace("\n", ""))
+
+    @skipIf(SA_VERSION < SA_1_4, "`as_generic` not available with SQLAlchemy 1.3")
+    def test_as_generic(self):
+        t1 = sa.Table(
+            "t",
+            self.metadata,
+            sa.Column("int_array", sa.ARRAY(sa.Integer)),
+        )
+        array_type = t1.c.int_array.type.as_generic()
+        assert isinstance(array_type, sa.ARRAY)
+
+    def test_create_with_array(self):
+        t1 = sa.Table(
+            "t",
+            self.metadata,
+            sa.Column("int_array", sa.ARRAY(sa.Integer)),
+            sa.Column("str_array", sa.ARRAY(sa.String)),
+        )
+        t1.create(self.engine)
+        fake_cursor.execute.assert_called_with(
+            ("\nCREATE TABLE t (\n\tint_array ARRAY(INT), \n\tstr_array ARRAY(STRING)\n)\n\n"),
+            sa.util.immutabledict({}),
+        )
+
+    def test_array_insert(self):
+        trillian = self.User(name="Trillian", friends=["Arthur", "Ford"])
+        self.session.add(trillian)
+        self.session.commit()
+        fake_cursor.execute.assert_called_with(
+            (
+                "INSERT INTO users (name, friends, scores) "
+                "VALUES (%(name)s, %(friends)s, %(scores)s)"
+            ),
+            {"friends": ["Arthur", "Ford"], "name": "Trillian", "scores": None},
+        )
+
+    def test_any(self):
+        s = self.session.query(self.User.name).filter(self.User.friends.any("arthur"))
+        # SA 1.4+ uses the column name as the bind param; SA 1.3 uses a generic "param_1".
+        param = "friends_1" if SA_VERSION >= SA_1_4 else "param_1"
+        self.assertSQL(
+            f"SELECT users.name AS users_name FROM users WHERE %({param})s = ANY (users.friends)",
+            s,
+        )
+
+    def test_any_with_operator(self):
+        s = self.session.query(self.User.name).filter(
+            self.User.scores.any(6, operator=operators.lt)
+        )
+        # SA 1.4+ uses the column name as the bind param; SA 1.3 uses a generic "param_1".
+        param = "scores_1" if SA_VERSION >= SA_1_4 else "param_1"
+        self.assertSQL(
+            f"SELECT users.name AS users_name FROM users WHERE %({param})s < ANY (users.scores)",
+            s,
+        )
+
+    def test_multidimensional_arrays(self):
+        t1 = sa.Table(
+            "t",
+            self.metadata,
+            sa.Column("unsupported_array", sa.ARRAY(sa.Integer, dimensions=2)),
+        )
+        err = None
+        try:
+            t1.create(self.engine)
+        except NotImplementedError as e:
+            err = e
+        self.assertEqual(str(err), "CrateDB doesn't support multidimensional arrays")

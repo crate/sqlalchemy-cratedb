@@ -1,0 +1,10 @@
+repos:
+  # Mirrors CI: poe lint → `ruff format --check` + `ruff check .`
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.13
+    hooks:
+      - id: ruff
+        exclude: ^bin/
+      - id: ruff-format
+        exclude: ^bin/
+
