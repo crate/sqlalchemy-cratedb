@@ -22,7 +22,6 @@
 from __future__ import absolute_import
 
 import re
-import sys
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
@@ -144,10 +143,7 @@ def test_from_db_failure():
 
     with pytest.raises(TypeError) as ex:
         from_db({"foo": "bar"})
-    if sys.version_info < (3, 10):
-        assert ex.match(re.escape("float() argument must be a string or a number, not 'dict'"))
-    else:
-        assert ex.match(re.escape("float() argument must be a string or a real number, not 'dict'"))
+    assert ex.match(re.escape("float() argument must be a string or a real number, not 'dict'"))
 
 
 def test_to_db_success():
