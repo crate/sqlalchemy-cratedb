@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /
+
+Sitemap: https://cratedb.com/docs/sqlalchemy-cratedb/site.xml

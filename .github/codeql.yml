@@ -1,0 +1,29 @@
+# Suppress some CodeQL warnings.
+query-filters:
+
+  # A few occurrences of try/except clauses without naming a specific exception type.
+  # TODO: May be improved.
+  # https://codeql.github.com/codeql-query-help/python/py-empty-except/
+  - exclude:
+      id: py/empty-except
+
+  # A module is imported with the "import" and "import from" statements.
+  # CodeQL says "Importing a module twice using the import xxx and from xxx import yyy is confusing.".
+  # While it has a point, it is still more than acceptable.
+  # https://codeql.github.com/codeql-query-help/python/py-import-and-import-from/
+  - exclude:
+      id: py/import-and-import-from
+
+  # Quite a few functions don't explicitly return values, but
+  # instead implicitly return `None`, when falling through.
+  # TODO: May be improved.
+  # https://codeql.github.com/codeql-query-help/python/py-mixed-returns/
+  - exclude:
+      id: py/mixed-returns
+
+  # The parameter naming in `CrateCompiler._get_crud_params` is so that it triggers this admonition.
+  # However, by using an alternative name for the first parameter of an instance method, it would
+  # make the code harder to read.
+  # https://codeql.github.com/codeql-query-help/python/py-not-named-self/
+  - exclude:
+      id: py/not-named-self

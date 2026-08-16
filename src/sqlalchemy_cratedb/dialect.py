@@ -1,0 +1,489 @@
+# -*- coding: utf-8; -*-
+#
+# Licensed to CRATE Technology GmbH ("Crate") under one or more contributor
+# license agreements.  See the NOTICE file distributed with this work for
+# additional information regarding copyright ownership.  Crate licenses
+# this file to you under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.  You may
+# obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+# However, if you have executed another commercial license agreement
+# with Crate these terms will supersede the license and you may use the
+# software solely pursuant to the terms of the relevant commercial agreement.
+
+import logging
+import warnings
+from datetime import date, datetime, time
+
+from sqlalchemy import types as sqltypes
+from sqlalchemy.engine import default, reflection
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.sql import functions
+from sqlalchemy.util import asbool, to_list
+
+from .compiler import (
+    CrateDDLCompiler,
+    CrateIdentifierPreparer,
+    CrateTypeCompiler,
+)
+from .sa_version import SA_1_4, SA_2_0, SA_VERSION
+from .type import FloatVector, ObjectArray, ObjectType
+from .util import SSLMode
+
+# For SQLAlchemy >= 1.1.
+TYPES_MAP = {
+    "boolean": sqltypes.BOOLEAN,
+    "short": sqltypes.SMALLINT,
+    "smallint": sqltypes.SMALLINT,
+    "timestamp": sqltypes.TIMESTAMP,
+    "timestamp with time zone": sqltypes.TIMESTAMP(timezone=True),
+    "timestamp without time zone": sqltypes.TIMESTAMP(timezone=False),
+    "object": ObjectType,
+    "object_array": ObjectArray,  # TODO: Can this also be improved to use `sqltypes.ARRAY`?
+    "integer": sqltypes.INTEGER,
+    "long": sqltypes.BIGINT,
+    "bigint": sqltypes.BIGINT,
+    "float": sqltypes.FLOAT,
+    "double": sqltypes.DECIMAL,
+    "double precision": sqltypes.DECIMAL,
+    "real": sqltypes.REAL,
+    "string": sqltypes.VARCHAR,
+    "text": sqltypes.VARCHAR,
+    "float_vector": FloatVector,
+}
+
+# For SQLAlchemy >= 1.4.
+try:
+    from sqlalchemy.types import ARRAY
+
+    TYPES_MAP["integer_array"] = ARRAY(sqltypes.INTEGER)
+    TYPES_MAP["boolean_array"] = ARRAY(sqltypes.BOOLEAN)
+    TYPES_MAP["short_array"] = ARRAY(sqltypes.SMALLINT)
+    TYPES_MAP["smallint_array"] = ARRAY(sqltypes.SMALLINT)
+    TYPES_MAP["timestamp_array"] = ARRAY(sqltypes.TIMESTAMP(timezone=False))
+    TYPES_MAP["timestamp with time zone_array"] = ARRAY(sqltypes.TIMESTAMP(timezone=True))
+    TYPES_MAP["long_array"] = ARRAY(sqltypes.BIGINT)
+    TYPES_MAP["bigint_array"] = ARRAY(sqltypes.BIGINT)
+    TYPES_MAP["float_array"] = ARRAY(sqltypes.FLOAT)
+    TYPES_MAP["real_array"] = ARRAY(sqltypes.REAL)
+    TYPES_MAP["string_array"] = ARRAY(sqltypes.VARCHAR)
+    TYPES_MAP["text_array"] = ARRAY(sqltypes.VARCHAR)
+except Exception:  # noqa: S110
+    pass
+
+# For SQLAlchemy >= 2.0.
+try:
+    from sqlalchemy.types import DOUBLE, DOUBLE_PRECISION
+
+    TYPES_MAP["double"] = DOUBLE
+    TYPES_MAP["double_array"] = ARRAY(DOUBLE)
+    TYPES_MAP["double precision"] = DOUBLE_PRECISION
+    TYPES_MAP["double precision_array"] = ARRAY(DOUBLE_PRECISION)
+except Exception:  # noqa: S110
+    pass
+
+
+log = logging.getLogger(__name__)
+
+
+class Date(sqltypes.Date):
+    def bind_processor(self, dialect):
+        def process(value):
+            if value is not None:
+                assert isinstance(value, date)  # noqa: S101
+                return value.strftime("%Y-%m-%d")
+            return None
+
+        return process
+
+    def result_processor(self, dialect, coltype):
+        def process(value):
+            if not value:
+                return None
+            try:
+                return datetime.utcfromtimestamp(value / 1e3).date()
+            except TypeError:
+                pass
+
+            # Crate doesn't really have datetime or date types but a
+            # timestamp type. The "date" mapping (conversion to long)
+            # is only applied if the schema definition for the column exists
+            # and if the sql insert statement was used.
+            # In case of dynamic mapping or using the rest indexing endpoint
+            # the date will be returned in the format it was inserted.
+            log.warning(
+                "Received timestamp isn't a long value."
+                "Trying to parse as date string and then as datetime string"
+            )
+            try:
+                return datetime.strptime(value, "%Y-%m-%d").date()
+            except ValueError:
+                return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ").date()
+
+        return process
+
+
+class DateTime(sqltypes.DateTime):
+    def bind_processor(self, dialect):
+        def process(value):
+            if isinstance(value, (datetime, date)):
+                return value.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+            return value
+
+        return process
+
+    def result_processor(self, dialect, coltype):
+        def process(value):
+            if not value:
+                return None
+            # When the driver's `time_zone` is configured, the timestamp column
+            # has already been converted to `datetime` by the driver's data type converter.
+            # Pass it through unchanged so this processor stays idempotent.
+            if isinstance(value, datetime):
+                return value
+            try:
+                return datetime.utcfromtimestamp(value / 1e3)
+            except TypeError:
+                pass
+
+            # Crate doesn't really have datetime or date types but a
+            # timestamp type. The "date" mapping (conversion to long)
+            # is only applied if the schema definition for the column exists
+            # and if the sql insert statement was used.
+            # In case of dynamic mapping or using the rest indexing endpoint
+            # the date will be returned in the format it was inserted.
+            log.warning(
+                "Received timestamp isn't a long value."
+                "Trying to parse as datetime string and then as date string"
+            )
+            try:
+                return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+            except ValueError:
+                return datetime.strptime(value, "%Y-%m-%d")
+
+        return process
+
+
+class Time(sqltypes.Time):
+    def bind_processor(self, dialect):
+        def process(value):
+            if value is not None:
+                assert isinstance(value, time)  # noqa: S101
+                return value.isoformat()
+            return None
+
+        return process
+
+    def result_processor(self, dialect, coltype):
+        def process(value):
+            if value is None:
+                return None
+            return time.fromisoformat(value)
+
+        return process
+
+
+colspecs = {
+    sqltypes.Date: Date,
+    sqltypes.DateTime: DateTime,
+    sqltypes.TIMESTAMP: DateTime,
+    sqltypes.Time: Time,
+}
+
+if SA_VERSION >= SA_2_0:
+    from .compat.core20 import CrateCompilerSA20
+
+    statement_compiler = CrateCompilerSA20
+elif SA_VERSION >= SA_1_4:
+    from .compat.core14 import CrateCompilerSA14
+
+    statement_compiler = CrateCompilerSA14
+else:
+    from .compat.core10 import CrateCompilerSA10
+
+    statement_compiler = CrateCompilerSA10
+
+
+class CrateDialect(default.DefaultDialect):
+    name = "crate"
+    driver = "crate-python"
+    default_paramstyle = "pyformat"
+    statement_compiler = statement_compiler
+    ddl_compiler = CrateDDLCompiler
+    type_compiler = CrateTypeCompiler
+    preparer = CrateIdentifierPreparer
+    use_insertmanyvalues = True
+    use_insertmanyvalues_wo_returning = True
+    supports_multivalues_insert = True
+    supports_native_boolean = True
+    supports_statement_cache = True
+    colspecs = colspecs
+    implicit_returning = True
+    insert_returning = True
+    update_returning = True
+
+    def __init__(self, **kwargs):
+        default.DefaultDialect.__init__(self, **kwargs)
+
+        # CrateDB does not need `OBJECT` types to be serialized as JSON.
+        # Corresponding data is forwarded 1:1, and will get marshalled
+        # by the low-level driver.
+        self._json_deserializer = lambda x: x
+        self._json_serializer = lambda x: x
+
+        # Currently, our SQL parser doesn't support unquoted column names that
+        # start with _. Adding it here causes sqlalchemy to quote such columns.
+        self.identifier_preparer.illegal_initial_characters.add("_")
+
+    def get_isolation_level_values(self, dbapi_conn):
+        return ()
+
+    def set_isolation_level(self, dbapi_connection, level):
+        pass
+
+    def get_isolation_level(self, dbapi_connection):
+        return "AUTOCOMMIT"
+
+    def initialize(self, connection):
+        # get lowest server version
+        self.server_version_info = self._get_server_version_info(connection)
+        # get default schema name
+        self.default_schema_name = self._get_default_schema_name(connection)
+
+    def do_rollback(self, connection):
+        # if any exception is raised by the dbapi, sqlalchemy by default
+        # attempts to do a rollback crate doesn't support rollbacks.
+        # implementing this as noop seems to cause sqlalchemy to propagate the
+        # original exception to the user
+        pass
+
+    def connect(self, host=None, port=None, *args, **kwargs):
+        server = None
+        if host:
+            server = "{0}:{1}".format(host, port or "4200")
+        if "servers" in kwargs:
+            server = kwargs.pop("servers")
+        servers = to_list(server)
+
+        # Process legacy SSL option `ssl`.
+        if "ssl" in kwargs:
+            warnings.warn(
+                "The `ssl=true` option will be deprecated, "
+                "please use `sslmode=require` going forward.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        use_ssl = asbool(kwargs.pop("ssl", False))
+
+        # Process new SSL option `sslmode`.
+        # Please consult https://www.postgresql.org/docs/18/libpq-connect.html.
+        if "sslmode" in kwargs:
+            try:
+                sslmode = SSLMode.parse(kwargs.pop("sslmode"))
+            except AttributeError as exc:
+                modes = ", ".join(SSLMode.modes)
+                raise SQLAlchemyError(
+                    "`sslmode` parameter must be one of: {}".format(modes)
+                ) from exc
+            if sslmode < SSLMode.allow:
+                use_ssl = False
+            else:
+                use_ssl = True
+                if sslmode >= SSLMode.verify_ca:
+                    kwargs["verify_ssl_cert"] = True
+                else:
+                    kwargs["verify_ssl_cert"] = False
+
+        if not servers:
+            servers = [self.dbapi.http.Client.default_server.replace("http://", "")]
+        if use_ssl:
+            servers = ["https://" + server for server in servers]
+        return self.dbapi.connect(servers=servers, **kwargs)
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+        """
+        Slightly amended to store its response into the request context instance.
+        """
+        result = cursor.execute(statement, parameters)
+        if context is not None:
+            context.last_result = result
+
+    def do_execute_no_params(self, cursor, statement, context=None):
+        """
+        Slightly amended to store its response into the request context instance.
+        """
+        result = cursor.execute(statement)
+        if context is not None:
+            context.last_result = result
+
+    def do_executemany(self, cursor, statement, parameters, context=None):
+        """
+        Slightly amended to store its response into the request context instance.
+        """
+        result = cursor.executemany(statement, parameters)
+        if context is not None:
+            context.last_result = result
+
+    def _get_default_schema_name(self, connection):
+        return "doc"
+
+    def _get_effective_schema_name(self, connection):
+        schema_name_raw = connection.engine.url.query.get("schema")
+        schema_name = None
+        if isinstance(schema_name_raw, str):
+            schema_name = schema_name_raw
+        elif isinstance(schema_name_raw, tuple):
+            schema_name = schema_name_raw[0]
+        return schema_name
+
+    def _get_server_version_info(self, connection):
+        return tuple(connection.connection.lowest_server_version.version)
+
+    @classmethod
+    def import_dbapi(cls):
+        from crate import client
+
+        return client
+
+    @classmethod
+    def dbapi(cls):
+        return cls.import_dbapi()
+
+    def has_schema(self, connection, schema, **kw):
+        return schema in self.get_schema_names(connection, **kw)
+
+    def has_table(self, connection, table_name, schema=None, **kw):
+        return table_name in self.get_table_names(connection, schema=schema, **kw)
+
+    @reflection.cache
+    def get_schema_names(self, connection, **kw):
+        cursor = connection.exec_driver_sql(
+            "select schema_name from information_schema.schemata order by schema_name asc"
+        )
+        return [row[0] for row in cursor.fetchall()]
+
+    @reflection.cache
+    def get_table_names(self, connection, schema=None, **kw):
+        if schema is None:
+            schema = self._get_effective_schema_name(connection)
+        cursor = connection.exec_driver_sql(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE {0} = ? "
+            "AND table_type = 'BASE TABLE' "
+            "ORDER BY table_name ASC, {0} ASC".format(self.schema_column),
+            (schema or self.default_schema_name,),
+        )
+        return [row[0] for row in cursor.fetchall()]
+
+    @reflection.cache
+    def get_view_names(self, connection, schema=None, **kw):
+        cursor = connection.exec_driver_sql(
+            "SELECT table_name FROM information_schema.views "
+            "ORDER BY table_name ASC, {0} ASC".format(self.schema_column),
+            (schema or self.default_schema_name,),
+        )
+        return [row[0] for row in cursor.fetchall()]
+
+    @reflection.cache
+    def get_columns(self, connection, table_name, schema=None, **kw):
+        query = (
+            "SELECT column_name, data_type "
+            "FROM information_schema.columns "
+            "WHERE table_name = ? AND {0} = ? "
+            "AND column_name !~ ?".format(self.schema_column)
+        )
+        cursor = connection.exec_driver_sql(
+            query,
+            (
+                table_name,
+                schema or self.default_schema_name,
+                r"(.*)\[\'(.*)\'\]",
+            ),  # regex to filter subscript
+        )
+        return [self._create_column_info(row) for row in cursor.fetchall()]
+
+    @reflection.cache
+    def get_pk_constraint(self, engine, table_name, schema=None, **kw):
+        if self.server_version_info >= (3, 0, 0):
+            query = """SELECT column_name
+                    FROM information_schema.key_column_usage
+                    WHERE table_name = ? AND table_schema = ?"""
+
+            def result_fun(result):
+                rows = result.fetchall()
+                return set(map(lambda el: el[0], rows))
+
+        elif self.server_version_info >= (2, 3, 0):
+            query = """SELECT column_name
+                    FROM information_schema.key_column_usage
+                    WHERE table_name = ? AND table_catalog = ?"""
+
+            def result_fun(result):
+                rows = result.fetchall()
+                return set(map(lambda el: el[0], rows))
+
+        else:
+            query = """SELECT constraint_name
+                   FROM information_schema.table_constraints
+                   WHERE table_name = ? AND {schema_col} = ?
+                   AND constraint_type='PRIMARY_KEY'
+                   """.format(schema_col=self.schema_column)
+
+            def result_fun(result):
+                rows = result.fetchone()
+                return set(rows[0] if rows else [])
+
+        pk_result = engine.exec_driver_sql(query, (table_name, schema or self.default_schema_name))
+        pks = result_fun(pk_result)
+        return {"constrained_columns": sorted(pks), "name": "PRIMARY KEY"}
+
+    @reflection.cache
+    def get_foreign_keys(
+        self, connection, table_name, schema=None, postgresql_ignore_search_path=False, **kw
+    ):
+        # Crate doesn't support Foreign Keys, so this stays empty
+        return []
+
+    @reflection.cache
+    def get_indexes(self, connection, table_name, schema, **kw):
+        return []
+
+    @property
+    def schema_column(self):
+        return "table_schema"
+
+    def _create_column_info(self, row):
+        return {
+            "name": row[0],
+            "type": self._resolve_type(row[1]),
+            # In Crate every column is nullable except PK
+            # Primary Key Constraints are not nullable anyway, no matter what
+            # we return here, so it's fine to return always `True`
+            "nullable": True,
+        }
+
+    def _resolve_type(self, type_):
+        return TYPES_MAP.get(type_, sqltypes.UserDefinedType)
+
+    def has_ilike_operator(self):
+        """
+        Only CrateDB 4.1.0 and higher implements the `ILIKE` operator.
+        """
+        server_version_info = self.server_version_info
+        return server_version_info is not None and server_version_info >= (4, 1, 0)
+
+
+class DateTrunc(functions.GenericFunction):
+    name = "date_trunc"
+    type = sqltypes.TIMESTAMP
+
+
+dialect = CrateDialect

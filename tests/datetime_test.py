@@ -1,0 +1,301 @@
+# -*- coding: utf-8; -*-
+#
+# Licensed to CRATE Technology GmbH ("Crate") under one or more contributor
+# license agreements.  See the NOTICE file distributed with this work for
+# additional information regarding copyright ownership.  Crate licenses
+# this file to you under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.  You may
+# obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+# However, if you have executed another commercial license agreement
+# with Crate these terms will supersede the license and you may use the
+# software solely pursuant to the terms of the relevant commercial agreement.
+
+from __future__ import absolute_import
+
+import datetime as dt
+from unittest import TestCase, skipIf
+from unittest.mock import MagicMock, patch
+
+import pytest
+import sqlalchemy as sa
+from sqlalchemy.orm import Session, sessionmaker
+
+from sqlalchemy_cratedb.dialect import DateTime
+from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
+
+try:
+    from sqlalchemy.orm import declarative_base
+except ImportError:
+    from sqlalchemy.ext.declarative import declarative_base
+
+try:
+    import zoneinfo
+except ImportError:
+    from backports import zoneinfo
+
+from crate.client.cursor import Cursor
+
+fake_cursor = MagicMock(name="fake_cursor")
+FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
+FakeCursor.return_value = fake_cursor
+
+
+INPUT_DATE = dt.date(2009, 5, 13)
+INPUT_DATETIME_NOTZ = dt.datetime(2009, 5, 13, 19, 00, 30, 123456)
+INPUT_DATETIME_TZ = dt.datetime(
+    2009, 5, 13, 19, 00, 30, 123456, tzinfo=zoneinfo.ZoneInfo("Europe/Kyiv")
+)
+OUTPUT_DATE = INPUT_DATE
+OUTPUT_TIMETZ_NOTZ = dt.time(19, 00, 30, 123000)
+OUTPUT_TIMETZ_TZ = dt.time(16, 00, 30, 123000)
+OUTPUT_DATETIME_NOTZ = dt.datetime(2009, 5, 13, 19, 00, 30, 123000)
+OUTPUT_DATETIME_TZ = dt.datetime(2009, 5, 13, 16, 00, 30, 123000)
+
+
+@skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
+@patch("crate.client.connection.Cursor", FakeCursor)
+class SqlAlchemyDateAndDateTimeTest(TestCase):
+    def setUp(self):
+        self.engine = sa.create_engine("crate://")
+        Base = declarative_base()
+
+        class Character(Base):
+            __tablename__ = "characters"
+            name = sa.Column(sa.String, primary_key=True)
+            date = sa.Column(sa.Date)
+            datetime = sa.Column(sa.DateTime)
+
+        fake_cursor.description = (
+            ("characters_name", None, None, None, None, None, None),
+            ("characters_date", None, None, None, None, None, None),
+        )
+        self.session = Session(bind=self.engine)
+        self.Character = Character
+
+    def test_date_can_handle_datetime(self):
+        """date type should also be able to handle iso datetime strings.
+
+        this verifies that the fallback in the Date result_processor works.
+        """
+        fake_cursor.fetchall.return_value = [("Trillian", "2013-07-16T00:00:00.000Z")]
+        self.session.query(self.Character).first()
+
+    def test_date_can_handle_tz_aware_datetime(self):
+        character = self.Character()
+        character.name = "Athur"
+        character.datetime = INPUT_DATETIME_NOTZ
+        self.session.add(character)
+
+
+Base = declarative_base()
+
+
+class FooBar(Base):
+    __tablename__ = "foobar"
+    name = sa.Column(sa.String, primary_key=True)
+    date = sa.Column(sa.Date)
+    datetime_notz = sa.Column(DateTime(timezone=False))
+    datetime_tz = sa.Column(DateTime(timezone=True))
+    time = sa.Column(sa.Time)
+    time_upper = sa.Column(sa.TIME())
+
+
+@pytest.fixture
+def session(cratedb_service):
+    engine = cratedb_service.database.engine
+    session = sessionmaker(bind=engine)()
+
+    Base.metadata.drop_all(engine, checkfirst=True)
+    Base.metadata.create_all(engine, checkfirst=True)
+    return session
+
+
+@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
+def test_datetime_notz(session):
+    """
+    An integration test for `sa.Date` and `sa.DateTime`, not using timezones.
+    """
+
+    # Insert record.
+    foo_item = FooBar(
+        name="foo",
+        date=INPUT_DATE,
+        datetime_notz=INPUT_DATETIME_NOTZ,
+        datetime_tz=INPUT_DATETIME_NOTZ,
+    )
+    session.add(foo_item)
+    session.commit()
+    session.execute(sa.text("REFRESH TABLE foobar"))
+
+    # Query record.
+    result = (
+        session.execute(
+            sa.select(FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)
+        )
+        .mappings()
+        .first()
+    )
+
+    # Compare outcome.
+    assert result["date"] == OUTPUT_DATE
+    assert result["datetime_notz"] == OUTPUT_DATETIME_NOTZ
+    assert result["datetime_notz"].tzname() is None
+    assert result["datetime_notz"].timetz() == OUTPUT_TIMETZ_NOTZ
+    assert result["datetime_notz"].tzinfo is None
+    assert result["datetime_tz"] == OUTPUT_DATETIME_NOTZ
+    assert result["datetime_tz"].tzname() is None
+    assert result["datetime_tz"].timetz() == OUTPUT_TIMETZ_NOTZ
+    assert result["datetime_tz"].tzinfo is None
+
+
+@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
+def test_datetime_tz(session):
+    """
+    An integration test for `sa.Date` and `sa.DateTime`, now using timezones.
+    """
+
+    # Insert record.
+    foo_item = FooBar(
+        name="foo",
+        date=INPUT_DATE,
+        datetime_notz=INPUT_DATETIME_TZ,
+        datetime_tz=INPUT_DATETIME_TZ,
+    )
+    session.add(foo_item)
+    session.commit()
+    session.execute(sa.text("REFRESH TABLE foobar"))
+
+    # Query record.
+    session.expunge(foo_item)
+    result = (
+        session.execute(
+            sa.select(FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)
+        )
+        .mappings()
+        .first()
+    )
+
+    # Compare outcome.
+    assert result["date"] == OUTPUT_DATE
+    assert result["datetime_notz"] == OUTPUT_DATETIME_NOTZ
+    assert result["datetime_notz"].tzname() is None
+    assert result["datetime_notz"].timetz() == OUTPUT_TIMETZ_NOTZ
+    assert result["datetime_notz"].tzinfo is None
+    assert result["datetime_tz"] == OUTPUT_DATETIME_TZ
+    assert result["datetime_tz"].tzname() is None
+    assert result["datetime_tz"].timetz() == OUTPUT_TIMETZ_TZ
+    assert result["datetime_tz"].tzinfo is None
+
+
+@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
+def test_datetime_date(session):
+    """
+    Validate assigning a `date` object to a `datetime` column works.
+
+    It is needed by meltano-tap-cratedb.
+
+    The test suite of `meltano-tap-cratedb`, derived from the corresponding
+    PostgreSQL adapter, will supply `dt.date` objects. Without this improvement,
+    those will otherwise fail.
+    """
+
+    # Insert record.
+    foo_item = FooBar(
+        name="foo",
+        datetime_notz=dt.date(2009, 5, 13),
+        datetime_tz=dt.date(2009, 5, 13),
+    )
+    session.add(foo_item)
+    session.commit()
+    session.execute(sa.text("REFRESH TABLE foobar"))
+
+    # Query record.
+    result = (
+        session.execute(
+            sa.select(FooBar.name, FooBar.date, FooBar.datetime_notz, FooBar.datetime_tz)
+        )
+        .mappings()
+        .first()
+    )
+
+    # Compare outcome.
+    assert result["datetime_notz"] == dt.datetime(2009, 5, 13, 0, 0, 0)
+    assert result["datetime_tz"] == dt.datetime(2009, 5, 13, 0, 0, 0)
+
+
+@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
+def test_datetime_tz_aware_read(session, cratedb_service):
+    """
+    With the driver's `time_zone` configured, `TIMESTAMP` columns read back as
+    timezone-aware `datetime` objects through the dialect.
+
+    Regression test for https://github.com/crate/sqlalchemy-cratedb/issues/92:
+    when the driver converts the column to a `datetime` itself, the dialect's
+    result processor must pass it through unchanged
+    """
+    aware = dt.datetime(2020, 6, 23, 12, 0, 0, tzinfo=dt.timezone(dt.timedelta(hours=2)))
+
+    # Write
+    session.add(FooBar(name="tz", datetime_tz=aware))
+    session.commit()
+    session.execute(sa.text("REFRESH TABLE foobar"))
+
+    # Read via an engine whose driver returns timezone-aware datetimes.
+    aware_engine = sa.create_engine(
+        cratedb_service.database.engine.url, connect_args={"time_zone": "+0530"}
+    )
+    try:
+        with aware_engine.connect() as conn:
+            result = conn.execute(
+                sa.select(FooBar.datetime_tz).where(FooBar.name == "tz")
+            ).scalar_one()
+    finally:
+        aware_engine.dispose()
+
+    # Same instant (10:00 UTC), now timezone-aware at the requested offset.
+    assert result.tzinfo is not None
+    assert result.utcoffset() == dt.timedelta(hours=5, minutes=30)
+    assert result == dt.datetime(2020, 6, 23, 10, 0, 0, tzinfo=dt.timezone.utc)
+
+
+@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
+def test_time(session):
+    """
+    An integration test for `sa.Time` and the SQL-standard `sa.TIME`.
+
+    CrateDB has no native `TIME` type, so the dialect stores it as a `STRING`
+    in ISO 8601 format and parses it back into a `dt.time` object on read. Both
+    spellings resolve to the same colspec, so both must round-trip.
+
+    Validates the fix for https://github.com/crate/sqlalchemy-cratedb/issues/206.
+    """
+
+    # insert
+    foo_item = FooBar(
+        name="foo",
+        time=dt.time(19, 0, 30, 123456),
+        time_upper=dt.time(19, 0, 30, 123456),
+    )
+    session.add(foo_item)
+    session.commit()
+    session.execute(sa.text("REFRESH TABLE foobar"))
+
+    # query
+    result = (
+        session.execute(sa.select(FooBar.name, FooBar.time, FooBar.time_upper)).mappings().first()
+    )
+
+    # compare
+    assert result["time"] == dt.time(19, 0, 30, 123456)
+    assert isinstance(result["time"], dt.time)
+    assert result["time_upper"] == dt.time(19, 0, 30, 123456)
+    assert isinstance(result["time_upper"], dt.time)

@@ -1,0 +1,66 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: "46 2 * * 5"
+
+  # Allow job to be triggered manually.
+  workflow_dispatch:
+
+# Cancel in-progress jobs when pushing to the same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  analyze:
+    name: "Analyze with SQLAlchemy ${{ matrix.sqla-version }}"
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ python ]
+        sqla-version: ['<1.4', '<1.5', '<2.1']
+
+    steps:
+      - name: Acquire sources
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+          architecture: x64
+          cache: 'pip'
+          cache-dependency-path:
+            pyproject.toml
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4.37.3
+        with:
+          languages: ${{ matrix.language }}
+          config-file: ./.github/codeql.yml
+          queries: +security-and-quality
+
+      #- name: Autobuild
+      #  uses: github/codeql-action/autobuild@v2
+
+      - name: Install project
+        run: |
+          pip install --editable=.[sqlalchemy,test]
+          pip install "sqlalchemy${{ matrix.sqla-version }}" --upgrade --pre
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4.37.3
+        with:
+          category: "/language:${{ matrix.language }}/sqla-version:${{ matrix.sqla-version }}"
