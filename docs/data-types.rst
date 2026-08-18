@@ -65,7 +65,7 @@ CrateDB           SQLAlchemy
 `integer`__       `Integer`__
 `long`__          `NUMERIC`__
 `float`__         `Float`__
-`float_vector`__  ``FloatVector``
+`float_vector`__  :ref:`floatvector` |nbsp| (extension type)
 `double`__        `DECIMAL`__
 `timestamp`__     `TIMESTAMP`__
 `string`__        `String`__
