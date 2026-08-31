@@ -38,6 +38,16 @@ from .sa_version import SA_1_4, SA_2_0, SA_VERSION
 from .type import FloatVector, ObjectArray, ObjectType
 from .util import SSLMode
 
+
+class Double(sqltypes.Float):
+    """
+    CrateDB's 64-bit approximate number; SQLAlchemy carries no core type for it
+    before 2.0's `DOUBLE`.
+    """
+
+    __visit_name__ = "double"
+
+
 # For SQLAlchemy >= 1.1.
 TYPES_MAP = {
     "boolean": sqltypes.BOOLEAN,
@@ -52,11 +62,12 @@ TYPES_MAP = {
     "long": sqltypes.BIGINT,
     "bigint": sqltypes.BIGINT,
     "float": sqltypes.FLOAT,
-    "double": sqltypes.DECIMAL,
-    "double precision": sqltypes.DECIMAL,
+    "double": Double,
+    "double precision": Double,
     "real": sqltypes.REAL,
     "string": sqltypes.VARCHAR,
     "text": sqltypes.VARCHAR,
+    "numeric": sqltypes.NUMERIC,
     "float_vector": FloatVector,
 }
 
@@ -76,6 +87,7 @@ try:
     TYPES_MAP["real_array"] = ARRAY(sqltypes.REAL)
     TYPES_MAP["string_array"] = ARRAY(sqltypes.VARCHAR)
     TYPES_MAP["text_array"] = ARRAY(sqltypes.VARCHAR)
+    TYPES_MAP["numeric_array"] = ARRAY(sqltypes.NUMERIC)
 except Exception:  # noqa: S110
     pass
 
@@ -191,11 +203,24 @@ class Time(sqltypes.Time):
         return process
 
 
+class Numeric(sqltypes.Numeric):
+    """
+    Hands `Decimal` values to the driver unconverted; it serializes them as
+    strings, which CrateDB stores without rounding.
+    """
+
+    def bind_processor(self, dialect):
+        return None
+
+
 colspecs = {
     sqltypes.Date: Date,
     sqltypes.DateTime: DateTime,
     sqltypes.TIMESTAMP: DateTime,
     sqltypes.Time: Time,
+    sqltypes.Numeric: Numeric,
+    # `Float` derives from `Numeric`; this entry keeps it on the generic handling.
+    sqltypes.Float: sqltypes.Float,
 }
 
 if SA_VERSION >= SA_2_0:

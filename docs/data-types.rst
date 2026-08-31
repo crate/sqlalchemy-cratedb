@@ -63,10 +63,11 @@ CrateDB           SQLAlchemy
 `byte`__          `SmallInteger`__
 `short`__         `SmallInteger`__
 `integer`__       `Integer`__
-`long`__          `NUMERIC`__
+`long`__          `BigInteger`__
+`numeric`__       `Numeric`__
 `float`__         `Float`__
 `float_vector`__  ``FloatVector``
-`double`__        `DECIMAL`__
+`double`__        `Double`__
 `timestamp`__     `TIMESTAMP`__
 `string`__        `String`__
 `array`__         `ARRAY`__
@@ -88,12 +89,14 @@ __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.S
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#numeric-data
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.Integer
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#numeric-data
-__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.NUMERIC
+__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.BigInteger
+__ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#numeric-precision-scale
+__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.Numeric
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#numeric-data
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.Float
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#float-vector
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#numeric-data
-__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.DECIMAL
+__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.Double
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#dates-and-times
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.TIMESTAMP
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#character-data
@@ -106,6 +109,26 @@ __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.htm
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#array
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#geo-point
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#geo-shape
+
+
+.. note::
+
+    ``NUMERIC`` and ``DECIMAL`` name the same type, rendered into the DDL as
+    ``NUMERIC(precision, scale)``. CrateDB stores up to 38 digits, and requires
+    the precision, so declaring a column without one raises a compile error
+    rather than emitting DDL the server would reject. Giving a precision but no
+    scale means a scale of zero, as it does in standard SQL, so
+    ``Numeric(10)`` holds whole numbers. Storing the type requires CrateDB 5.9
+    or later.
+
+    Values are written exactly: a ``Decimal`` reaches the database with every
+    digit it was given. Reading is narrower, because the driver reads the
+    numbers in a response as floats, so a returned value carries at most the
+    digits a float holds.
+
+    Reflection recovers a column's type from its name alone, so a reflected
+    ``NUMERIC`` column carries no precision and cannot be rendered back into
+    DDL.
 
 
 .. _TIMESTAMP conversion with time zone: https://cratedb.com/docs/python/en/latest/query.html#timestamp-conversion-with-time-zone
