@@ -35,8 +35,23 @@ from .compiler import (
     CrateTypeCompiler,
 )
 from .sa_version import SA_1_4, SA_2_0, SA_VERSION
-from .type import FloatVector, ObjectArray, ObjectType
+from .type import FloatVector, Geopoint, Geoshape, ObjectArray, ObjectType
 from .util import SSLMode
+
+ARRAY_SUFFIX = "_array"
+
+
+class UnresolvedType(sqltypes.UserDefinedType):
+    """
+    A CrateDB type with no SQLAlchemy counterpart, under the name reflection reported.
+    """
+
+    __visit_name__ = "unresolved"
+
+    cache_ok = True
+
+    def __init__(self, type_name):
+        self.type_name = type_name
 
 
 class Double(sqltypes.Float):
@@ -57,7 +72,8 @@ TYPES_MAP = {
     "timestamp with time zone": sqltypes.TIMESTAMP(timezone=True),
     "timestamp without time zone": sqltypes.TIMESTAMP(timezone=False),
     "object": ObjectType,
-    "object_array": ObjectArray,  # TODO: Can this also be improved to use `sqltypes.ARRAY`?
+    # `ObjectArray` tracks mutation of its objects, which a derived `ARRAY` would lose.
+    "object_array": ObjectArray,
     "integer": sqltypes.INTEGER,
     "long": sqltypes.BIGINT,
     "bigint": sqltypes.BIGINT,
@@ -69,37 +85,17 @@ TYPES_MAP = {
     "text": sqltypes.VARCHAR,
     "numeric": sqltypes.NUMERIC,
     "float_vector": FloatVector,
+    "geo_point": Geopoint,
+    "geo_shape": Geoshape,
 }
-
-# For SQLAlchemy >= 1.4.
-try:
-    from sqlalchemy.types import ARRAY
-
-    TYPES_MAP["integer_array"] = ARRAY(sqltypes.INTEGER)
-    TYPES_MAP["boolean_array"] = ARRAY(sqltypes.BOOLEAN)
-    TYPES_MAP["short_array"] = ARRAY(sqltypes.SMALLINT)
-    TYPES_MAP["smallint_array"] = ARRAY(sqltypes.SMALLINT)
-    TYPES_MAP["timestamp_array"] = ARRAY(sqltypes.TIMESTAMP(timezone=False))
-    TYPES_MAP["timestamp with time zone_array"] = ARRAY(sqltypes.TIMESTAMP(timezone=True))
-    TYPES_MAP["long_array"] = ARRAY(sqltypes.BIGINT)
-    TYPES_MAP["bigint_array"] = ARRAY(sqltypes.BIGINT)
-    TYPES_MAP["float_array"] = ARRAY(sqltypes.FLOAT)
-    TYPES_MAP["real_array"] = ARRAY(sqltypes.REAL)
-    TYPES_MAP["string_array"] = ARRAY(sqltypes.VARCHAR)
-    TYPES_MAP["text_array"] = ARRAY(sqltypes.VARCHAR)
-    TYPES_MAP["numeric_array"] = ARRAY(sqltypes.NUMERIC)
-except Exception:  # noqa: S110
-    pass
 
 # For SQLAlchemy >= 2.0.
 try:
     from sqlalchemy.types import DOUBLE, DOUBLE_PRECISION
 
     TYPES_MAP["double"] = DOUBLE
-    TYPES_MAP["double_array"] = ARRAY(DOUBLE)
     TYPES_MAP["double precision"] = DOUBLE_PRECISION
-    TYPES_MAP["double precision_array"] = ARRAY(DOUBLE_PRECISION)
-except Exception:  # noqa: S110
+except ImportError:
     pass
 
 
@@ -496,7 +492,27 @@ class CrateDialect(default.DefaultDialect):
         }
 
     def _resolve_type(self, type_):
-        return TYPES_MAP.get(type_, sqltypes.UserDefinedType)
+        resolved = self._lookup_type(type_)
+        if resolved is None:
+            # Debug level: reflecting `pg_catalog` alone leaves twenty-odd columns unresolved.
+            log.debug("Unable to resolve CrateDB type: %s", type_)
+            return UnresolvedType(type_)
+        return resolved
+
+    def _lookup_type(self, type_):
+        resolved = TYPES_MAP.get(type_)
+        if resolved is not None:
+            return resolved
+        if not type_.endswith(ARRAY_SUFFIX):
+            return None
+        element_name = type_[: -len(ARRAY_SUFFIX)]
+        # SQLAlchemy's `ARRAY` cannot hold an array.
+        if not element_name or element_name.endswith(ARRAY_SUFFIX):
+            return None
+        element_type = self._lookup_type(element_name)
+        if element_type is None:
+            return None
+        return sqltypes.ARRAY(element_type)
 
     def has_ilike_operator(self):
         """
