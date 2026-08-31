@@ -281,6 +281,11 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
             raise NotImplementedError("CrateDB doesn't support multidimensional arrays")
         return "ARRAY({0})".format(self.process(type_.item_type, **kw))
 
+    def visit_unresolved(self, type_, **kw):
+        raise sa.exc.CompileError(
+            "Unable to represent CrateDB type '{0}' in SQLAlchemy".format(type_.type_name)
+        )
+
     def visit_OBJECT(self, type_, **kw):
         return "OBJECT"
 
