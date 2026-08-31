@@ -10,6 +10,20 @@
   serializes them as strings, storing every digit instead of rounding to float
 - Types: Added `numeric` and `numeric_array` to the reflected type map, where
   they previously resolved to an abstract type that could not be compiled
+- Reflection: A column whose CrateDB type the dialect cannot represent now
+  raises `CompileError` naming that type, the table and the column when asked
+  to compile it, where it previously raised `AttributeError` from inside
+  SQLAlchemy and named none of them. Such a column still reads, and from
+  SQLAlchemy 1.4 onwards printing its type yields the CrateDB type name
+- Reflection: Added `geo_point` and `geo_shape` to the reflected type map,
+  resolving to the `Geopoint` and `Geoshape` types the package already offers,
+  which lets tables such as `sys.summits` round-trip into DDL
+- Reflection: An array type name resolves to an array of whatever the name
+  without its `_array` suffix resolves to, in place of a fixed list of array
+  names. Every mapped type thereby gains its array form, `geo_point_array` and
+  `timestamp without time zone_array` among them. Such an array carries its
+  element type into DDL and into the reflected column; it applies no conversion
+  of values, matching the array types the fixed list carried
 
 ## 2026/06/22 0.43.1
 - Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
