@@ -229,7 +229,7 @@ def test_update(session):
     session.commit()
     refresh(session)
 
-    session.get(Blobby, 1).payload = b"after"
+    session.query(Blobby).filter_by(id=1).one().payload = b"after"
     session.commit()
     refresh(session)
 
@@ -257,8 +257,8 @@ def test_filtering_works_without_index(session):
     session.commit()
     refresh(session)
 
-    ids = session.execute(sa.select(Blobby.id).where(Blobby.payload == b"needle")).scalars()
-    assert list(ids) == [1]
+    rows = session.execute(sa.select(Blobby.id).where(Blobby.payload == b"needle")).fetchall()
+    assert [row[0] for row in rows] == [1]
 
 
 def test_reflection_yields_string(session, cratedb_service):
