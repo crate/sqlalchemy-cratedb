@@ -21,7 +21,7 @@
 
 import logging
 import warnings
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from sqlalchemy import types as sqltypes
 from sqlalchemy.engine import default, reflection
@@ -145,6 +145,11 @@ class DateTime(sqltypes.DateTime):
         def process(value):
             if not value:
                 return None
+            # When the driver's `time_zone` is configured, the timestamp column
+            # has already been converted to `datetime` by the driver's data type converter.
+            # Pass it through unchanged so this processor stays idempotent.
+            if isinstance(value, datetime):
+                return value
             try:
                 return datetime.utcfromtimestamp(value / 1e3)
             except TypeError:
@@ -168,11 +173,31 @@ class DateTime(sqltypes.DateTime):
         return process
 
 
+class Time(sqltypes.Time):
+    def bind_processor(self, dialect):
+        def process(value):
+            if value is not None:
+                assert isinstance(value, time)  # noqa: S101
+                return value.isoformat()
+            return None
+
+        return process
+
+    def result_processor(self, dialect, coltype):
+        def process(value):
+            if value is None:
+                return None
+            return time.fromisoformat(value)
+
+        return process
+
+
 colspecs = {
     sqltypes.Date: Date,
     sqltypes.DateTime: DateTime,
     sqltypes.TIMESTAMP: DateTime,
     sqltypes.LargeBinary: LargeBinary,
+    sqltypes.Time: Time,
 }
 
 if SA_VERSION >= SA_2_0:
