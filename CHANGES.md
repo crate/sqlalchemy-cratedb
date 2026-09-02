@@ -1,7 +1,12 @@
 # Changelog
 
 ## Unreleased
-- Types: Added support for BLOB type, per base64 encoding
+- Types: Added support for binary column types (`LargeBinary`, `BLOB`, `BINARY`,
+  `VARBINARY`, and `PickleType`), emulated as base64-encoded `STRING`. Those
+  columns are created with `INDEX OFF` and `columnstore = false`, without which
+  payloads would be capped at roughly 24 KB
+- Types: Fixed `CLOB`, `NCHAR`, `NVARCHAR`, `DATETIME`, and `DATE` emitting type
+  names CrateDB cannot parse
 
 ## 2026/06/22 0.43.1
 - Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
