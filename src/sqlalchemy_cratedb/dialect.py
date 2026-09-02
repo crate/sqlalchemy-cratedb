@@ -36,7 +36,7 @@ from .compiler import (
 )
 from .sa_version import SA_1_4, SA_2_0, SA_VERSION
 from .type import FloatVector, ObjectArray, ObjectType
-from .type.binary import LargeBinary
+from .type.binary import BinaryBase64
 from .util import SSLMode
 
 # For SQLAlchemy >= 1.1.
@@ -196,7 +196,9 @@ colspecs = {
     sqltypes.Date: Date,
     sqltypes.DateTime: DateTime,
     sqltypes.TIMESTAMP: DateTime,
-    sqltypes.LargeBinary: LargeBinary,
+    sqltypes.LargeBinary: BinaryBase64,  # Also covers `sa.BLOB`.
+    sqltypes.BINARY: BinaryBase64,
+    sqltypes.VARBINARY: BinaryBase64,
     sqltypes.Time: Time,
 }
 
