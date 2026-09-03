@@ -181,8 +181,8 @@ def create_test_suite():
         "docs/advanced-querying.rst",
     ]
 
-    # Don't run DataFrame integration tests on SQLAlchemy 1.4 and earlier, or Python 3.7.
-    skip_dataframe = SA_VERSION < SA_2_0 or sys.version_info < (3, 8)
+    # Don't run DataFrame integration tests on SQLAlchemy 1.4 and earlier.
+    skip_dataframe = SA_VERSION < SA_2_0
     if not skip_dataframe:
         sqlalchemy_integration_tests += [
             "docs/dataframe.rst",
