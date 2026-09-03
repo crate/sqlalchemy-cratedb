@@ -52,27 +52,27 @@ class SqlAlchemyCreateTableTest(TestCase):
             unicode_col = sa.Column(sa.Unicode)
             text_col = sa.Column(sa.Text)
             int_col = sa.Column(sa.Integer)
-            long_col1 = sa.Column(sa.BigInteger)
-            long_col2 = sa.Column(sa.NUMERIC)
+            long_col = sa.Column(sa.BigInteger)
+            numeric_col = sa.Column(sa.NUMERIC(10, 2))
             bool_col = sa.Column(sa.Boolean)
             short_col = sa.Column(sa.SmallInteger)
             datetime_col = sa.Column(sa.DateTime)
             date_col = sa.Column(sa.Date)
             float_col = sa.Column(sa.Float)
-            double_col = sa.Column(sa.DECIMAL)
+            decimal_col = sa.Column(sa.DECIMAL(10, 2))
 
         self.Base.metadata.create_all(bind=self.engine)
         fake_cursor.execute.assert_called_with(
             (
                 "\nCREATE TABLE users (\n\tstring_col STRING NOT NULL, "
                 "\n\tunicode_col STRING, \n\ttext_col STRING, \n\tint_col INT, "
-                "\n\tlong_col1 LONG, \n\tlong_col2 LONG, "
+                "\n\tlong_col LONG, \n\tnumeric_col NUMERIC(10, 2), "
                 "\n\tbool_col BOOLEAN, "
                 "\n\tshort_col SHORT, "
                 "\n\tdatetime_col TIMESTAMP WITHOUT TIME ZONE, "
                 "\n\tdate_col TIMESTAMP, "
                 "\n\tfloat_col FLOAT, "
-                "\n\tdouble_col DOUBLE, "
+                "\n\tdecimal_col NUMERIC(10, 2), "
                 "\n\tPRIMARY KEY (string_col)\n)\n\n"
             ),
             sa.util.immutabledict({}),

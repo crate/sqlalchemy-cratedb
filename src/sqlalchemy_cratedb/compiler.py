@@ -97,6 +97,18 @@ def crate_before_execute(conn, clauseelement, multiparams, params, *args, **kwar
     return clauseelement, multiparams, params
 
 
+def _require_numeric_precision(type_):
+    if isinstance(type_, sa.types.ARRAY):
+        _require_numeric_precision(type_.item_type)
+        return
+    if isinstance(type_, sa.types.Numeric) and not isinstance(type_, sa.types.Float):
+        if type_.precision is None:
+            raise sa.exc.CompileError(
+                "CrateDB stores a NUMERIC column only with a precision, "
+                "as in Numeric(precision=10, scale=2)"
+            )
+
+
 class CrateDDLCompiler(compiler.DDLCompiler):
     __special_opts_tmpl = {"partitioned_by": " PARTITIONED BY ({0})"}
     __clustered_opts_tmpl = {
@@ -106,6 +118,7 @@ class CrateDDLCompiler(compiler.DDLCompiler):
     __clustered_opt_tmpl = " CLUSTERED{clustered_by}{number_of_shards}"
 
     def get_column_specification(self, column, **kwargs):
+        _require_numeric_precision(column.type)
         colspec = (
             self.preparer.format_column(column)
             + " "
@@ -223,7 +236,7 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         return "STRING"
 
     def visit_DECIMAL(self, type_, **kw):
-        return "DOUBLE"
+        return self.visit_NUMERIC(type_, **kw)
 
     def visit_double(self, type_, **kw):
         return "DOUBLE"
@@ -232,7 +245,15 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         return "LONG"
 
     def visit_NUMERIC(self, type_, **kw):
-        return "LONG"
+        """
+        A bare `NUMERIC` is a valid cast target; only columns require the
+        precision, which `CrateDDLCompiler` enforces.
+        """
+        if type_.precision is None:
+            return "NUMERIC"
+        if type_.scale is None:
+            return "NUMERIC({0})".format(type_.precision)
+        return "NUMERIC({0}, {1})".format(type_.precision, type_.scale)
 
     def visit_INTEGER(self, type_, **kw):
         return "INT"
@@ -258,7 +279,7 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
     def visit_ARRAY(self, type_, **kw):
         if type_.dimensions is not None and type_.dimensions > 1:
             raise NotImplementedError("CrateDB doesn't support multidimensional arrays")
-        return "ARRAY({0})".format(self.process(type_.item_type))
+        return "ARRAY({0})".format(self.process(type_.item_type, **kw))
 
     def visit_OBJECT(self, type_, **kw):
         return "OBJECT"
