@@ -97,6 +97,20 @@ def crate_before_execute(conn, clauseelement, multiparams, params, *args, **kwar
     return clauseelement, multiparams, params
 
 
+def _is_binary_type(type_):
+    """
+    Whether `type_` is a SQLAlchemy binary type, resolving through
+    `TypeDecorator` wrappers such as `sa.PickleType`.
+
+    `sa.LargeBinary` also covers `sa.BLOB`, which derives from it.
+    """
+    while isinstance(type_, sa.types.TypeDecorator):
+        type_ = type_.impl
+        if isinstance(type_, type):
+            type_ = type_()
+    return isinstance(type_, (sa.LargeBinary, sa.BINARY, sa.VARBINARY))
+
+
 class CrateDDLCompiler(compiler.DDLCompiler):
     __special_opts_tmpl = {"partitioned_by": " PARTITIONED BY ({0})"}
     __clustered_opts_tmpl = {
@@ -124,7 +138,9 @@ class CrateDDLCompiler(compiler.DDLCompiler):
         elif column.nullable and column.primary_key:
             raise sa.exc.CompileError("Primary key columns cannot be nullable")
 
-        if column.dialect_options["crate"].get("index") is False:
+        binary_column = _is_binary_type(column.type)
+
+        if binary_column or column.dialect_options["crate"].get("index") is False:
             if isinstance(column.type, (Geopoint, Geoshape, ObjectTypeImpl)):
                 raise sa.exc.CompileError(
                     "Disabling indexing is not supported for column "
@@ -133,8 +149,8 @@ class CrateDDLCompiler(compiler.DDLCompiler):
 
             colspec += " INDEX OFF"
 
-        if column.dialect_options["crate"].get("columnstore") is False:
-            if not isinstance(column.type, (String,)):
+        if binary_column or column.dialect_options["crate"].get("columnstore") is False:
+            if not (binary_column or isinstance(column.type, (String,))):
                 raise sa.exc.CompileError(
                     "Controlling the columnstore is only allowed for STRING columns"
                 )
@@ -222,6 +238,15 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
     def visit_TEXT(self, type_, **kw):
         return "STRING"
 
+    def visit_CLOB(self, type_, **kw):
+        return "STRING"
+
+    def visit_NCHAR(self, type_, **kw):
+        return self.visit_CHAR(type_, **kw)
+
+    def visit_NVARCHAR(self, type_, **kw):
+        return self.visit_VARCHAR(type_, **kw)
+
     def visit_DECIMAL(self, type_, **kw):
         return "DOUBLE"
 
@@ -240,10 +265,10 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
     def visit_SMALLINT(self, type_, **kw):
         return "SHORT"
 
-    def visit_datetime(self, type_, **kw):
+    def visit_DATETIME(self, type_, **kw):
         return self.visit_TIMESTAMP(type_, **kw)
 
-    def visit_date(self, type_, **kw):
+    def visit_DATE(self, type_, **kw):
         return "TIMESTAMP"
 
     def visit_TIME(self, type_, **kw):
@@ -276,6 +301,19 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         From `sqlalchemy.dialects.postgresql.base.PGTypeCompiler`.
         """
         return "TIMESTAMP %s" % ((type_.timezone and "WITH" or "WITHOUT") + " TIME ZONE",)
+
+    def visit_BLOB(self, type_, **kw):
+        """
+        CrateDB has no binary data type. Binary columns are emulated by
+        base64-encoding the payload into a `STRING` column, see `type/binary.py`.
+        """
+        return "STRING"
+
+    def visit_BINARY(self, type_, **kw):
+        return self.visit_BLOB(type_, **kw)
+
+    def visit_VARBINARY(self, type_, **kw):
+        return self.visit_BLOB(type_, **kw)
 
     def visit_FLOAT(self, type_, **kw):
         """
