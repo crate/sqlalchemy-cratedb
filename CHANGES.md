@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- Types: Fixed `CLOB`, `NCHAR`, `NVARCHAR`, `DATETIME`, and `DATE` compiling to
+  type names CrateDB cannot parse. They now map to `STRING`, `CHAR`, `VARCHAR`,
+  and `TIMESTAMP` respectively, matching their generic lower-case counterparts
+
 ## 2026/06/22 0.43.1
 - Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
   'visit_on_conflict_do_update'` by forwarding calls to

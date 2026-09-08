@@ -222,6 +222,15 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
     def visit_TEXT(self, type_, **kw):
         return "STRING"
 
+    def visit_CLOB(self, type_, **kw):
+        return "STRING"
+
+    def visit_NCHAR(self, type_, **kw):
+        return self.visit_CHAR(type_, **kw)
+
+    def visit_NVARCHAR(self, type_, **kw):
+        return self.visit_VARCHAR(type_, **kw)
+
     def visit_DECIMAL(self, type_, **kw):
         return "DOUBLE"
 
@@ -244,6 +253,12 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         return self.visit_TIMESTAMP(type_, **kw)
 
     def visit_date(self, type_, **kw):
+        return "TIMESTAMP"
+
+    def visit_DATETIME(self, type_, **kw):
+        return self.visit_TIMESTAMP(type_, **kw)
+
+    def visit_DATE(self, type_, **kw):
         return "TIMESTAMP"
 
     def visit_TIME(self, type_, **kw):
