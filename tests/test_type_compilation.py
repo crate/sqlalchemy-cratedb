@@ -95,7 +95,7 @@ def test_core_type_is_creatable(cratedb_service, name):
     """CrateDB accepts the DDL the dialect generates for this type."""
     engine = cratedb_service.database.engine
     table = sa.Table(
-        "type_coverage",
+        "type_compilation",
         sa.MetaData(),
         sa.Column("id", sa.Integer, primary_key=True),
         sa.Column("d", CORE_TYPES[name]),
