@@ -20,7 +20,7 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 from .compat.api13 import monkeypatch_add_exec_driver_sql
-from .dialect import dialect
+from .dialect import UnresolvedType, dialect
 from .predicate import match
 from .sa_version import SA_1_4, SA_VERSION
 from .support import insert_bulk
@@ -74,6 +74,7 @@ __all__ = [
     Geoshape,
     ObjectArray,
     ObjectType,
+    UnresolvedType,
     match,
     knn_match,
     insert_bulk,
