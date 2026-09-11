@@ -1,5 +1,4 @@
 import re
-import sys
 
 import pandas as pd
 import pytest
@@ -37,9 +36,6 @@ float_nan_df = pd.DataFrame.from_dict(
 
 
 @pytest.mark.skipif(
-    sys.version_info < (3, 8), reason="Feature not supported on Python 3.7 and earlier"
-)
-@pytest.mark.skipif(
     SA_VERSION < SA_2_0, reason="Feature not supported on SQLAlchemy 1.4 and earlier"
 )
 def test_table_kwargs_partitioned_by(cratedb_service):
@@ -72,9 +68,6 @@ def test_table_kwargs_partitioned_by(cratedb_service):
     assert 'PARTITIONED BY ("time")' in ddl[0][0]
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 8), reason="Feature not supported on Python 3.7 and earlier"
-)
 @pytest.mark.skipif(
     SA_VERSION < SA_2_0, reason="Feature not supported on SQLAlchemy 1.4 and earlier"
 )
@@ -109,9 +102,6 @@ def test_table_kwargs_translog_durability(cratedb_service):
 
 
 @pytest.mark.skipif(
-    sys.version_info < (3, 8), reason="Feature not supported on Python 3.7 and earlier"
-)
-@pytest.mark.skipif(
     SA_VERSION < SA_2_0, reason="Feature not supported on SQLAlchemy 1.4 and earlier"
 )
 def test_table_kwargs_unknown(cratedb_service):
@@ -136,9 +126,6 @@ def test_table_kwargs_unknown(cratedb_service):
 
 
 @pytest.mark.skipif(
-    sys.version_info < (3, 8), reason="Feature not supported on Python 3.7 and earlier"
-)
-@pytest.mark.skipif(
     SA_VERSION < SA_2_0, reason="Feature not supported on SQLAlchemy 1.4 and earlier"
 )
 def test_float_special_values(cratedb_service):
@@ -160,9 +147,6 @@ def test_float_special_values(cratedb_service):
     assert df_load["col_1"].isna().all()
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 8), reason="Feature not supported on Python 3.7 and earlier"
-)
 @pytest.mark.skipif(
     SA_VERSION < SA_2_0, reason="Feature not supported on SQLAlchemy 1.4 and earlier"
 )

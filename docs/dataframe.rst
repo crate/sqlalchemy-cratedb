@@ -58,7 +58,7 @@ Compatibility notes
 .. NOTE::
 
     Please note that DataFrame support for pandas and Dask is only validated
-    with Python 3.8 and higher, and SQLAlchemy 1.4 and higher. We recommend
+    with Python 3.10 and higher, and SQLAlchemy 1.4 and higher. We recommend
     to use the most recent versions of those libraries.
 
 
