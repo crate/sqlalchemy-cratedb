@@ -374,8 +374,9 @@ Extension types
 ---------------
 
 In the :ref:`example SQLAlchemy table definition <table-definition>` above, we
-are making use of the two extension data types that the CrateDB SQLAlchemy
-dialect provides.
+are making use of extension data types provided by the CrateDB SQLAlchemy
+dialect. The examples below also show how to use the `FloatVector`_ extension
+for vector embeddings.
 
 .. SEEALSO::
 
@@ -458,6 +459,45 @@ The resulting object will look like this:
     Behind the scenes, if you update an ``ObjectArray``, and ``commit`` that
     change, the :ref:`UPDATE <crate-reference:dml-updating-data>` statement
     sent to CrateDB will include all of the ``ObjectArray`` data.
+
+.. _floatvector:
+
+``FloatVector``
+...............
+
+Use ``FloatVector`` to store fixed-length floating-point vectors, such as
+embeddings used for similarity search.
+
+Install the optional NumPy dependency before using vector columns:
+
+.. code-block:: console
+
+    $ pip install 'sqlalchemy-cratedb[vector]'
+
+Pass the vector dimension to the type when defining the column:
+
+    >>> from sqlalchemy_cratedb import FloatVector, knn_match
+
+    >>> class SearchIndex(Base):
+    ...     __tablename__ = 'search_index'
+    ...     name = sa.Column(sa.String, primary_key=True)
+    ...     embedding = sa.Column(FloatVector(3))
+
+Values can be supplied as lists of floating-point numbers. To find nearby
+vectors, use ``knn_match`` in a query:
+
+    >>> item = SearchIndex(name='example', embedding=[1.0, 2.0, 3.0])
+    >>> session.add(item)
+    >>> session.commit()
+    >>> _ = session.execute(sa.text("REFRESH TABLE search_index"))
+    >>> query = session.query(SearchIndex.name).filter(
+    ...     knn_match(SearchIndex.embedding, [1.0, 2.0, 2.9], 10)
+    ... )
+    >>> query.all()
+    [('example',)]
+
+See the :ref:`vector type guide <vector-type>` for a complete example,
+including storing and retrieving vectors.
 
 .. _geopoint:
 .. _geoshape:
