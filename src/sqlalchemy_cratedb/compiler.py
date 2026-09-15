@@ -249,12 +249,6 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
     def visit_SMALLINT(self, type_, **kw):
         return "SHORT"
 
-    def visit_datetime(self, type_, **kw):
-        return self.visit_TIMESTAMP(type_, **kw)
-
-    def visit_date(self, type_, **kw):
-        return "TIMESTAMP"
-
     def visit_DATETIME(self, type_, **kw):
         return self.visit_TIMESTAMP(type_, **kw)
 
