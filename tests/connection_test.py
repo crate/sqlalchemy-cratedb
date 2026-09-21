@@ -20,10 +20,12 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 import contextlib
 import warnings
-from unittest import TestCase
+from unittest import TestCase, mock
 
 import pytest
 import sqlalchemy as sa
+from crate.client.exceptions import ConnectionError as CrateConnectionError
+from crate.client.http import Client
 from sqlalchemy.exc import NoSuchModuleError, SQLAlchemyError
 
 from sqlalchemy_cratedb import SA_1_4, SA_VERSION
@@ -31,6 +33,11 @@ from tests.util import ExtraAssertions
 
 
 class SqlAlchemyConnectionTest(TestCase, ExtraAssertions):
+    def setUp(self):
+        patcher = mock.patch.object(Client, "server_infos", return_value=(None, None, "6.4.3"))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_connection_server_uri_unknown_sa_plugin(self):
         with self.assertRaises(NoSuchModuleError):
             sa.create_engine("foobar://otherhost:19201")
@@ -180,4 +187,18 @@ class SqlAlchemyConnectionTest(TestCase, ExtraAssertions):
             repr(conn.driver_connection),
         )
         conn.close()
+        engine.dispose()
+
+
+def test_connection_failure_is_raised_early():
+    """
+    Connecting to an unreachable cluster fails immediately.
+    """
+    engine = sa.create_engine("crate://localhost:14200")
+    try:
+        with pytest.raises(sa.exc.OperationalError) as ex:
+            engine.connect()
+        assert isinstance(ex.value.orig, CrateConnectionError)
+        assert "Server not available" in str(ex.value)
+    finally:
         engine.dispose()
