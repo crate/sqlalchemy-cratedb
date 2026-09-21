@@ -253,7 +253,7 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         return self.visit_TIMESTAMP(type_, **kw)
 
     def visit_DATE(self, type_, **kw):
-        return "TIMESTAMP"
+        return "DATE" if kw.get("cast_target") else "TIMESTAMP"
 
     def visit_TIME(self, type_, **kw):
         """
@@ -267,7 +267,7 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
     def visit_ARRAY(self, type_, **kw):
         if type_.dimensions is not None and type_.dimensions > 1:
             raise NotImplementedError("CrateDB doesn't support multidimensional arrays")
-        return "ARRAY({0})".format(self.process(type_.item_type))
+        return "ARRAY({0})".format(self.process(type_.item_type, **kw))
 
     def visit_OBJECT(self, type_, **kw):
         return "OBJECT"
@@ -312,6 +312,12 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
 
 
 class CrateCompiler(compiler.SQLCompiler):
+    def visit_typeclause(self, typeclause, **kw):
+        """
+        Mark that a type is being rendered as a cast target.
+        """
+        return super().visit_typeclause(typeclause, cast_target=True, **kw)
+
     visit_on_conflict_do_update = PGCompiler.visit_on_conflict_do_update
     _on_conflict_target = PGCompiler._on_conflict_target
 

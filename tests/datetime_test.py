@@ -233,6 +233,23 @@ def test_datetime_date(session):
 
 
 @pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
+def test_date_cast_truncates(session):
+    """
+    Casting to `sa.Date` drops the time of day, server-side.
+    """
+    session.add(FooBar(name="cast", datetime_notz=INPUT_DATETIME_NOTZ))
+    session.commit()
+    session.execute(sa.text("REFRESH TABLE foobar"))
+
+    def hour_of(type_):
+        expression = sa.extract("hour", sa.cast(FooBar.datetime_notz, type_))
+        return session.execute(sa.select(expression)).scalar()
+
+    assert hour_of(sa.DATE) == 0
+    assert hour_of(sa.DateTime) == INPUT_DATETIME_NOTZ.hour
+
+
+@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_datetime_tz_aware_read(session, cratedb_service):
     """
     With the driver's `time_zone` configured, `TIMESTAMP` columns read back as

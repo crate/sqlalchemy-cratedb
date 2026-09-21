@@ -30,6 +30,7 @@ from unittest import TestCase, skipIf
 from unittest.mock import MagicMock, patch
 
 from crate.client.cursor import Cursor
+from sqlalchemy.testing import AssertsCompiledSQL
 
 from sqlalchemy_cratedb import Geopoint, ObjectArray, ObjectType
 from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
@@ -40,9 +41,10 @@ FakeCursor.return_value = fake_cursor
 
 
 @patch("crate.client.connection.Cursor", FakeCursor)
-class SqlAlchemyCreateTableTest(TestCase):
+class SqlAlchemyCreateTableTest(TestCase, AssertsCompiledSQL):
     def setUp(self):
         self.engine = sa.create_engine("crate://")
+        self.__dialect__ = self.engine.dialect
         self.Base = declarative_base()
 
     def test_table_basic_types(self):
@@ -108,6 +110,43 @@ class SqlAlchemyCreateTableTest(TestCase):
             ),
             sa.util.immutabledict({}),
         )
+
+    def test_date_column_is_stored_as_timestamp(self):
+        """
+        A `DATE` column is not storable, so it is emitted as `TIMESTAMP`.
+        """
+
+        class Appointment(self.Base):
+            __tablename__ = "appointment"
+            name = sa.Column(sa.String, primary_key=True)
+            day_lower = sa.Column(sa.Date)
+            day_upper = sa.Column(sa.DATE())
+            days = sa.Column(sa.ARRAY(sa.DATE))
+
+        self.assert_compile(
+            sa.schema.CreateTable(Appointment.__table__),
+            "CREATE TABLE appointment ("
+            "name STRING NOT NULL, "
+            "day_lower TIMESTAMP, "
+            "day_upper TIMESTAMP, "
+            "days ARRAY(TIMESTAMP), "
+            "PRIMARY KEY (name))",
+        )
+
+    def test_date_cast_is_not_rewritten(self):
+        """
+        `CAST(x AS DATE)` keeps its `DATE` target, unlike a `DATE` column.
+        """
+        for type_, expected in (
+            (sa.Date, "CAST(ts AS DATE)"),
+            (sa.DATE, "CAST(ts AS DATE)"),
+            (sa.ARRAY(sa.DATE), "CAST(ts AS ARRAY(DATE))"),
+        ):
+            with self.subTest(type_=type_):
+                self.assert_compile(
+                    sa.select(sa.cast(sa.column("ts"), type_)),
+                    "SELECT {0} AS ts".format(expected),
+                )
 
     def test_column_obj(self):
         class DummyTable(self.Base):
