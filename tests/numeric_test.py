@@ -111,8 +111,13 @@ def test_numeric_write_preserves_digits_beyond_double(session):
     assert Decimal(stored) == EXACT_HIGH_PRECISION
 
 
-def test_numeric_column_requires_precision():
-    table = sa.Table("t", sa.MetaData(), sa.Column("c", sa.Numeric()))
+@pytest.mark.parametrize(
+    "type_",
+    [sa.Numeric(), sa.ARRAY(sa.Numeric())],
+    ids=["Numeric", "ARRAY"],
+)
+def test_numeric_column_requires_precision(type_):
+    table = sa.Table("t", sa.MetaData(), sa.Column("c", type_))
     with pytest.raises(sa.exc.CompileError):
         sa.schema.CreateTable(table).compile(dialect=CrateDialect())
 
