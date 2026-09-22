@@ -10,7 +10,6 @@ except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy_cratedb.dialect import CrateDialect
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
 
 # A value with more significant digits than a double can hold, so a column that
 # is silently backed by an approximate type fails these tests instead of passing
@@ -42,11 +41,6 @@ def render(type_):
     return CrateDialect().type_compiler.process(type_)
 
 
-def render_cast(type_):
-    statement = sa.select(sa.cast(sa.column("c"), type_))
-    return str(statement.compile(dialect=CrateDialect())).split("AS ", 1)[1].rsplit(")", 2)[0]
-
-
 @pytest.mark.parametrize(
     "type_",
     [
@@ -68,7 +62,6 @@ def test_numeric_ddl_without_scale_carries_precision():
     assert render(sa.Numeric(10)) == "NUMERIC(10)"
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_numeric_cast_carries_precision_and_scale():
     column = sa.column("c")
     statement = sa.select(sa.cast(column, sa.Numeric(10, 2)))
@@ -76,7 +69,6 @@ def test_numeric_cast_carries_precision_and_scale():
     assert "CAST(c AS NUMERIC(10, 2))" in str(compiled)
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_numeric_roundtrip_preserves_scale(session):
     """
     `Decimal` equality disregards the exponent, so the rendered form is what
@@ -99,7 +91,6 @@ def test_numeric_roundtrip_preserves_scale(session):
     assert str(result.amount_decimal) == "3.75"
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_numeric_write_preserves_digits_beyond_double(session):
     session.add(Ledger(name="exact", exact=EXACT_HIGH_PRECISION))
     session.commit()
@@ -123,10 +114,11 @@ def test_numeric_column_requires_precision(type_):
 
 
 def test_numeric_cast_without_precision_is_unbounded():
-    assert render_cast(sa.Numeric()) == "NUMERIC"
+    statement = sa.select(sa.cast(sa.column("c"), sa.Numeric()))
+    compiled = statement.compile(dialect=CrateDialect())
+    assert "CAST(c AS NUMERIC)" in str(compiled)
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_reflected_numeric_reads_as_decimal(session):
     """
     Reflection recovers the type from its name alone, so it carries no precision.
