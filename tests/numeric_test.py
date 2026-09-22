@@ -19,6 +19,11 @@ EXACT_HIGH_PRECISION = Decimal("1.234567890123456789")
 Base = declarative_base()
 
 
+class Money(sa.types.TypeDecorator):
+    impl = sa.Numeric
+    cache_ok = True
+
+
 class Ledger(Base):
     __tablename__ = "ledger"
     name = sa.Column(sa.String, primary_key=True)
@@ -104,8 +109,8 @@ def test_numeric_write_preserves_digits_beyond_double(session):
 
 @pytest.mark.parametrize(
     "type_",
-    [sa.Numeric(), sa.ARRAY(sa.Numeric())],
-    ids=["Numeric", "ARRAY"],
+    [sa.Numeric(), sa.ARRAY(sa.Numeric()), Money(), sa.ARRAY(Money())],
+    ids=["Numeric", "ARRAY", "TypeDecorator", "ARRAY of TypeDecorator"],
 )
 def test_numeric_column_requires_precision(type_):
     table = sa.Table("t", sa.MetaData(), sa.Column("c", type_))

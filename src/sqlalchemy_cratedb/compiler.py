@@ -101,6 +101,9 @@ def _require_numeric_precision(type_):
     if isinstance(type_, sa.types.ARRAY):
         _require_numeric_precision(type_.item_type)
         return
+    if isinstance(type_, sa.types.TypeDecorator):
+        _require_numeric_precision(type_.impl)
+        return
     if isinstance(type_, sa.types.Numeric) and not isinstance(type_, sa.types.Float):
         if type_.precision is None:
             raise sa.exc.CompileError(
