@@ -190,6 +190,7 @@ class SqlAlchemyConnectionTest(TestCase, ExtraAssertions):
         engine.dispose()
 
 
+@pytest.mark.skipif(CRATE_VERSION < Version("2.3.0"), reason="Early connect failure arrived in crate 2.3.0")
 def test_connection_failure_is_raised_early():
     """
     Connecting to an unreachable cluster fails immediately.
