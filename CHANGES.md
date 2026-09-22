@@ -6,8 +6,11 @@
   compiled to `LONG` and `DOUBLE` and lost them. Declaring such a column
   without a precision now raises `CompileError`, since CrateDB only stores
   the type with one. Storing the type requires CrateDB 5.9 or later
-- Types: Bound `Decimal` values now reach the driver unconverted, which
-  serializes them as strings, storing every digit instead of rounding to float
+- BREAKING: Types: Bound `Decimal` values now reach the driver unconverted,
+  which serializes them as strings, storing every digit instead of rounding to
+  float. A `LONG` column that an earlier release created from `Numeric` rejects
+  any such value written with a decimal point, `1.00` included, so those
+  columns need migrating to `NUMERIC`
 - Types: Added `numeric` and `numeric_array` to the reflected type map, where
   they previously resolved to an abstract type that could not be compiled
 
