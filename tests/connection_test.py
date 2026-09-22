@@ -24,12 +24,17 @@ from unittest import TestCase, mock
 
 import pytest
 import sqlalchemy as sa
+from crate.client import __version__ as crate_client_version
 from crate.client.exceptions import ConnectionError as CrateConnectionError
 from crate.client.http import Client
 from sqlalchemy.exc import NoSuchModuleError, SQLAlchemyError
+from verlib2.packaging.version import Version
 
 from sqlalchemy_cratedb import SA_1_4, SA_VERSION
 from tests.util import ExtraAssertions
+
+CRATE_VERSION = Version(crate_client_version)
+CRATE_2_3 = Version("2.3.0")
 
 
 class SqlAlchemyConnectionTest(TestCase, ExtraAssertions):
@@ -190,7 +195,10 @@ class SqlAlchemyConnectionTest(TestCase, ExtraAssertions):
         engine.dispose()
 
 
-@pytest.mark.skipif(CRATE_VERSION < Version("2.3.0"), reason="Early connect failure arrived in crate 2.3.0")
+@pytest.mark.skipif(
+    CRATE_VERSION < CRATE_2_3,
+    reason="Early connect failure arrived in crate 2.3.0",
+)
 def test_connection_failure_is_raised_early():
     """
     Connecting to an unreachable cluster fails immediately.
