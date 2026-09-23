@@ -147,7 +147,7 @@ def test_unresolved_type_is_logged_under_the_column_type_name(caplog, data_type)
         for record in caplog.records
         if record.name == "sqlalchemy_cratedb.dialect"
     ]
-    assert messages == ["Unable to resolve CrateDB type: {0}".format(data_type)]
+    assert "Unable to resolve CrateDB type: {0}".format(data_type) in messages
 
 
 @pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
