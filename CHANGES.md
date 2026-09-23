@@ -4,6 +4,8 @@
 - Types: Fixed `CLOB`, `NCHAR`, `NVARCHAR`, `DATETIME`, and `DATE` compiling to
   type names CrateDB cannot parse. They now map to `STRING`, `CHAR`, `VARCHAR`,
   and `TIMESTAMP` respectively, matching their generic lower-case counterparts
+- BREAKING: Types: `cast(x, Date)` now renders `CAST(x AS DATE)` instead of
+  `CAST(x AS TIMESTAMP)`.
 - Types: Mapped `Numeric` and `DECIMAL` to CrateDB's `NUMERIC`, carrying the
   declared precision and scale into DDL and casts, where they previously
   compiled to `LONG` and `DOUBLE` and lost them. Declaring such a column
