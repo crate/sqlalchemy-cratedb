@@ -143,10 +143,7 @@ class SqlAlchemyCreateTableTest(TestCase, AssertsCompiledSQL):
             (sa.ARRAY(sa.DATE), "CAST(ts AS ARRAY(DATE))"),
         ):
             with self.subTest(type_=type_):
-                self.assert_compile(
-                    sa.select(sa.cast(sa.column("ts"), type_)),
-                    "SELECT {0} AS ts".format(expected),
-                )
+                self.assert_compile(sa.cast(sa.column("ts"), type_), expected)
 
     def test_column_obj(self):
         class DummyTable(self.Base):
