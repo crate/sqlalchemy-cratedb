@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Types: Fixed `UUID` columns rejecting every insert, since values were bound
+  as 32 hex digits while CrateDB's `UUID` type takes the dashed form. The
+  portable `Uuid` type keeps its `CHAR(32)` storage. Storing `UUID` requires
+  CrateDB 6.2 or later
+- Types: Added `uuid` and `uuid_array` to the reflected type map
 - Types: Fixed `CLOB`, `NCHAR`, `NVARCHAR`, `DATETIME`, and `DATE` compiling to
   type names CrateDB cannot parse. They now map to `STRING`, `CHAR`, `VARCHAR`,
   and `TIMESTAMP` respectively, matching their generic lower-case counterparts

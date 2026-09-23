@@ -77,6 +77,7 @@ CrateDB           SQLAlchemy
 `array(object)`__ :ref:`objectarray` |nbsp| (extension type)
 `geo_point`__     :ref:`geopoint` |nbsp| (extension type)
 `geo_shape`__     :ref:`geoshape` |nbsp| (extension type)
+`uuid`__          `UUID`__
 ================= =========================================
 
 
@@ -109,7 +110,15 @@ __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.htm
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#array
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#geo-point
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#geo-shape
+__ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#type-uuid
+__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.UUID
 
+
+.. note::
+
+    ``UUID`` renders CrateDB's ``UUID`` type, supported by CrateDB since 6.2.
+    The portable ``Uuid`` type keeps storing 32 hex digits in a ``CHAR(32)``
+    column.
 
 .. note::
 
