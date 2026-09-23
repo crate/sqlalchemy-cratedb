@@ -506,7 +506,7 @@ class CrateDialect(default.DefaultDialect):
         if not type_.endswith(ARRAY_SUFFIX):
             return None
         element_name = type_[: -len(ARRAY_SUFFIX)]
-        # SQLAlchemy's `ARRAY` cannot hold an array.
+        # SQLAlchemy refuses to nest `ARRAY`, and the type compiler refuses `dimensions`.
         if not element_name or element_name.endswith(ARRAY_SUFFIX):
             return None
         element_type = self._lookup_type(element_name)

@@ -18,13 +18,13 @@
   columns need migrating to `NUMERIC`
 - Types: Added `numeric` and `numeric_array` to the reflected type map, where
   they previously resolved to an abstract type that could not be compiled
-- Reflection: Fixed columns of a CrateDB type the dialect cannot represent
+- Types: Fixed columns of a CrateDB type the dialect cannot represent
   raising a bare `AttributeError` when compiled. They reflect as
   `UnresolvedType`, which still reads and raises `CompileError` naming the
   type, table and column
-- Reflection: Added `geo_point` and `geo_shape` to the reflected type map, so
+- Types: Added `geo_point` and `geo_shape` to the reflected type map, so
   tables such as `sys.summits` round-trip into DDL
-- Reflection: Derived array types from their element type in place of a fixed
+- Types: Derived array types from their element type in place of a fixed
   list, so every mapped type gains its array form
 
 ## 2026/06/22 0.43.1
