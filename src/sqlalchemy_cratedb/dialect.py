@@ -43,7 +43,7 @@ ARRAY_SUFFIX = "_array"
 
 class UnresolvedType(sqltypes.UserDefinedType):
     """
-    A CrateDB type with no SQLAlchemy counterpart, under the name reflection reported.
+    A reflected CrateDB type that SQLAlchemy cannot represent, kept under its CrateDB name.
     """
 
     __visit_name__ = "unresolved"
@@ -516,7 +516,7 @@ class CrateDialect(default.DefaultDialect):
         if not element_name or element_name.endswith(ARRAY_SUFFIX):
             return None
         element_type = self._lookup_type(element_name)
-        # Crate reports no length for array elements, and a bare `CHAR` stores one character.
+        # CrateDB reports no length for array elements, and a bare `CHAR` holds one character.
         if element_type is None or element_type is sqltypes.CHAR:
             return None
         return sqltypes.ARRAY(element_type)
