@@ -8,8 +8,7 @@ from sqlalchemy_cratedb import Geopoint, Geoshape, ObjectArray
 from sqlalchemy_cratedb.dialect import ARRAY_SUFFIX, TYPES_MAP, CrateDialect
 from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_0, SA_VERSION
 
-# `pg_catalog` reports `regproc` for function references, which no table can declare.
-UNRESOLVABLE = "regproc"
+UNRESOLVABLE = "unresolvable_cratedb_type"
 
 
 def reflected_column(data_type):
