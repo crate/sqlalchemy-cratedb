@@ -31,9 +31,11 @@ def render_ddl(data_type):
     [
         ("geo_point", "GEO_POINT"),
         ("geo_shape", "GEO_SHAPE"),
+        ("ip", "IP"),
+        ("character", "CHAR"),
     ],
 )
-def test_reflected_geo_column_renders_its_ddl(data_type, rendered):
+def test_reflected_column_renders_its_ddl(data_type, rendered):
     assert "c {0}".format(rendered) in render_ddl(data_type)
 
 
@@ -41,6 +43,21 @@ def test_reflected_geo_column_resolves_to_the_geo_type():
     dialect = CrateDialect()
     assert dialect._resolve_type("geo_point") is Geopoint
     assert dialect._resolve_type("geo_shape") is Geoshape
+
+
+@pytest.mark.parametrize(
+    ("row", "rendered"),
+    [
+        (("c", "character", 5), "c CHAR(5)"),
+        (("c", "text", 10), "c VARCHAR(10)"),
+        (("c", "text", None), "c VARCHAR"),
+    ],
+)
+def test_reflected_string_column_keeps_its_length(row, rendered):
+    column = CrateDialect()._create_column_info(row)
+    table = sa.Table("t", sa.MetaData(), sa.Column(column["name"], column["type"]))
+    ddl = str(sa.schema.CreateTable(table).compile(dialect=CrateDialect()))
+    assert "\t{0}\n".format(rendered) in ddl
 
 
 @pytest.mark.parametrize(
@@ -63,6 +80,7 @@ def test_reflected_geo_column_resolves_to_the_geo_type():
         ("double_array", "ARRAY(DOUBLE)"),
         ("geo_point_array", "ARRAY(GEO_POINT)"),
         ("geo_shape_array", "ARRAY(GEO_SHAPE)"),
+        ("ip_array", "ARRAY(IP)"),
     ],
 )
 def test_array_type_name_renders_as_an_array_of_its_element_type(data_type, rendered):
@@ -80,7 +98,9 @@ def test_every_mapped_type_is_the_element_of_its_array_form():
     derived = {
         name: type_
         for name, type_ in TYPES_MAP.items()
-        if not name.endswith(ARRAY_SUFFIX) and name + ARRAY_SUFFIX not in TYPES_MAP
+        if not name.endswith(ARRAY_SUFFIX)
+        and name + ARRAY_SUFFIX not in TYPES_MAP
+        and name != "character"
     }
     assert derived
     for name, element_type in derived.items():
@@ -107,6 +127,7 @@ def test_reflected_object_array_keeps_its_own_type():
         "integer_array_array",
         "object_array_array",
         "integer_array_array_array",
+        "character_array",
     ],
 )
 def test_unresolved_type_refuses_ddl_and_names_the_column_type(data_type):
@@ -156,3 +177,18 @@ def test_reflected_system_table_renders_ddl(cratedb_service):
     table = sa.Table("summits", sa.MetaData(schema="sys"), autoload_with=engine)
     ddl = str(sa.schema.CreateTable(table).compile(engine))
     assert "coordinates GEO_POINT" in ddl
+
+
+@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
+def test_reflected_table_renders_string_lengths_and_ip(cratedb_service):
+    engine = cratedb_service.database.engine
+    with engine.begin() as connection:
+        connection.exec_driver_sql("DROP TABLE IF EXISTS reflected_strings")
+        connection.exec_driver_sql(
+            "CREATE TABLE reflected_strings (code CHAR(5), name VARCHAR(10), address IP)"
+        )
+    table = sa.Table("reflected_strings", sa.MetaData(), autoload_with=engine)
+    ddl = str(sa.schema.CreateTable(table).compile(engine))
+    assert "code CHAR(5)" in ddl
+    assert "name VARCHAR(10)" in ddl
+    assert "address IP" in ddl

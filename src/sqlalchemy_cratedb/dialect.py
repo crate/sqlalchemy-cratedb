@@ -35,7 +35,7 @@ from .compiler import (
     CrateTypeCompiler,
 )
 from .sa_version import SA_1_4, SA_2_0, SA_VERSION
-from .type import FloatVector, Geopoint, Geoshape, ObjectArray, ObjectType
+from .type import IP, FloatVector, Geopoint, Geoshape, ObjectArray, ObjectType
 from .util import SSLMode
 
 ARRAY_SUFFIX = "_array"
@@ -87,6 +87,8 @@ TYPES_MAP = {
     "float_vector": FloatVector,
     "geo_point": Geopoint,
     "geo_shape": Geoshape,
+    "ip": IP,
+    "character": sqltypes.CHAR,
 }
 
 # For SQLAlchemy >= 2.0.
@@ -416,7 +418,7 @@ class CrateDialect(default.DefaultDialect):
     @reflection.cache
     def get_columns(self, connection, table_name, schema=None, **kw):
         query = (
-            "SELECT column_name, data_type "
+            "SELECT column_name, data_type, character_maximum_length "
             "FROM information_schema.columns "
             "WHERE table_name = ? AND {0} = ? "
             "AND column_name !~ ?".format(self.schema_column)
@@ -482,9 +484,13 @@ class CrateDialect(default.DefaultDialect):
         return "table_schema"
 
     def _create_column_info(self, row):
+        name, data_type, length = row
+        type_ = self._resolve_type(data_type)
+        if length is not None and isinstance(type_, type) and issubclass(type_, sqltypes.String):
+            type_ = type_(length)
         return {
-            "name": row[0],
-            "type": self._resolve_type(row[1]),
+            "name": name,
+            "type": type_,
             # In Crate every column is nullable except PK
             # Primary Key Constraints are not nullable anyway, no matter what
             # we return here, so it's fine to return always `True`
@@ -510,7 +516,8 @@ class CrateDialect(default.DefaultDialect):
         if not element_name or element_name.endswith(ARRAY_SUFFIX):
             return None
         element_type = self._lookup_type(element_name)
-        if element_type is None:
+        # Crate reports no length for array elements, and a bare `CHAR` stores one character.
+        if element_type is None or element_type is sqltypes.CHAR:
             return None
         return sqltypes.ARRAY(element_type)
 
