@@ -1,5 +1,3 @@
-import logging
-
 import pytest
 import sqlalchemy as sa
 from sqlalchemy import types as sqltypes
@@ -154,21 +152,6 @@ def test_unresolved_type_remains_selectable():
     dialect = CrateDialect()
     table = sa.Table("t", sa.MetaData(), reflected_column(UNRESOLVABLE))
     assert "SELECT t.c" in str(table.select().compile(dialect=dialect))
-
-
-@pytest.mark.parametrize(
-    "data_type",
-    [UNRESOLVABLE, "{0}{1}".format(UNRESOLVABLE, ARRAY_SUFFIX)],
-)
-def test_unresolved_type_is_logged_under_the_column_type_name(caplog, data_type):
-    with caplog.at_level(logging.DEBUG, logger="sqlalchemy_cratedb.dialect"):
-        CrateDialect()._resolve_type(data_type)
-    messages = [
-        record.getMessage()
-        for record in caplog.records
-        if record.name == "sqlalchemy_cratedb.dialect"
-    ]
-    assert "Unable to resolve CrateDB type: {0}".format(data_type) in messages
 
 
 @pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")

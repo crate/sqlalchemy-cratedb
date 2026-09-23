@@ -500,8 +500,6 @@ class CrateDialect(default.DefaultDialect):
     def _resolve_type(self, type_):
         resolved = self._lookup_type(type_)
         if resolved is None:
-            # Debug level: reflecting `pg_catalog` alone leaves twenty-odd columns unresolved.
-            log.debug("Unable to resolve CrateDB type: %s", type_)
             return UnresolvedType(type_)
         return resolved
 
