@@ -20,12 +20,13 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 from .compat.api13 import monkeypatch_add_exec_driver_sql
-from .dialect import dialect
+from .dialect import UnresolvedType, dialect
 from .predicate import match
 from .sa_version import SA_1_4, SA_VERSION
 from .support import insert_bulk
 from .type.array import ObjectArray
 from .type.geo import Geopoint, Geoshape
+from .type.ip import IP
 from .type.object import ObjectType
 from .type.vector import FloatVector, knn_match
 
@@ -72,8 +73,10 @@ __all__ = [
     FloatVector,
     Geopoint,
     Geoshape,
+    IP,
     ObjectArray,
     ObjectType,
+    UnresolvedType,
     match,
     knn_match,
     insert_bulk,

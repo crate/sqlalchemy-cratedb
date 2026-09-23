@@ -18,6 +18,18 @@
   columns need migrating to `NUMERIC`
 - Types: Added `numeric` and `numeric_array` to the reflected type map, where
   they previously resolved to an abstract type that could not be compiled
+- Types: Fixed columns of a CrateDB type the dialect cannot represent
+  raising a bare `AttributeError` when compiled. They reflect as
+  `UnresolvedType`, which still reads and raises `CompileError` naming the
+  type, table and column
+- Types: Added `geo_point`, `geo_shape`, `ip` and `character` to the
+  reflected type map, so tables such as `sys.summits` round-trip into DDL.
+  The new `IP` type renders CrateDB's `IP`
+- Types: Reflected `CHAR` and `VARCHAR` columns keep their declared length.
+  Arrays of `CHAR` reflect as `UnresolvedType`, since CrateDB reports no
+  length for array elements
+- Types: Derived array types from their element type in place of a fixed
+  list, so mapped types gain their array form
 
 ## 2026/06/22 0.43.1
 - Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
