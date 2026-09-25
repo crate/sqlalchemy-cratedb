@@ -92,6 +92,53 @@ class SqlAlchemyDictTypeTest(TestCase):
             "SELECT mytable.name FROM mytable " + "WHERE mytable.data['x'] = mytable.name", s
         )
 
+    def test_select_with_dict_column_quote_in_key(self):
+        mytable = self.mytable
+        self.assertSQL(
+            "SELECT mytable.data['it''s'] AS anon_1 FROM mytable", select(mytable.c.data["it's"])
+        )
+
+    def test_select_with_dict_column_injection_in_key(self):
+        mytable = self.mytable
+        s = select(mytable.c.name).where(mytable.c.data["x'] = 1 OR TRUE OR mytable.data['x"] == 1)
+        self.assertSQL(
+            "SELECT mytable.name FROM mytable "
+            "WHERE mytable.data['x''] = 1 OR TRUE OR mytable.data[''x'] = %(param_1)s",
+            s,
+        )
+
+    def test_select_with_dict_column_integer_key(self):
+        # CrateDB does not accept an array index on an object.
+        mytable = self.mytable
+        self.assertSQL("SELECT mytable.data['1'] AS anon_1 FROM mytable", select(mytable.c.data[1]))
+
+    def test_select_with_dict_column_invalid_key(self):
+        mytable = self.mytable
+        with self.assertRaises(sa.exc.CompileError) as cm:
+            select(mytable.c.data[True]).compile(bind=self.engine)
+        self.assertEqual(
+            "CrateDB subscripts take an integer index or a string key, not True", str(cm.exception)
+        )
+
+    def test_select_with_dict_column_nested_index(self):
+        # A value inside an object may be an array.
+        mytable = self.mytable
+        self.assertSQL(
+            "SELECT mytable.data['nums'][2] AS anon_1 FROM mytable",
+            select(mytable.c.data["nums"][2]),
+        )
+
+    def test_select_with_dict_column_nested_slice(self):
+        mytable = self.mytable
+        self.assertSQL(
+            "SELECT mytable.data['nums'][1:2] AS anon_1 FROM mytable",
+            select(mytable.c.data["nums"][1:2]),
+        )
+        self.assertSQL(
+            "SELECT mytable.data['nums'][:2] AS anon_1 FROM mytable",
+            select(mytable.c.data["nums"][:2]),
+        )
+
     def test_update_with_dict_column(self):
         mytable = self.mytable
         stmt = (

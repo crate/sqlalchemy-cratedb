@@ -27,7 +27,7 @@ from .dict_test import SqlAlchemyDictTypeTest
 from .function_test import SqlAlchemyFunctionTest
 from .insert_from_select_test import SqlAlchemyInsertFromSelectTest
 from .match_test import SqlAlchemyMatchTest
-from .query_caching import SqlAlchemyQueryCompilationCaching
+from .query_caching_test import SqlAlchemyQueryCompilationCaching
 from .update_test import SqlAlchemyUpdateTest
 from .warnings_test import SqlAlchemyWarningsTest
 
