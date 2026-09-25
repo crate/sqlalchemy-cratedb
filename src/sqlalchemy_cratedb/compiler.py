@@ -26,8 +26,15 @@ from collections import defaultdict
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql.base import RESERVED_WORDS as POSTGRESQL_RESERVED_WORDS
 from sqlalchemy.dialects.postgresql.base import PGCompiler
-from sqlalchemy.sql import compiler, operators, visitors
-from sqlalchemy.sql.elements import BinaryExpression, BindParameter, Grouping, Null, Slice
+from sqlalchemy.sql import compiler, operators
+from sqlalchemy.sql.elements import (
+    BinaryExpression,
+    BindParameter,
+    Grouping,
+    Null,
+    Slice,
+    TypeCoerce,
+)
 from sqlalchemy.types import String
 
 from .sa_version import SA_1_4, SA_VERSION
@@ -390,11 +397,16 @@ def _is_top_level_object(element):
     return isinstance(element.type, sa.types.JSON)
 
 
-def _has_required_bindparam(element):
-    return any(
-        isinstance(child, BindParameter) and child.required
-        for child in visitors.iterate(element, {})
-    )
+def _unwrap_bindparam(element):
+    """
+    Return the bind parameter inside `element`, if it renders as a bare one.
+    """
+    inner = element
+    while isinstance(inner, Grouping):
+        inner = inner.element
+    if isinstance(inner, TypeCoerce):
+        inner = inner.typed_expression
+    return inner if isinstance(inner, BindParameter) else element
 
 
 class CrateCompiler(compiler.SQLCompiler):
@@ -409,27 +421,27 @@ class CrateCompiler(compiler.SQLCompiler):
 
     def _render_subscript(self, binary, **kw):
         left = self.process(binary.left, **kw)
-        index = binary.right
+        index = _unwrap_bindparam(binary.right)
         if isinstance(index, Slice):
             return "%s[%s]" % (left, self._render_slice(index, **kw))
+        if not isinstance(index, BindParameter):
+            # CrateDB accepts bind parameters inside an expression.
+            return "%s[%s]" % (left, self.process(index, **kw))
 
-        if isinstance(index, BindParameter):
-            type_ = _SubscriptType(int_as_key=_is_top_level_object(binary.left))
-            if not index.required:
-                type_.literal_processor(self.dialect)(index.effective_value)
-            index = sa.type_coerce(index, type_).typed_expression
-
-        # CrateDB does not accept bind parameters as array indexes or object
-        # keys, so render them as literals.
-        deferred = _has_required_bindparam(index)
-        if deferred and SA_VERSION < SA_1_4:
+        # CrateDB does not accept a bind parameter as an array index or object
+        # key, so render it as a literal.
+        type_ = _SubscriptType(int_as_key=_is_top_level_object(binary.left))
+        if not index.required:
+            type_.literal_processor(self.dialect)(index.effective_value)
+        elif SA_VERSION < SA_1_4:
             raise sa.exc.CompileError(
                 "A subscript taking its value on execution needs SQLAlchemy 1.4 or later"
             )
-        if deferred or getattr(self, "cache_key", None) is not None:
+        if index.required or getattr(self, "cache_key", None) is not None:
             kw["literal_execute"] = True
         else:
             kw["literal_binds"] = True
+        index = sa.type_coerce(index, type_).typed_expression
         return "%s[%s]" % (left, self.process(index, **kw))
 
     def _render_slice(self, slice_, **kw):
