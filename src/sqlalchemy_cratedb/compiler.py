@@ -26,7 +26,8 @@ from collections import defaultdict
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql.base import RESERVED_WORDS as POSTGRESQL_RESERVED_WORDS
 from sqlalchemy.dialects.postgresql.base import PGCompiler
-from sqlalchemy.sql import compiler
+from sqlalchemy.sql import compiler, operators, visitors
+from sqlalchemy.sql.elements import BinaryExpression, BindParameter, Grouping, Null, Slice
 from sqlalchemy.types import String
 
 from .sa_version import SA_1_4, SA_VERSION
@@ -335,6 +336,67 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         return "OBJECT"
 
 
+def _slice_bound(value):
+    if value is None:
+        return ""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise sa.exc.CompileError(f"CrateDB array slices take integer bounds, not {value!r}")
+    return str(value)
+
+
+class _SubscriptType(sa.types.TypeEngine):
+    """
+    Renders an array index, an array slice, or an object key as a literal.
+
+    With `int_as_key`, an integer renders as an object key.
+    """
+
+    cache_ok = True
+    # Reject `None`, instead of rendering it as `NULL`.
+    should_evaluate_none = True
+
+    def __init__(self, int_as_key=False):
+        self.int_as_key = int_as_key
+
+    def literal_processor(self, dialect):
+        def process(value):
+            if isinstance(value, slice):
+                if value.step is not None:
+                    raise sa.exc.CompileError("CrateDB array slices do not support a step")
+                return "%s:%s" % (_slice_bound(value.start), _slice_bound(value.stop))
+            if isinstance(value, bool) or not isinstance(value, (int, str)):
+                raise sa.exc.CompileError(
+                    f"CrateDB subscripts take an integer index or a string key, not {value!r}"
+                )
+            if isinstance(value, int) and not self.int_as_key:
+                return str(value)
+            return "'%s'" % str(value).replace("'", "''")
+
+        return process
+
+
+def _is_top_level_object(element):
+    """
+    Whether `element` is an object, and not a value taken out of one, which
+    may be an array. CrateDB does not accept an array index on an object.
+    """
+    while isinstance(element, Grouping):
+        element = element.element
+    if isinstance(element, BinaryExpression) and element.operator in (
+        operators.getitem,
+        operators.json_getitem_op,
+    ):
+        return False
+    return isinstance(element.type, sa.types.JSON)
+
+
+def _has_required_bindparam(element):
+    return any(
+        isinstance(child, BindParameter) and child.required
+        for child in visitors.iterate(element, {})
+    )
+
+
 class CrateCompiler(compiler.SQLCompiler):
     def visit_typeclause(self, typeclause, **kw):
         """
@@ -345,11 +407,45 @@ class CrateCompiler(compiler.SQLCompiler):
     visit_on_conflict_do_update = PGCompiler.visit_on_conflict_do_update
     _on_conflict_target = PGCompiler._on_conflict_target
 
+    def _render_subscript(self, binary, **kw):
+        left = self.process(binary.left, **kw)
+        index = binary.right
+        if isinstance(index, Slice):
+            return "%s[%s]" % (left, self._render_slice(index, **kw))
+
+        if isinstance(index, BindParameter):
+            type_ = _SubscriptType(int_as_key=_is_top_level_object(binary.left))
+            if not index.required:
+                type_.literal_processor(self.dialect)(index.effective_value)
+            index = sa.type_coerce(index, type_).typed_expression
+
+        # CrateDB does not accept bind parameters as array indexes or object
+        # keys, so render them as literals.
+        deferred = _has_required_bindparam(index)
+        if deferred and SA_VERSION < SA_1_4:
+            raise sa.exc.CompileError(
+                "A subscript taking its value on execution needs SQLAlchemy 1.4 or later"
+            )
+        if deferred or getattr(self, "cache_key", None) is not None:
+            kw["literal_execute"] = True
+        else:
+            kw["literal_binds"] = True
+        return "%s[%s]" % (left, self.process(index, **kw))
+
+    def _render_slice(self, slice_, **kw):
+        # CrateDB accepts bind parameters as slice bounds.
+        if not isinstance(slice_.step, Null):
+            raise sa.exc.CompileError("CrateDB array slices do not support a step")
+        return ":".join(
+            "" if isinstance(bound, Null) else self.process(bound, **kw)
+            for bound in (slice_.start, slice_.stop)
+        )
+
     def visit_getitem_binary(self, binary, operator, **kw):
-        return "{0}['{1}']".format(self.process(binary.left, **kw), binary.right.value)
+        return self._render_subscript(binary, **kw)
 
     def visit_json_getitem_op_binary(self, binary, operator, _cast_applied=False, **kw):
-        return "{0}['{1}']".format(self.process(binary.left, **kw), binary.right.value)
+        return self._render_subscript(binary, **kw)
 
     def visit_any(self, element, **kw):
         return "%s%sANY (%s)" % (
