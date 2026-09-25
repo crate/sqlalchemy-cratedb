@@ -18,6 +18,12 @@
   columns need migrating to `NUMERIC`
 - Types: Added `numeric` and `numeric_array` to the reflected type map, where
   they previously resolved to an abstract type that could not be compiled
+- Compiler: Fixed array indexes rendering as object keys, as in `arr['1']`.
+  Added support for array slices, and for columns and expressions as indexes
+  - Fixed the statement cache returning results for another key on
+  `ObjectArray` and `JSON` subscripts and escaped quotes in object keys. 
+  - Statements with a literal subscript, as in `js['x']` run with
+  `execution_options(compiled_cache=None)`
 
 ## 2026/06/22 0.43.1
 - Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
