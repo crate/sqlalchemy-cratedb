@@ -55,6 +55,10 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
             sa.Column("js", sa.JSON),
         )
 
+    def tearDown(self):
+        self.session.close()
+        self.metadata.drop_all(self.engine)
+
     def setup_entity(self):
         """
         Define ORM entity.

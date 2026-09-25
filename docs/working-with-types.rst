@@ -215,6 +215,9 @@ or past the end of the array, returns ``NULL``:
     >>> query.filter_by(name='Arthur Dent').all()
     [([2, 3],)]
 
+Positions and slices work the same way on ``sa.ARRAY`` columns. With
+``sa.ARRAY(..., zero_indexes=True)``, positions start at 0, as in Python.
+
 
 Geospatial types
 ================
