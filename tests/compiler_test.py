@@ -23,12 +23,14 @@ from textwrap import dedent
 from unittest import TestCase, mock, skipIf
 from unittest.mock import MagicMock, patch
 
+import pytest
 import sqlalchemy as sa
 from crate.client.cursor import Cursor
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import Update, text
 
 from sqlalchemy_cratedb.compiler import crate_before_execute
+from sqlalchemy_cratedb.dialect import CrateDialect
 from tests.settings import crate_host
 from tests.util import ExtraAssertions
 
@@ -605,3 +607,24 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
 
         """),
         )
+
+
+@pytest.mark.parametrize(
+    "type_,expected",
+    [
+        (sa.Float(), "DOUBLE"),
+        (sa.Float(asdecimal=True), "DOUBLE"),
+        (sa.Float(precision=53), "DOUBLE"),
+        (sa.Float(precision=25), "DOUBLE"),
+        (sa.Float(precision=24), "FLOAT"),
+        (sa.Float(precision=10), "FLOAT"),
+        (sa.FLOAT(), "FLOAT"),
+        (sa.REAL(), "REAL"),
+        (sa.Double(), "DOUBLE"),
+    ],
+)
+def test_float_ddl(type_, expected):
+    """
+    A precision-less generic `Float` is 8-byte; 4-byte types stay available.
+    """
+    assert type_.compile(dialect=CrateDialect()) == expected
