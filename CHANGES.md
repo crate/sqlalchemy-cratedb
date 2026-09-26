@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- BREAKING: Types: The generic `Float` without a precision now compiles to
+  `DOUBLE` instead of `FLOAT`, CrateDB's 4-byte `REAL`, which rounded Python
+  floats to 24 bits. This matches SQLAlchemy's documented behaviour on
+  backends that distinguish the two. `Float(precision<=24)`, `REAL` and the
+  uppercase `FLOAT` type still render 4-byte columns
 - Types: Fixed `CLOB`, `NCHAR`, `NVARCHAR`, `DATETIME`, and `DATE` compiling to
   type names CrateDB cannot parse. They now map to `STRING`, `CHAR`, `VARCHAR`,
   and `TIMESTAMP` respectively, matching their generic lower-case counterparts
