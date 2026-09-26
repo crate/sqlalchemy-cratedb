@@ -124,8 +124,34 @@ class SqlAlchemyDialectTest(TestCase):
         eq_(
             self.executed_statement,
             "SELECT table_name FROM information_schema.views "
-            "ORDER BY table_name ASC, table_schema ASC",
+            "WHERE table_schema = ? ORDER BY table_name ASC",
         )
+
+    def test_get_view_definition(self):
+        self.init_mock()
+        self.fake_cursor.fetchone = MagicMock(return_value=["SELECT 1"])
+        insp = inspect(self.session.bind)
+        eq_(insp.get_view_definition("v1", schema="doc"), "SELECT 1")
+        in_("SELECT view_definition FROM information_schema.views", self.executed_statement)
+
+    def test_get_view_definition_missing(self):
+        self.init_mock()
+        self.fake_cursor.fetchone = MagicMock(return_value=None)
+        insp = inspect(self.session.bind)
+        with self.assertRaises(sa.exc.NoSuchTableError):
+            insp.get_view_definition("missing", schema="doc")
+
+    def test_get_columns_nullable(self):
+        self.init_mock(
+            return_value=[["id", "integer", False], ["code", "integer", False], ["x", "text", True]]
+        )
+        insp = inspect(self.session.bind)
+        columns = insp.get_columns("t", schema="doc")
+        eq_(
+            [(c["name"], c["nullable"]) for c in columns],
+            [("id", False), ("code", False), ("x", True)],
+        )
+        in_("is_nullable", self.executed_statement)
 
     @skipIf(SA_VERSION < SA_1_4, "Inspector.has_table only available on SQLAlchemy>=1.4")
     def test_has_table(self):
@@ -135,9 +161,19 @@ class SqlAlchemyDialectTest(TestCase):
         eq_(
             self.executed_statement,
             "SELECT table_name FROM information_schema.tables "
-            "WHERE table_schema = ? AND table_type = 'BASE TABLE' "
-            "ORDER BY table_name ASC, table_schema ASC",
+            "WHERE table_schema = ? AND table_name = ? "
+            "AND table_type IN ('BASE TABLE', 'VIEW')",
         )
+
+    @skipIf(SA_VERSION < SA_1_4, "Inspector.has_table only available on SQLAlchemy>=1.4")
+    def test_has_table_view(self):
+        # Not a base table, but a view.
+        self.fake_cursor.rowcount = 1
+        self.fake_cursor.description = (("foo", None, None, None, None, None, None),)
+        self.fake_cursor.fetchall = MagicMock(return_value=[["v1"]])
+        insp = inspect(self.session.bind)
+        is_true(insp.has_table("v1"))
+        in_("'VIEW'", self.executed_statement)
 
     @skipIf(SA_VERSION < SA_2_0, "Inspector.has_schema only available on SQLAlchemy>=2.0")
     def test_has_schema(self):
@@ -163,3 +199,46 @@ class SqlAlchemyDialectTest(TestCase):
         so that SQLAlchemy generates %(name)s placeholders.
         """
         eq_(self.engine.dialect.default_paramstyle, "pyformat")
+
+
+@patch("crate.client.connection.Cursor", FakeCursor)
+class SqlAlchemyDialectUrlSchemaTest(TestCase):
+    """
+    Reflection uses the `schema` URL parameter that `get_table_names` lists from.
+    """
+
+    def setUp(self):
+        self.fake_cursor = MagicMock(name="fake_cursor")
+        FakeCursor.return_value = self.fake_cursor
+        self.parameters = []
+
+        def execute(query, parameters=None, *args, **kwargs):
+            self.parameters.append(parameters)
+            return self.fake_cursor
+
+        self.fake_cursor.execute = execute
+        self.fake_cursor.rowcount = 1
+        self.fake_cursor.description = (("foo", None, None, None, None, None, None),)
+        self.engine = sa.create_engine("crate://?schema=sales")
+        self.engine.connect().close()
+        self.engine.dialect.server_version_info = (5, 10, 0)
+
+    def test_get_columns(self):
+        self.fake_cursor.fetchall = MagicMock(return_value=[["id", "integer", False]])
+        inspect(self.engine).get_columns("t")
+        eq_(self.parameters[-1][:2], ("t", "sales"))
+
+    def test_get_pk_constraint(self):
+        self.fake_cursor.fetchall = MagicMock(return_value=[["id"]])
+        eq_(inspect(self.engine).get_pk_constraint("t")["constrained_columns"], ["id"])
+        eq_(self.parameters[-1], ("t", "sales"))
+
+    def test_get_view_names(self):
+        self.fake_cursor.fetchall = MagicMock(return_value=[["v1"]])
+        eq_(inspect(self.engine).get_view_names(), ["v1"])
+        eq_(self.parameters[-1], ("sales",))
+
+    def test_explicit_schema_wins(self):
+        self.fake_cursor.fetchall = MagicMock(return_value=[["id"]])
+        inspect(self.engine).get_pk_constraint("t", schema="other")
+        eq_(self.parameters[-1], ("t", "other"))
