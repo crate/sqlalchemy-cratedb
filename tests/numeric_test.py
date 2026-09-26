@@ -15,6 +15,7 @@ from sqlalchemy_cratedb.dialect import CrateDialect
 # is silently backed by an approximate type fails these tests instead of passing
 # by accident.
 EXACT_HIGH_PRECISION = Decimal("1.234567890123456789")
+EXACT_DIGITS = "12345678901234567890.123456789012345678"
 
 Base = declarative_base()
 
@@ -140,3 +141,31 @@ def test_reflected_numeric_reads_as_decimal(session):
         sa.select(reflected.c.amount).where(reflected.c.name == "reflect")
     ).scalar()
     assert amount == Decimal("1.25")
+
+
+@pytest.mark.parametrize(
+    "type_,value,expected",
+    [
+        (sa.Numeric(38, 18), Decimal(EXACT_DIGITS), Decimal(EXACT_DIGITS)),
+        (sa.Numeric(10, 2), Decimal("2.5"), Decimal("2.50")),
+        (sa.Numeric(), Decimal(EXACT_DIGITS), Decimal(EXACT_DIGITS)),
+        (sa.Numeric(38, 18), None, None),
+    ],
+)
+def test_numeric_result_keeps_driver_decimal_exact(type_, value, expected):
+    """
+    A `Decimal` from the driver does not pass through a float.
+    """
+    dialect = CrateDialect()
+    process = type_.dialect_impl(dialect).result_processor(dialect, None)
+    result = process(value)
+    assert result == expected
+    assert str(result) == str(expected)
+
+
+def test_numeric_result_asdecimal_false_and_float_input():
+    dialect = CrateDialect()
+    as_float = sa.Numeric(38, 18, asdecimal=False).dialect_impl(dialect)
+    assert as_float.result_processor(dialect, None)(Decimal("1.5")) == 1.5
+    as_decimal = sa.Numeric(10, 2).dialect_impl(dialect)
+    assert as_decimal.result_processor(dialect, None)(1.25) == Decimal("1.25")

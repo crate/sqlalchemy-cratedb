@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Types: `Numeric` results that the driver returns as `Decimal` are kept
+  exact, rounded to the column's scale with `Decimal` arithmetic. SQLAlchemy's
+  generic conversion formatted them through a float, dropping digits beyond
+  double precision. Together with crate/crate-python#835, `NUMERIC` reads keep
+  every digit
 - Types: Fixed `CLOB`, `NCHAR`, `NVARCHAR`, `DATETIME`, and `DATE` compiling to
   type names CrateDB cannot parse. They now map to `STRING`, `CHAR`, `VARCHAR`,
   and `TIMESTAMP` respectively, matching their generic lower-case counterparts

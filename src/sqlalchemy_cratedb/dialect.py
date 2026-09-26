@@ -19,6 +19,7 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 
+import decimal
 import logging
 import warnings
 from datetime import date, datetime, time
@@ -211,6 +212,26 @@ class Numeric(sqltypes.Numeric):
 
     def bind_processor(self, dialect):
         return None
+
+    def result_processor(self, dialect, coltype):
+        """
+        A `Decimal` from the driver is already exact. SQLAlchemy's generic
+        conversion formats it through a float, dropping digits beyond double
+        precision, so it only handles other values, like a `float` result.
+        """
+        generic = super().result_processor(dialect, coltype)
+
+        def process(value):
+            if isinstance(value, decimal.Decimal):
+                if not self.asdecimal:
+                    return float(value)
+                if self.scale is not None:
+                    # `Decimal.__format__` rounds exactly, without a float.
+                    return decimal.Decimal(format(value, ".{0}f".format(self.scale)))
+                return value
+            return generic(value) if generic else value
+
+        return process
 
 
 colspecs = {
