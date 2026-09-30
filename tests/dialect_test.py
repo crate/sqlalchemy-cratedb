@@ -39,6 +39,12 @@ from sqlalchemy.testing import eq_, in_, is_true
 
 FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 
+# Cursor description of the `get_columns` query.
+COLUMNS_DESCRIPTION = tuple(
+    (name, None, None, None, None, None, None)
+    for name in ("column_name", "data_type", "is_nullable")
+)
+
 
 @patch("crate.client.connection.Cursor", FakeCursor)
 class SqlAlchemyDialectTest(TestCase):
@@ -145,6 +151,8 @@ class SqlAlchemyDialectTest(TestCase):
         self.init_mock(
             return_value=[["id", "integer", False], ["code", "integer", False], ["x", "text", True]]
         )
+        # One description entry per selected column, or SQLAlchemy 1.x truncates the rows.
+        self.fake_cursor.description = COLUMNS_DESCRIPTION
         insp = inspect(self.session.bind)
         columns = insp.get_columns("t", schema="doc")
         eq_(
@@ -152,6 +160,21 @@ class SqlAlchemyDialectTest(TestCase):
             [("id", False), ("code", False), ("x", True)],
         )
         in_("is_nullable", self.executed_statement)
+
+    def test_get_columns_nullable_text(self):
+        """
+        CrateDB after 6.0 reports `is_nullable` as `'YES'` / `'NO'` text.
+        """
+        self.init_mock(
+            return_value=[["id", "integer", "NO"], ["code", "integer", "NO"], ["x", "text", "YES"]]
+        )
+        self.fake_cursor.description = COLUMNS_DESCRIPTION
+        insp = inspect(self.session.bind)
+        columns = insp.get_columns("t", schema="doc")
+        eq_(
+            [(c["name"], c["nullable"]) for c in columns],
+            [("id", False), ("code", False), ("x", True)],
+        )
 
     @skipIf(SA_VERSION < SA_1_4, "Inspector.has_table only available on SQLAlchemy>=1.4")
     def test_has_table(self):
@@ -219,11 +242,12 @@ class SqlAlchemyDialectUrlSchemaTest(TestCase):
         self.fake_cursor.execute = execute
         self.fake_cursor.rowcount = 1
         self.fake_cursor.description = (("foo", None, None, None, None, None, None),)
-        self.engine = sa.create_engine("crate://?schema=sales")
+        self.engine = sa.create_engine("crate:///?schema=sales")
         self.engine.connect().close()
         self.engine.dialect.server_version_info = (5, 10, 0)
 
     def test_get_columns(self):
+        self.fake_cursor.description = COLUMNS_DESCRIPTION
         self.fake_cursor.fetchall = MagicMock(return_value=[["id", "integer", False]])
         inspect(self.engine).get_columns("t")
         eq_(self.parameters[-1][:2], ("t", "sales"))

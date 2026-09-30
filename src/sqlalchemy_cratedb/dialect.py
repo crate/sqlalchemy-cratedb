@@ -512,9 +512,20 @@ class CrateDialect(default.DefaultDialect):
         return {
             "name": row[0],
             "type": self._resolve_type(row[1]),
-            # Primary key and `NOT NULL` columns report `is_nullable = false`.
-            "nullable": bool(row[2]),
+            "nullable": self._is_nullable(row[2]),
         }
+
+    @staticmethod
+    def _is_nullable(value):
+        """
+        Primary key and `NOT NULL` columns are not nullable. CrateDB up to 6.0
+        reports `information_schema.columns.is_nullable` as a `BOOLEAN`; later
+        versions report the SQL standard's `'YES'` / `'NO'` text, and
+        `bool('NO')` is `True`.
+        """
+        if isinstance(value, str):
+            return value.strip().upper() != "NO"
+        return bool(value)
 
     def _reflection_schema(self, connection, schema):
         """
