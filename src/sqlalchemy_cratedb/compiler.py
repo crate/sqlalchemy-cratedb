@@ -328,6 +328,20 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
             return "DOUBLE"
         return "FLOAT"
 
+    def visit_float(self, type_, **kw):
+        """
+        The generic `Float` without a precision is an 8-byte `DOUBLE`.
+
+        CrateDB's `FLOAT` is the 4-byte `REAL`, which rounds Python floats to
+        24 bits of precision. SQLAlchemy documents a precision-less `Float` as
+        8-byte on backends that distinguish the two, such as PostgreSQL and
+        MSSQL. A 4-byte column is still available through `Float(precision=24)`
+        or lower, `REAL`, or the uppercase `FLOAT` type.
+        """
+        if type_.precision is None:
+            return "DOUBLE"
+        return self.visit_FLOAT(type_, **kw)
+
     def visit_JSON(self, type_, **kw):
         return "OBJECT"
 

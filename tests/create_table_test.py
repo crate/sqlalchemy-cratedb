@@ -73,7 +73,7 @@ class SqlAlchemyCreateTableTest(TestCase, AssertsCompiledSQL):
                 "\n\tshort_col SHORT, "
                 "\n\tdatetime_col TIMESTAMP WITHOUT TIME ZONE, "
                 "\n\tdate_col TIMESTAMP, "
-                "\n\tfloat_col FLOAT, "
+                "\n\tfloat_col DOUBLE, "
                 "\n\tdecimal_col NUMERIC(10, 2), "
                 "\n\tPRIMARY KEY (string_col)\n)\n\n"
             ),
