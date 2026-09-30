@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- Reflection: `get_columns` reports `nullable` from `information_schema.columns`,
+  so primary key and `NOT NULL` columns reflect as `nullable=False` instead of
+  always `True`
+- Reflection: `get_view_names` lists only the views of the requested schema;
+  it previously passed the schema as an unused parameter and listed the views
+  of every schema
+- Reflection: `has_table` reports views as well as tables, like SQLAlchemy
+  2.0's `Inspector.has_table`, and `get_view_definition` is implemented
+- Reflection: `get_columns`, `get_pk_constraint`, `get_view_names` and
+  `get_view_definition` use the `schema` URL parameter that `get_table_names`
+  already honours, instead of falling back to `doc`
 - Types: Fixed `CLOB`, `NCHAR`, `NVARCHAR`, `DATETIME`, and `DATE` compiling to
   type names CrateDB cannot parse. They now map to `STRING`, `CHAR`, `VARCHAR`,
   and `TIMESTAMP` respectively, matching their generic lower-case counterparts
