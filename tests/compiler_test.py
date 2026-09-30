@@ -609,20 +609,22 @@ class SqlAlchemyDDLCompilerTest(CompilerTestCase, ExtraAssertions):
         )
 
 
-@pytest.mark.parametrize(
-    "type_,expected",
-    [
-        (sa.Float(), "DOUBLE"),
-        (sa.Float(asdecimal=True), "DOUBLE"),
-        (sa.Float(precision=53), "DOUBLE"),
-        (sa.Float(precision=25), "DOUBLE"),
-        (sa.Float(precision=24), "FLOAT"),
-        (sa.Float(precision=10), "FLOAT"),
-        (sa.FLOAT(), "FLOAT"),
-        (sa.REAL(), "REAL"),
-        (sa.Double(), "DOUBLE"),
-    ],
-)
+FLOAT_DDL_CASES = [
+    (sa.Float(), "DOUBLE"),
+    (sa.Float(asdecimal=True), "DOUBLE"),
+    (sa.Float(precision=53), "DOUBLE"),
+    (sa.Float(precision=25), "DOUBLE"),
+    (sa.Float(precision=24), "FLOAT"),
+    (sa.Float(precision=10), "FLOAT"),
+    (sa.FLOAT(), "FLOAT"),
+    (sa.REAL(), "REAL"),
+]
+# `sa.Double` is only available on SQLAlchemy>=2.0.
+if hasattr(sa, "Double"):
+    FLOAT_DDL_CASES.append((sa.Double(), "DOUBLE"))
+
+
+@pytest.mark.parametrize("type_,expected", FLOAT_DDL_CASES)
 def test_float_ddl(type_, expected):
     """
     A precision-less generic `Float` is 8-byte; 4-byte types stay available.
