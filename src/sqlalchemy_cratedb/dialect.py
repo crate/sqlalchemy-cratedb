@@ -27,7 +27,7 @@ from sqlalchemy import types as sqltypes
 from sqlalchemy.engine import default, reflection
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import functions
-from sqlalchemy.util import asbool, to_list
+from sqlalchemy.util import asbool, to_list, warn
 
 from .compiler import (
     CrateDDLCompiler,
@@ -473,6 +473,8 @@ class CrateDialect(default.DefaultDialect):
     def _create_column_info(self, row):
         name, data_type, length = row
         type_ = self._resolve_type(data_type)
+        if isinstance(type_, UnresolvedType):
+            warn("Did not recognize type '{0}' of column '{1}'".format(data_type, name))
         if length is not None and isinstance(type_, type) and issubclass(type_, sqltypes.String):
             type_ = type_(length)
         return {

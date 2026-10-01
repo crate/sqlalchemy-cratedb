@@ -150,6 +150,12 @@ def test_unresolved_type_prints_its_crate_type_name():
     assert UNRESOLVABLE in str(sa.schema.CreateTable(table))
 
 
+def test_reflected_unknown_type_warns_with_the_column_name():
+    with pytest.warns(sa.exc.SAWarning, match="type '{0}' of column 'c'".format(UNRESOLVABLE)):
+        column = CrateDialect()._create_column_info(("c", UNRESOLVABLE, None))
+    assert isinstance(column["type"], sqltypes.NullType)
+
+
 def test_unresolved_type_binds_a_compared_value_by_its_python_type():
     table = sa.Table("t", sa.MetaData(), reflected_column(UNRESOLVABLE))
     comparison = table.c.c == datetime.datetime(2026, 1, 1)
