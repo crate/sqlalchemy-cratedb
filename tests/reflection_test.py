@@ -1,10 +1,11 @@
 import datetime
+import ipaddress
 
 import pytest
 import sqlalchemy as sa
 from sqlalchemy import types as sqltypes
 
-from sqlalchemy_cratedb import Geopoint, Geoshape, ObjectArray
+from sqlalchemy_cratedb import IP, Geopoint, Geoshape, ObjectArray
 from sqlalchemy_cratedb.dialect import ARRAY_SUFFIX, TYPES_MAP, CrateDialect
 from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_0, SA_VERSION
 
@@ -190,3 +191,17 @@ def test_reflected_table_renders_string_lengths_and_ip(cratedb_service):
     assert "name VARCHAR(10)" in ddl
     assert "address IP" in ddl
 
+
+@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
+def test_ip_column_stores_ipaddress_objects(cratedb_service):
+    engine = cratedb_service.database.engine
+    with engine.begin() as connection:
+        connection.exec_driver_sql("DROP TABLE IF EXISTS ip_addresses")
+        connection.exec_driver_sql("CREATE TABLE ip_addresses (address IP)")
+    table = sa.Table("ip_addresses", sa.MetaData(), sa.Column("address", IP))
+    values = ["10.0.0.1", ipaddress.IPv4Address("10.0.0.2"), ipaddress.IPv6Address("::1")]
+    with engine.begin() as connection:
+        connection.execute(table.insert(), [{"address": value} for value in values])
+        connection.exec_driver_sql("REFRESH TABLE ip_addresses")
+        stored = connection.execute(sa.select(table.c.address)).scalars().all()
+    assert sorted(stored) == ["10.0.0.1", "10.0.0.2", "::1"]
