@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 import sqlalchemy as sa
 from sqlalchemy import types as sqltypes
@@ -148,6 +150,12 @@ def test_unresolved_type_prints_its_crate_type_name():
     assert UNRESOLVABLE in str(sa.schema.CreateTable(table))
 
 
+def test_unresolved_type_binds_a_compared_value_by_its_python_type():
+    table = sa.Table("t", sa.MetaData(), reflected_column(UNRESOLVABLE))
+    comparison = table.c.c == datetime.datetime(2026, 1, 1)
+    assert isinstance(comparison.right.type, sqltypes.DateTime)
+
+
 def test_unresolved_type_remains_selectable():
     dialect = CrateDialect()
     table = sa.Table("t", sa.MetaData(), reflected_column(UNRESOLVABLE))
@@ -175,3 +183,4 @@ def test_reflected_table_renders_string_lengths_and_ip(cratedb_service):
     assert "code CHAR(5)" in ddl
     assert "name VARCHAR(10)" in ddl
     assert "address IP" in ddl
+

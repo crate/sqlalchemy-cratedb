@@ -35,23 +35,10 @@ from .compiler import (
     CrateTypeCompiler,
 )
 from .sa_version import SA_1_4, SA_2_0, SA_VERSION
-from .type import IP, FloatVector, Geopoint, Geoshape, ObjectArray, ObjectType
+from .type import IP, FloatVector, Geopoint, Geoshape, ObjectArray, ObjectType, UnresolvedType
 from .util import SSLMode
 
 ARRAY_SUFFIX = "_array"
-
-
-class UnresolvedType(sqltypes.UserDefinedType):
-    """
-    A reflected CrateDB type that SQLAlchemy cannot represent, kept under its CrateDB name.
-    """
-
-    __visit_name__ = "unresolved"
-
-    cache_ok = True
-
-    def __init__(self, type_name):
-        self.type_name = type_name
 
 
 class Double(sqltypes.Float):
