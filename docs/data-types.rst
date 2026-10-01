@@ -70,6 +70,7 @@ CrateDB           SQLAlchemy
 `double`__        `Double`__
 `timestamp`__     `TIMESTAMP`__
 `string`__        `String`__
+`character`__     `CHAR`__
 `array`__         `ARRAY`__
 `object`__        :ref:`object` |nbsp| (extension type)
 `object`__        ``JSON``
@@ -77,6 +78,7 @@ CrateDB           SQLAlchemy
 `array(object)`__ :ref:`objectarray` |nbsp| (extension type)
 `geo_point`__     :ref:`geopoint` |nbsp| (extension type)
 `geo_shape`__     :ref:`geoshape` |nbsp| (extension type)
+`ip`__            ``IP`` |nbsp| (extension type)
 ================= =========================================
 
 
@@ -101,6 +103,8 @@ __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.htm
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.TIMESTAMP
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#character-data
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.String
+__ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#data-type-character
+__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.CHAR
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#array
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.ARRAY
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#object
@@ -109,7 +113,13 @@ __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.htm
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#array
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#geo-point
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#geo-shape
+__ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#type-ip
 
+
+Reflection resolves a column whose CrateDB type is missing from this map to
+``UnresolvedType``, and emits an ``SAWarning`` naming the type and the column.
+Such a column can still be selected, but rendering it into DDL raises a
+``CompileError``.
 
 .. note::
 
