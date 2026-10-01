@@ -6,7 +6,7 @@ import sqlalchemy as sa
 from sqlalchemy_cratedb.dialect import CrateDialect
 from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
 
-pytestmark = pytest.mark.skipif(SA_VERSION < SA_2_0, reason="SQLAlchemy 1.4 has no UUID type")
+pytestmark = pytest.mark.skipif(SA_VERSION < SA_2_0, reason="SQLAlchemy < 2.0 has no UUID type")
 
 VALUE = uuid.UUID("5f0b6b4e-6d2a-4a55-9b0e-1c9a3f2d7e41")
 
@@ -24,6 +24,8 @@ def render(type_):
 def engine(cratedb_service):
     engine = cratedb_service.database.engine
     with engine.begin() as connection:
+        if connection.dialect.server_version_info < (6, 2):
+            pytest.skip("CrateDB < 6.2 has no UUID type")
         connection.exec_driver_sql("DROP TABLE IF EXISTS uuids")
     return engine
 
@@ -63,6 +65,15 @@ def test_native_uuid_round_trips(engine, as_uuid):
         assert connection.execute(sa.select(table.c.id)).scalar() == value
         matched = connection.execute(sa.select(table.c.id).where(table.c.id == value)).scalar()
         assert matched == value
+
+
+def test_native_uuid_round_trips_null(engine):
+    table = sa.Table("uuids", sa.MetaData(), sa.Column("id", sa.UUID()))
+    with engine.begin() as connection:
+        table.create(connection)
+        connection.execute(table.insert().values(id=None))
+        connection.exec_driver_sql("REFRESH TABLE uuids")
+        assert connection.execute(sa.select(table.c.id)).scalar() is None
 
 
 def test_reflected_uuid_column_is_native_uuid(engine):
