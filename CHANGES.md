@@ -34,7 +34,6 @@
 - Types: Reflected `CHAR` and `VARCHAR` columns keep their declared length
 - Types: A reflected column of an unknown type warns and becomes
   `UnresolvedType`, which raises `CompileError` naming the column in DDL
-  instead of a bare `AttributeError`
 
 ## 2026/06/22 0.43.1
 - Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
