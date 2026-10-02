@@ -18,6 +18,17 @@
   columns need migrating to `NUMERIC`
 - Types: Added `numeric` and `numeric_array` to the reflected type map, where
   they previously resolved to an abstract type that could not be compiled
+- Compiler: Fixed array indexes rendering as object keys, as in `arr['1']`.
+  Added support for array slices, and for columns and expressions as indexes
+- Compiler: Fixed cached statements on `sa.JSON` and `ObjectArray` columns
+  reusing the subscript of an earlier statement, which returned values of
+  another key. Fixed object keys containing a quote
+- BREAKING: Compiler: A statement with a literal subscript on an `sa.JSON`,
+  `ObjectArray` or `ARRAY` column can't run with `executemany()` on a cached
+  engine. For that, use `execution_options(compiled_cache=None)`
+- BREAKING: Compiler: An integer subscript on a nested object renders as an
+  array position. Write the key as a string, as in `obj['n']['1']`
+- Compiler: `bool`, `float` and `None` subscripts raise `CompileError`
 - Types: Added `geo_point`, `geo_shape`, `ip` and `character` to the
   reflected type map, and arrays of mapped types
 - Types: Reflected `CHAR` and `VARCHAR` columns keep their declared length

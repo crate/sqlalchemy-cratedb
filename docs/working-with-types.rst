@@ -203,6 +203,21 @@ all values of that field of all objects in that object array:
     >>> query.all()
     [([1, 2, 3],), (None,), (None,)]
 
+Select an element of an array by its position, or a part of it by a slice.
+Positions start at 1, and slices include both bounds. A position of 0 or less,
+or past the end of the array, returns ``NULL``:
+
+    >>> query = session.query(Character.more_details[1]['foo']).order_by(Character.name)
+    >>> query.all()
+    [(1,), (None,), (None,)]
+
+    >>> query = session.query(Character.more_details['foo'][2:3])
+    >>> query.filter_by(name='Arthur Dent').all()
+    [([2, 3],)]
+
+Positions and slices work the same way on ``sa.ARRAY`` columns. With
+``sa.ARRAY(..., zero_indexes=True)``, positions start at 0, as in Python.
+
 
 Geospatial types
 ================
