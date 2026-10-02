@@ -20,6 +20,7 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 import logging
+import uuid
 import warnings
 from datetime import date, datetime, time
 
@@ -84,6 +85,7 @@ try:
 
     TYPES_MAP["double"] = DOUBLE
     TYPES_MAP["double precision"] = DOUBLE_PRECISION
+    TYPES_MAP["uuid"] = sqltypes.UUID
 except ImportError:
     pass
 
@@ -207,6 +209,30 @@ colspecs = {
     # `Float` derives from `Numeric`; this entry keeps it on the generic handling.
     sqltypes.Float: sqltypes.Float,
 }
+
+if SA_VERSION >= SA_2_0:
+
+    class UUID(sqltypes.UUID):
+        """
+        CrateDB's `UUID` column accepts the dashed form only, while SQLAlchemy binds
+        the 32-digit form for any dialect without native UUID support.
+        """
+
+        def bind_processor(self, dialect):
+            def process(value):
+                if value is None:
+                    return None
+                return str(value if isinstance(value, uuid.UUID) else uuid.UUID(value))
+
+            return process
+
+        def literal_processor(self, dialect):
+            def process(value):
+                return "'{0}'".format(value if isinstance(value, uuid.UUID) else uuid.UUID(value))
+
+            return process
+
+    colspecs[sqltypes.UUID] = UUID
 
 if SA_VERSION >= SA_2_0:
     from .compat.core20 import CrateCompilerSA20
