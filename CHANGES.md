@@ -29,6 +29,11 @@
 - BREAKING: Compiler: An integer subscript on a nested object renders as an
   array position. Write the key as a string, as in `obj['n']['1']`
 - Compiler: `bool`, `float` and `None` subscripts raise `CompileError`
+- Types: Added `geo_point`, `geo_shape`, `ip` and `character` to the
+  reflected type map, and arrays of mapped types
+- Types: Reflected `CHAR` and `VARCHAR` columns keep their declared length
+- Types: A reflected column of an unknown type warns and becomes
+  `UnresolvedType`, which raises `CompileError` naming the column in DDL
 
 ## 2026/06/22 0.43.1
 - Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
