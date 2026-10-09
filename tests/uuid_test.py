@@ -22,7 +22,7 @@ def render(type_):
 
 @pytest.fixture
 def engine(cratedb_service):
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     with engine.begin() as connection:
         if connection.dialect.server_version_info < (6, 2):
             pytest.skip("CrateDB < 6.2 has no UUID type")

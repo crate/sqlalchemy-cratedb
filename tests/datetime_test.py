@@ -111,7 +111,7 @@ class FooBar(Base):
 
 @pytest.fixture
 def session(cratedb_service):
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     session = sessionmaker(bind=engine)()
 
     Base.metadata.drop_all(engine, checkfirst=True)
@@ -267,9 +267,7 @@ def test_datetime_tz_aware_read(session, cratedb_service):
     session.execute(sa.text("REFRESH TABLE foobar"))
 
     # Read via an engine whose driver returns timezone-aware datetimes.
-    aware_engine = sa.create_engine(
-        cratedb_service.database.engine.url, connect_args={"time_zone": "+0530"}
-    )
+    aware_engine = sa.create_engine(cratedb_service.engine.url, connect_args={"time_zone": "+0530"})
     try:
         with aware_engine.connect() as conn:
             result = conn.execute(

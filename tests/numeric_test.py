@@ -35,7 +35,7 @@ class Ledger(Base):
 
 @pytest.fixture
 def session(cratedb_service):
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     session = sessionmaker(bind=engine)()
     Base.metadata.drop_all(engine, checkfirst=True)
     Base.metadata.create_all(engine, checkfirst=True)
