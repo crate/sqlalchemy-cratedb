@@ -81,6 +81,10 @@ KNOWN_UNSUPPORTED = {
     "VARBINARY": "CrateDB has no binary data type",
 }
 
+MINIMUM_SERVER_VERSION = {
+    "UUID": (6, 2),
+}
+
 
 def _cases():
     for name in sorted(CORE_TYPES):
@@ -94,6 +98,13 @@ def _cases():
 def test_core_type_is_creatable(cratedb_service, name):
     """CrateDB accepts the DDL the dialect generates for this type."""
     engine = cratedb_service.database.engine
+    minimum = MINIMUM_SERVER_VERSION.get(name)
+
+    if minimum:
+        with engine.connect() as connection:
+            if connection.dialect.server_version_info < minimum:
+                pytest.skip(f"CrateDB < {'.'.join(map(str, minimum))} has no {name} type")
+
     table = sa.Table(
         "type_compilation",
         sa.MetaData(),
