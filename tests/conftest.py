@@ -13,7 +13,7 @@ from cratedb_toolkit.testing.testcontainers.cratedb import CrateDBTestAdapter
 TESTDRIVE_EXT_SCHEMA = "testdrive-ext"
 TESTDRIVE_DATA_SCHEMA = "testdrive-data"
 
-CRATEDB_VERSION = os.environ.get("CRATEDB_VERSION", "nightly")
+CRATEDB_VERSION = os.environ.get("CRATEDB_VERSION", "latest")
 ASSETS_PATH = Path(__file__).parent / "assets"
 OFFLINE_SERVER_VERSION = "6.5.0"
 DEFAULT_SERVERS = {"http://127.0.0.1:4200", "http://localhost:4200"}

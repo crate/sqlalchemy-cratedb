@@ -22,7 +22,7 @@ jobs:
       matrix:
         os: ['ubuntu-22.04']
         python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
-        cratedb-version: ['nightly']
+        cratedb-version: ['latest']
         sqla-version: ['<1.4', '<1.5', '<2.1', '<2.2']
         pip-allow-prerelease: ['false']
 
@@ -43,16 +43,18 @@ jobs:
             pip-allow-prerelease: 'false'
           - os: 'ubuntu-22.04'
             python-version: '3.14'
-            cratedb-version: 'latest'
+            cratedb-version: 'nightly'
             sqla-version: '<2.2'
             pip-allow-prerelease: 'false'
           - os: 'ubuntu-latest'
             python-version: '3.14'
-            cratedb-version: 'nightly'
+            cratedb-version: 'latest'
             sqla-version: 'latest'
             pip-allow-prerelease: 'true'
 
       fail-fast: false
+
+    continue-on-error: ${{ matrix.cratedb-version == 'nightly' }}
 
     env:
       CRATEDB_VERSION: ${{ matrix.cratedb-version }}
