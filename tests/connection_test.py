@@ -199,7 +199,6 @@ class SqlAlchemyConnectionTest(TestCase, ExtraAssertions):
     CRATE_VERSION < CRATE_2_3,
     reason="Early connect failure arrived in crate 2.3.0",
 )
-@pytest.mark.network
 def test_connection_failure_is_raised_early():
     """
     Connecting to an unreachable cluster fails immediately.

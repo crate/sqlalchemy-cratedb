@@ -210,7 +210,7 @@ ini_options.addopts = """
   -rfEXs -p pytester --strict-markers --verbosity=3
   --cov --cov-report=term-missing --cov-report=xml
   """
-ini_options.markers = ["network: Test connects to the network",]
+ini_options.markers = []
 ini_options.xfail_strict = true
 ini_options.log_format = "%(asctime)-15s [%(name)-36s] %(levelname)-8s: %(message)s"
 ini_options.log_level = "DEBUG"
