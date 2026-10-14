@@ -24,16 +24,10 @@ from unittest import TestCase, skipIf
 from unittest.mock import MagicMock, patch
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
+from crate.client.cursor import Cursor
+from sqlalchemy.orm import Session, declarative_base
 
 from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
-
-from crate.client.cursor import Cursor
 
 fake_cursor = MagicMock(name="fake_cursor")
 FakeCursor = MagicMock(name="FakeCursor", spec=Cursor, return_value=fake_cursor)

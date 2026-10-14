@@ -20,21 +20,15 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 
-from unittest import TestCase, skipIf
+from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
+from crate.client.cursor import Cursor
+from sqlalchemy.orm import Session, declarative_base
 from sqlalchemy.sql import operators
 
-from sqlalchemy_cratedb import SA_1_4, SA_VERSION, ObjectArray
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
-
-from crate.client.cursor import Cursor
+from sqlalchemy_cratedb import ObjectArray
 
 fake_cursor = MagicMock(name="fake_cursor")
 FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
@@ -75,7 +69,6 @@ class SqlAlchemyArrayTypeTest(TestCase):
             "SELECT subscripts.idx AS subscripts_idx FROM subscripts WHERE " + expected_where, s
         )
 
-    @skipIf(SA_VERSION < SA_1_4, "`as_generic` not available with SQLAlchemy 1.3")
     def test_as_generic(self):
         t1 = sa.Table(
             "t",
@@ -112,10 +105,8 @@ class SqlAlchemyArrayTypeTest(TestCase):
 
     def test_any(self):
         s = self.session.query(self.User.name).filter(self.User.friends.any("arthur"))
-        # SA 1.4+ uses the column name as the bind param; SA 1.3 uses a generic "param_1".
-        param = "friends_1" if SA_VERSION >= SA_1_4 else "param_1"
         self.assertSQL(
-            f"SELECT users.name AS users_name FROM users WHERE %({param})s = ANY (users.friends)",
+            "SELECT users.name AS users_name FROM users WHERE %(friends_1)s = ANY (users.friends)",
             s,
         )
 
@@ -123,10 +114,8 @@ class SqlAlchemyArrayTypeTest(TestCase):
         s = self.session.query(self.User.name).filter(
             self.User.scores.any(6, operator=operators.lt)
         )
-        # SA 1.4+ uses the column name as the bind param; SA 1.3 uses a generic "param_1".
-        param = "scores_1" if SA_VERSION >= SA_1_4 else "param_1"
         self.assertSQL(
-            f"SELECT users.name AS users_name FROM users WHERE %({param})s < ANY (users.scores)",
+            "SELECT users.name AS users_name FROM users WHERE %(scores_1)s < ANY (users.scores)",
             s,
         )
 
@@ -182,23 +171,12 @@ class SqlAlchemyArrayTypeTest(TestCase):
             "SELECT users.name AS users_name FROM users WHERE users.scores[2] = %(param_1)s", s
         )
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has no `literal_execute`")
     def test_index_bindparam(self):
         s = self.session.query(self.User.name).filter(self.User.scores[sa.bindparam("pos")] == 5)
         self.assertSQL(
             "SELECT users.name AS users_name FROM users "
             "WHERE users.scores[__[POSTCOMPILE_pos]] = %(param_1)s",
             s,
-        )
-
-    @skipIf(SA_VERSION >= SA_1_4, "SQLAlchemy 1.4+ renders the parameter on execution")
-    def test_index_bindparam_sa13(self):
-        s = self.session.query(self.User.name).filter(self.User.scores[sa.bindparam("pos")] == 5)
-        with self.assertRaises(sa.exc.CompileError) as cm:
-            str(s)
-        self.assertEqual(
-            "A subscript taking its value on execution needs SQLAlchemy 1.4 or later",
-            str(cm.exception),
         )
 
     def test_index_invalid(self):

@@ -4,14 +4,7 @@ import pytest
 import sqlalchemy as sa
 from sqlalchemy.event import listen
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import sessionmaker
-
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from sqlalchemy_cratedb.support import (
     check_uniqueness_factory,
@@ -20,9 +13,6 @@ from sqlalchemy_cratedb.support import (
 )
 
 
-@pytest.mark.skipif(
-    SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3 and earlier"
-)
 def test_autoincrement_timestamp(cratedb_service):
     """
     Validate autoincrement columns using `sa.DateTime` columns.
@@ -63,9 +53,6 @@ def test_autoincrement_timestamp(cratedb_service):
     assert result["string"] >= "1718846016235"
 
 
-@pytest.mark.skipif(
-    SA_VERSION < SA_1_4, reason="Feature not supported on SQLAlchemy 1.3 and earlier"
-)
 def test_check_uniqueness_factory(cratedb_service):
     """
     Validate basic synthetic UNIQUE constraints.
@@ -103,9 +90,6 @@ def test_check_uniqueness_factory(cratedb_service):
     assert ex.match("DuplicateKeyException in table 'foobar' on constraint 'id-name'")
 
 
-@pytest.mark.skipif(
-    SA_VERSION < SA_1_4, reason="Feature not supported on SQLAlchemy 1.3 and earlier"
-)
 @pytest.mark.parametrize("mode", ["engine", "session"])
 def test_refresh_after_dml(cratedb_service, mode):
     """

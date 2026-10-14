@@ -22,7 +22,7 @@
 from __future__ import absolute_import
 
 import re
-from unittest import TestCase, skipIf
+from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 import sqlalchemy as sa
@@ -40,14 +40,13 @@ except ImportError:
 from crate.client.cursor import Cursor
 
 from sqlalchemy_cratedb import ObjectArray, ObjectType
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_1, SA_VERSION
+from sqlalchemy_cratedb.sa_version import SA_2_1, SA_VERSION
 
 fake_cursor = MagicMock(name="fake_cursor")
 FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 FakeCursor.return_value = fake_cursor
 
 
-@skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 class SqlAlchemyDictTypeTest(TestCase):
     def setUp(self):
         self.engine = sa.create_engine("crate://")
