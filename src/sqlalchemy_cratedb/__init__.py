@@ -19,10 +19,9 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 
-from .compat.api13 import monkeypatch_add_exec_driver_sql
 from .dialect import dialect
 from .predicate import match
-from .sa_version import SA_1_4, SA_VERSION
+from .sa_version import SA_1_4, SA_VERSION  # noqa: F401  # Re-exported for compatibility.
 from .support import insert_bulk
 from .type.array import ObjectArray
 from .type.geo import Geopoint, Geoshape
@@ -30,29 +29,6 @@ from .type.ip import IP
 from .type.object import ObjectType
 from .type.unresolved import UnresolvedType
 from .type.vector import FloatVector, knn_match
-
-if SA_VERSION < SA_1_4:
-    import textwrap
-    import warnings
-
-    # SQLAlchemy 1.3 is effectively EOL.
-    SA13_DEPRECATION_WARNING = textwrap.dedent(
-        """
-    WARNING: SQLAlchemy 1.3 is effectively EOL.
-
-    SQLAlchemy 1.3 is EOL since 2023-01-27.
-    Future versions of the CrateDB SQLAlchemy dialect will drop support for SQLAlchemy 1.3.
-    It is recommended that you transition to using SQLAlchemy 1.4 or 2.0:
-
-    - https://docs.sqlalchemy.org/en/14/changelog/migration_14.html
-    - https://docs.sqlalchemy.org/en/20/changelog/migration_20.html
-    """.lstrip("\n")
-    )
-    warnings.warn(message=SA13_DEPRECATION_WARNING, category=DeprecationWarning, stacklevel=2)
-
-    # SQLAlchemy 1.3 does not have the `exec_driver_sql` method, so add it.
-    monkeypatch_add_exec_driver_sql()
-
 
 try:
     from importlib.metadata import PackageNotFoundError, version
