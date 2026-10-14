@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         language: [ python ]
-        sqla-version: ['<1.4', '<1.5', '<2.1']
+        sqla-version: ['<1.5', '<2.1', '<2.2']
 
     steps:
       - name: Acquire sources
