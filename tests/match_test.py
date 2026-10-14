@@ -24,14 +24,8 @@ from unittest import TestCase
 from unittest.mock import MagicMock
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
-
 from crate.client.cursor import Cursor
+from sqlalchemy.orm import Session, declarative_base
 
 from sqlalchemy_cratedb import ObjectType
 from sqlalchemy_cratedb.predicate import match

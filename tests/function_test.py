@@ -22,12 +22,8 @@
 from unittest import TestCase
 
 import sqlalchemy as sa
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql.sqltypes import TIMESTAMP
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
 
 
 class SqlAlchemyFunctionTest(TestCase):
