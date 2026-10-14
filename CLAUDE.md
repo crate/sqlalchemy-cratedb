@@ -13,7 +13,6 @@ source bootstrap.sh   # Creates .venv with Python 3.11, installs all deps in edi
 ```
 
 Environment variables that influence bootstrap:
-- `CRATEDB_VERSION` (default: `5.5.1`) — CrateDB Docker image version
 - `SQLALCHEMY_VERSION` (default: `<2.2`) — SQLAlchemy version constraint
 - `PIP_ALLOW_PRERELEASE=true` — allow pre-release packages
 
@@ -22,7 +21,7 @@ Environment variables that influence bootstrap:
 ```bash
 poe format    # Auto-format code (ruff + black)
 poe lint      # Run linters (ruff, validate-pyproject)
-poe test      # Run pytest + integration tests
+poe test      # Run pytest, including the doctests
 poe check     # lint + test combined
 
 # Run specific tests
@@ -31,10 +30,11 @@ pytest -k SqlAlchemyCompilerTest
 pytest -k test_score
 
 # Run integration/doctests
-python -m unittest -vvv tests/integration.py
+pytest tests/test_documentation.py
 ```
 
 Tests require a live CrateDB instance via Docker (managed automatically by `cratedb_toolkit.testing.testcontainers`).
+Select the CrateDB version with `CRATEDB_VERSION`, a `crate/crate` image tag (default: `latest`), e.g. `CRATEDB_VERSION=5.10.16 pytest`.
 
 ## Architecture
 
@@ -61,11 +61,13 @@ Tests require a live CrateDB instance via Docker (managed automatically by `crat
 ### Testing
 
 Tests in `tests/` follow two patterns:
-- `*_test.py` files: unit/integration tests using pytest with a live CrateDB instance
-- `tests/integration.py`: doctests for documentation examples, run with `unittest`
+- `*_test.py` and `test_*.py` files: pytest tests. Integration tests use the `cratedb_service` fixture; unit tests mock the driver's cursor and run offline
+- `tests/test_documentation.py`: runs the doctests in `docs/*.rst` against the same CrateDB instance
 
-The `conftest.py` provides a session-scoped `cratedb_service` fixture that starts CrateDB via Docker containers.
-
+The `conftest.py` provides:
+- `cratedb_service`: session-scoped, starts one CrateDB container (`crate/crate:$CRATEDB_VERSION`) with `tests/assets` mounted at `/assets`
+- `crate_host`: the container's `host:port`, used by the doctests
+- `offline_default_server`: autouse, answers the driver's connect-time server version probe for the default address `localhost:4200`.
 ## Code Style
 
 - Line length: 100 characters (ruff + black)
