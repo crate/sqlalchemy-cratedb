@@ -20,7 +20,7 @@ class SqlAlchemyWarningsTest(TestCase, ExtraAssertions):
     )
     def test_sa14_deprecation_warning(self):
         """
-        Verify that a `DeprecationWarning` is issued when running SQLAlchemy 1.4.
+        Verify that a `FutureWarning` is issued when running SQLAlchemy 1.4.
         """
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -29,7 +29,7 @@ class SqlAlchemyWarningsTest(TestCase, ExtraAssertions):
             import sqlalchemy_cratedb  # noqa: F401
 
             self.assertEqual(len(w), 1)
-            self.assertIsSubclass(w[-1].category, DeprecationWarning)
+            self.assertIsSubclass(w[-1].category, FutureWarning)
             self.assertIn("SQLAlchemy 1.4 is EOL.", str(w[-1].message))
 
     def test_craty_object_deprecation_warning(self):

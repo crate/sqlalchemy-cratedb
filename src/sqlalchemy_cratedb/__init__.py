@@ -45,7 +45,7 @@ if SA_VERSION < SA_2_0:
     - https://docs.sqlalchemy.org/en/20/changelog/migration_20.html
     """.lstrip("\n")
     )
-    warnings.warn(message=SA14_DEPRECATION_WARNING, category=DeprecationWarning, stacklevel=2)
+    warnings.warn(message=SA14_DEPRECATION_WARNING, category=FutureWarning, stacklevel=2)
 
 try:
     from importlib.metadata import PackageNotFoundError, version
