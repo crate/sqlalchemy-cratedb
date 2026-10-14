@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- BREAKING: Dropped support for SQLAlchemy 1.3, which is EOL since 2021.
+  The minimum supported version is SQLAlchemy 1.4
+- Deprecated support for SQLAlchemy 1.4, which is EOL. Importing the dialect
+  with SQLAlchemy 1.4 emits a `DeprecationWarning`. A future release will
+  require SQLAlchemy 2.0
 - Types: Fixed `UUID` columns rejecting every insert, since values were bound
   as 32 hex digits while CrateDB's `UUID` type takes the dashed form. The
   portable `Uuid` type keeps its `CHAR(32)` storage. Storing `UUID` requires
