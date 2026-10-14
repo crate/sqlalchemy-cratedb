@@ -9,7 +9,7 @@ from tests.util import ExtraAssertions
 
 class SqlAlchemyWarningsTest(TestCase, ExtraAssertions):
     """
-    Verify a few `DeprecationWarning` spots.
+    Verify a few `DeprecationWarning` and `FutureWarning` spots.
 
     https://docs.python.org/3/library/warnings.html#testing-warnings
     """
