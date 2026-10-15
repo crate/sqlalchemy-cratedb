@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 2026/10/15 0.44.0
+- Types: Fixed `sa.Time` raising `Cannot find data type: time`. `Time` columns 
+  are created as `STRING` and hold values in ISO 8601 format.
+- Types: Fixed `DateTime` results failing when the driver's `time_zone`
+  connect argument is set. Timezone-aware `datetime` values converted by the
+  driver now pass through unchanged
 - Types: Fixed `UUID` columns rejecting every insert, since values were bound
   as 32 hex digits while CrateDB's `UUID` type takes the dashed form. The
   portable `Uuid` type keeps its `CHAR(32)` storage. Storing `UUID` requires
