@@ -102,13 +102,14 @@ optional-dependencies.release = [
   "twine<8",
 ]
 optional-dependencies.test = [
-  "cratedb-toolkit[testing]",
   "dask[dataframe]",
+  "httpx",
   "pandas<2.4",
   "pueblo>=0.0.7",
   "pytest<10",
   "pytest-cov<8",
   "pytest-mock<4",
+  "testcontainers>=4.15,<5",
 ]
 optional-dependencies.vector = [
   "numpy",

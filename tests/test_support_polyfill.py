@@ -21,7 +21,7 @@ def test_autoincrement_timestamp(cratedb_service):
     """
     patch_autoincrement_timestamp()
 
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     session = sessionmaker(bind=engine)()
     Base = declarative_base()
 
@@ -60,7 +60,7 @@ def test_check_uniqueness_factory(cratedb_service):
     https://github.com/crate/sqlalchemy-cratedb/issues/76
     """
 
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     session = sessionmaker(bind=engine)()
     Base = declarative_base()
 
@@ -97,7 +97,7 @@ def test_refresh_after_dml(cratedb_service, mode):
 
     https://github.com/crate/sqlalchemy-cratedb/issues/83
     """
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     session = sessionmaker(bind=engine)()
     Base = declarative_base()
 

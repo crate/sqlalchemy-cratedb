@@ -97,7 +97,7 @@ def _cases():
 @pytest.mark.parametrize("name", list(_cases()))
 def test_core_type_is_creatable(cratedb_service, name):
     """CrateDB accepts the DDL the dialect generates for this type."""
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     minimum = MINIMUM_SERVER_VERSION.get(name)
 
     if minimum:

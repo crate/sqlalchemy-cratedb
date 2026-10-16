@@ -201,7 +201,7 @@ def test_float_vector_integration(cratedb_service):
     """
     np = pytest.importorskip("numpy")
 
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     session = sessionmaker(bind=engine)()
     Base = declarative_base()
 

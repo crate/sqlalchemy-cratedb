@@ -34,7 +34,7 @@ from sqlalchemy_cratedb import ObjectArray, ObjectType
 class SqlAlchemyQueryCompilationCaching(TestCase):
     @pytest.fixture(autouse=True)
     def provide_engine(self, cratedb_service):
-        self.engine = cratedb_service.database.engine
+        self.engine = cratedb_service.engine
 
     def setUp(self):
         self.metadata = sa.MetaData(schema="testdrive")
