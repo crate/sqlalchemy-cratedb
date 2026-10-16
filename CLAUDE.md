@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`sqlalchemy-cratedb` is a SQLAlchemy dialect for CrateDB, a distributed SQL database. It supports SQLAlchemy 1.3 through 2.1 (with ongoing 2.1 compatibility work on the current branch).
+`sqlalchemy-cratedb` is a SQLAlchemy dialect for CrateDB, a distributed SQL database. It supports SQLAlchemy 1.4 through 2.1.
 
 ## Development Setup
 
@@ -44,7 +44,7 @@ Select the CrateDB version with `CRATEDB_VERSION`, an image tag (default: `lates
 - **`compiler.py`** — SQL/DDL compilation: `CrateDDLCompiler`, `CrateTypeCompiler`, `CrateIdentifierPreparer`, and `rewrite_update()` for partial object updates
 - **`predicate.py`** — `match()` predicate for full-text search
 - **`sa_version.py`** — Version detection; exports `SA_VERSION`, `SA_1_4`, `SA_2_0`, `SA_2_1` constants
-- **`compat/`** — Multi-version SQLAlchemy compatibility: `core10.py`, `core14.py`, `core20.py`, `core21.py`, `api13.py`
+- **`compat/`** — Multi-version SQLAlchemy compatibility: `core14.py` (SQLAlchemy 1.4), `core20.py` (2.0 and 2.1)
 - **`type/`** — Custom CrateDB types: `ObjectType` (JSON objects), `ObjectArray`, `FloatVector`, `Geopoint`, `Geoshape`
 - **`support/`** — Integrations and polyfills: `pandas.py` (bulk insert), `polyfill.py` (refresh-after-DML, uniqueness, autoincrement timestamps), `util.py`
 

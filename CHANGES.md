@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- BREAKING: Dropped support for SQLAlchemy 1.3, which is EOL since 2021.
+  The minimum supported version is SQLAlchemy 1.4
+- Deprecated support for SQLAlchemy 1.4, which is EOL. Importing the dialect
+  with SQLAlchemy 1.4 emits a `FutureWarning`. A future release will
+  require SQLAlchemy 2.0
 - Dependencies: Replaced `cratedb-toolkit[testing]` with
   `testcontainers>=4.15,<5` in the `test` extra
 - Types: Fixed `UUID` columns rejecting every insert, since values were bound

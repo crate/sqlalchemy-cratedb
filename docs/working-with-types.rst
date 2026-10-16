@@ -23,10 +23,7 @@ Import the relevant symbols:
     >>> from sqlalchemy import delete, func, text
     >>> from sqlalchemy.orm import sessionmaker
     >>> from sqlalchemy.sql import operators
-    >>> try:
-    ...     from sqlalchemy.orm import declarative_base
-    ... except ImportError:
-    ...     from sqlalchemy.ext.declarative import declarative_base
+    >>> from sqlalchemy.orm import declarative_base
     >>> from uuid import uuid4
 
 Establish a connection to the database, see also :ref:`sa:engines_toplevel`

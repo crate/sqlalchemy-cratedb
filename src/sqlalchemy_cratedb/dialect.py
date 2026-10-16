@@ -35,7 +35,7 @@ from .compiler import (
     CrateIdentifierPreparer,
     CrateTypeCompiler,
 )
-from .sa_version import SA_1_4, SA_2_0, SA_VERSION
+from .sa_version import SA_2_0, SA_VERSION
 from .type import IP, FloatVector, Geopoint, Geoshape, ObjectArray, ObjectType, UnresolvedType
 from .util import SSLMode
 
@@ -238,14 +238,10 @@ if SA_VERSION >= SA_2_0:
     from .compat.core20 import CrateCompilerSA20
 
     statement_compiler = CrateCompilerSA20
-elif SA_VERSION >= SA_1_4:
+else:
     from .compat.core14 import CrateCompilerSA14
 
     statement_compiler = CrateCompilerSA14
-else:
-    from .compat.core10 import CrateCompilerSA10
-
-    statement_compiler = CrateCompilerSA10
 
 
 class CrateDialect(default.DefaultDialect):

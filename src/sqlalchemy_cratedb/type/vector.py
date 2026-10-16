@@ -21,10 +21,6 @@ see `pgvector.sqlalchemy.Vector.comparator_factory`.
 <#>: max_inner_product
 <=>: cosine_distance
 
-## Backlog
-- After dropping support for SQLAlchemy 1.3, use
-  `class FloatVector(sa.TypeDecorator[t.Sequence[float]]):`
-
 ## Origin
 This module is based on the corresponding pgvector implementation
 by Andrew Kane. Thank you.
@@ -86,7 +82,7 @@ def to_db(value: t.Any, dim: t.Optional[int] = None) -> t.Optional[t.List]:
     return value
 
 
-class FloatVector(sa.TypeDecorator):
+class FloatVector(sa.TypeDecorator[t.Sequence[float]]):
     """
     SQLAlchemy `FloatVector` data type for CrateDB.
     """

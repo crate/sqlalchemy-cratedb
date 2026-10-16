@@ -21,20 +21,14 @@
 
 from __future__ import absolute_import
 
-from unittest import TestCase, skipIf
+from unittest import TestCase
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, declarative_base
 from sqlalchemy.sql.operators import eq
 
 from sqlalchemy_cratedb import ObjectArray, ObjectType
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
 
 
 class SqlAlchemyQueryCompilationCaching(TestCase):
@@ -120,7 +114,6 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
             self.assertIs(connection.dialect.CACHE_HIT, result.context.cache_hit)
         return results
 
-    @skipIf(SA_VERSION < SA_1_4, "On SA13, the 'ResultProxy' object has no attribute 'scalar_one'")
     def test_object_multiple_select_legacy(self):
         """
         The SQLAlchemy implementation of CrateDB's `OBJECT` type offers indexed
@@ -144,7 +137,6 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
         result = self.session.execute(selectable).scalar_one().data
         self.assertEqual({"y": 2}, result)
 
-    @skipIf(SA_VERSION < SA_1_4, "On SA13, the 'ResultProxy' object has no attribute 'scalar_one'")
     def test_object_multiple_select_modern(self):
         """
         The SQLAlchemy implementation of CrateDB's `OBJECT` type offers indexed
@@ -168,7 +160,6 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
         result = self.session.execute(selectable).scalar_one().data
         self.assertEqual({"y": 2}, result)
 
-    @skipIf(SA_VERSION < SA_1_4, "On SA13, the 'ResultProxy' object has no attribute 'scalar_one'")
     def test_objectarray_multiple_select(self):
         """
         The `ObjectType` column of the entity turns off caching for these
@@ -185,19 +176,16 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
         result = self.session.execute(selectable).scalar_one().data
         self.assertEqual({"y": 2}, result)
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has no statement cache")
     def test_subscript_array_index(self):
         self.setup_subscript_data()
         arr = self.subscripts.c.arr
         self.assertEqual([10, 20], self.execute_twice(sa.select(arr[1]), sa.select(arr[2])))
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has no statement cache")
     def test_subscript_array_index_bindparam(self):
         self.setup_subscript_data()
         statement = sa.select(self.subscripts.c.arr[sa.bindparam("pos")])
         self.assertEqual([10, 30], self.execute_twice(statement, statement, {"pos": 1}, {"pos": 3}))
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has no statement cache")
     def test_subscript_array_index_expression_bindparam(self):
         self.setup_subscript_data()
         t = self.subscripts
@@ -207,7 +195,6 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
             connection = connection.execution_options(compiled_cache=None)
             self.assertEqual(20, connection.execute(statement, {"off": 1}).scalar())
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has no statement cache")
     def test_subscript_executemany(self):
         """
         SQLAlchemy does not support `literal_execute` with `executemany()`.
@@ -227,7 +214,6 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
                 0, connection.execute(sa.select(sa.func.count()).select_from(t)).scalar()
             )
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has a different `select()` signature")
     def test_subscript_expression_executemany(self):
         self.setup_subscript_data()
         t = self.subscripts
@@ -241,7 +227,6 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
                 0, connection.execute(sa.select(sa.func.count()).select_from(t)).scalar()
             )
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has no statement cache")
     def test_subscript_array_index_where(self):
         self.setup_subscript_data()
         t = self.subscripts
@@ -253,7 +238,6 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
             ),
         )
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has no statement cache")
     def test_subscript_array_slice(self):
         self.setup_subscript_data()
         arr = self.subscripts.c.arr
@@ -261,7 +245,6 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
             [[10, 20], [20, 30]], self.execute_twice(sa.select(arr[1:2]), sa.select(arr[2:3]))
         )
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has no statement cache")
     def test_subscript_array_update(self):
         self.setup_subscript_data()
         t = self.subscripts
@@ -275,7 +258,6 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
             connection.execute(sa.text("REFRESH TABLE testdrive.subscripts"))
             self.assertEqual([99, 88, 30], connection.execute(sa.select(t.c.arr)).scalar())
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has no statement cache")
     def test_subscript_objectarray_key(self):
         self.setup_subscript_data()
         objarr = self.subscripts.c.objarr
@@ -284,7 +266,6 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
             self.execute_twice(sa.select(objarr["foo"]), sa.select(objarr["bar"])),
         )
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has no statement cache")
     def test_subscript_objectarray_index_key(self):
         self.setup_subscript_data()
         objarr = self.subscripts.c.objarr
@@ -293,13 +274,11 @@ class SqlAlchemyQueryCompilationCaching(TestCase):
             self.execute_twice(sa.select(objarr[1]["foo"]), sa.select(objarr[2]["foo"])),
         )
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has no statement cache")
     def test_subscript_json_key(self):
         self.setup_subscript_data()
         js = self.subscripts.c.js
         self.assertEqual(["JX", "JY"], self.execute_twice(sa.select(js["x"]), sa.select(js["y"])))
 
-    @skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 has no statement cache")
     def test_subscript_json_key_with_quote(self):
         self.setup_subscript_data()
         js = self.subscripts.c.js

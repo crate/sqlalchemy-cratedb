@@ -1,19 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from sqlalchemy_cratedb.compat.api13 import (
-    monkeypatch_add_connectionfairy_driver_connection,
-    monkeypatch_amend_select_sa14,
-)
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
-
-from .util import ParametrizedTestCase
-
-# `sql.select()` of SQLAlchemy 1.3 uses old calling semantics,
-# but the test cases already need the modern ones.
-if SA_VERSION < SA_1_4:
-    monkeypatch_amend_select_sa14()
-    monkeypatch_add_connectionfairy_driver_connection()
-
 from unittest import TestLoader, TestSuite
 
 from .array_test import SqlAlchemyArrayTypeTest
@@ -28,6 +14,7 @@ from .function_test import SqlAlchemyFunctionTest
 from .insert_from_select_test import SqlAlchemyInsertFromSelectTest
 from .match_test import SqlAlchemyMatchTest
 from .update_test import SqlAlchemyUpdateTest
+from .util import ParametrizedTestCase
 from .warnings_test import SqlAlchemyWarningsTest
 
 makeSuite = TestLoader().loadTestsFromTestCase
