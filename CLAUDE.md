@@ -33,8 +33,8 @@ pytest -k test_score
 pytest tests/test_documentation.py
 ```
 
-Tests require a live CrateDB instance via Docker (managed automatically by `cratedb_toolkit.testing.testcontainers`).
-Select the CrateDB version with `CRATEDB_VERSION`, a `crate/crate` image tag (default: `latest`), e.g. `CRATEDB_VERSION=5.10.16 pytest`.
+Tests require a live CrateDB instance via Docker, started automatically by the `cratedb_service` fixture through `testcontainers.community.cratedb`.
+Select the CrateDB version with `CRATEDB_VERSION`, an image tag (default: `latest`), e.g. `CRATEDB_VERSION=5.10.16 pytest`. `nightly` uses `crate/crate:nightly`, any other tag the official `crate` image.
 
 ## Architecture
 

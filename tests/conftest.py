@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 from crate.client.http import Client
-from cratedb_toolkit.testing.testcontainers.cratedb import CrateDBTestAdapter
+
+from tests.util import CrateDBTestAdapter
 
 # Use different schemas for storing the subsystem database tables, and the
 # test/example data, so that they do not accidentally touch the default `doc`
@@ -24,10 +25,12 @@ def cratedb_service():
     """
     Provide a CrateDB service instance to the test suite.
     """
-    db = CrateDBTestAdapter(crate_version=CRATEDB_VERSION)
-    db.start(volumes=[(str(ASSETS_PATH), "/assets", "ro")])
-    yield db
-    db.stop()
+    db = CrateDBTestAdapter(CRATEDB_VERSION)
+    try:
+        db.start(volumes=[(str(ASSETS_PATH), "/assets", "ro")])
+        yield db
+    finally:
+        db.stop()
 
 
 @pytest.fixture(scope="session")
@@ -38,7 +41,7 @@ def crate_host(cratedb_service):
     container = cratedb_service.cratedb
     return "{host}:{port}".format(
         host=container.get_container_host_ip(),
-        port=container.get_exposed_port(container.port_to_expose),
+        port=container.get_exposed_port(container.port),
     )
 
 

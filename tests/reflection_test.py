@@ -171,7 +171,7 @@ def test_unresolved_type_remains_selectable():
 
 @pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_reflected_system_table_renders_ddl(cratedb_service):
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     table = sa.Table("summits", sa.MetaData(schema="sys"), autoload_with=engine)
     ddl = str(sa.schema.CreateTable(table).compile(engine))
     assert "coordinates GEO_POINT" in ddl
@@ -179,7 +179,7 @@ def test_reflected_system_table_renders_ddl(cratedb_service):
 
 @pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_reflected_table_renders_string_lengths_and_ip(cratedb_service):
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     with engine.begin() as connection:
         connection.exec_driver_sql("DROP TABLE IF EXISTS reflected_strings")
         connection.exec_driver_sql(
@@ -194,7 +194,7 @@ def test_reflected_table_renders_string_lengths_and_ip(cratedb_service):
 
 @pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_ip_column_stores_ipaddress_objects(cratedb_service):
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     with engine.begin() as connection:
         connection.exec_driver_sql("DROP TABLE IF EXISTS ip_addresses")
         connection.exec_driver_sql("CREATE TABLE ip_addresses (address IP)")
