@@ -1,5 +1,8 @@
 import unittest
 
+import sqlalchemy as sa
+from testcontainers.community.cratedb import CrateDBContainer
+
 
 class ExtraAssertions:
     """
@@ -44,3 +47,35 @@ class ParametrizedTestCase(unittest.TestCase):
         for name in testnames:
             suite.addTest(testcase_klass(name, param=param))
         return suite
+
+
+class CrateDBTestAdapter:
+    """
+    Run CrateDB in a container, with an engine and a few SQL shortcuts for the tests.
+    """
+
+    def __init__(self, crate_version: str):
+        # Only `crate/crate` has nightly builds; its release tags are amd64-only, the official
+        # `crate` image is not.
+        image = "crate/crate:nightly" if crate_version == "nightly" else f"crate:{crate_version}"
+        self.cratedb = CrateDBContainer(image=image)
+
+    def start(self):
+        self.cratedb.start()
+        self.dburi = self.cratedb.get_connection_url()
+        self.engine = sa.create_engine(self.dburi)
+
+    def stop(self):
+        self.engine.dispose()
+        self.cratedb.stop()
+
+    def run_sql(self, sql: str):
+        with self.engine.begin() as connection:
+            result = connection.execute(sa.text(sql))
+            return result.fetchall() if result.returns_rows else None
+
+    def refresh_table(self, name: str):
+        self.run_sql(f"REFRESH TABLE {name}")
+
+    def count_records(self, name: str) -> int:
+        return self.run_sql(f"SELECT COUNT(*) FROM {name}")[0][0]

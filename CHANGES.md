@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Dependencies: Replaced `cratedb-toolkit[testing]` with
+  `testcontainers>=4.15,<5` in the `test` extra
 - Types: Fixed `UUID` columns rejecting every insert, since values were bound
   as 32 hex digits while CrateDB's `UUID` type takes the dashed form. The
   portable `Uuid` type keeps its `CHAR(32)` storage. Storing `UUID` requires

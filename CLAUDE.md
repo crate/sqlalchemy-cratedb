@@ -13,7 +13,6 @@ source bootstrap.sh   # Creates .venv with Python 3.11, installs all deps in edi
 ```
 
 Environment variables that influence bootstrap:
-- `CRATEDB_VERSION` (default: `5.5.1`) — CrateDB Docker image version
 - `SQLALCHEMY_VERSION` (default: `<2.2`) — SQLAlchemy version constraint
 - `PIP_ALLOW_PRERELEASE=true` — allow pre-release packages
 
@@ -34,7 +33,7 @@ pytest -k test_score
 python -m unittest -vvv tests/integration.py
 ```
 
-Tests require a live CrateDB instance via Docker (managed automatically by `cratedb_toolkit.testing.testcontainers`).
+Most tests need the CrateDB node from `tests/docker-compose.yml` up and answering on port 4200 before pytest starts. Tests using the `cratedb_service` fixture run against a second node, which the fixture starts itself through `testcontainers.community.cratedb`. `CRATEDB_VERSION` picks the image tag for both (fixture default: `nightly`).
 
 ## Architecture
 
