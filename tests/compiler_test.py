@@ -29,7 +29,6 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import Update, text
 
 from sqlalchemy_cratedb.compiler import crate_before_execute
-from tests.settings import crate_host
 from tests.util import ExtraAssertions
 
 try:
@@ -362,7 +361,7 @@ class CompilerTestCase(TestCase):
     """
 
     def setUp(self):
-        self.engine = sa.create_engine(f"crate://{crate_host}")
+        self.engine = sa.create_engine("crate://")
         self.metadata = sa.MetaData(schema="testdrive")
         self.session = sa.orm.Session(bind=self.engine)
         self.setup_mock()

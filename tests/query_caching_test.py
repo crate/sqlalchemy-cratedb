@@ -23,6 +23,7 @@ from __future__ import absolute_import
 
 from unittest import TestCase, skipIf
 
+import pytest
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.operators import eq
@@ -35,12 +36,13 @@ try:
 except ImportError:
     from sqlalchemy.ext.declarative import declarative_base
 
-from tests.settings import crate_host
-
 
 class SqlAlchemyQueryCompilationCaching(TestCase):
+    @pytest.fixture(autouse=True)
+    def provide_engine(self, cratedb_service):
+        self.engine = cratedb_service.engine
+
     def setUp(self):
-        self.engine = sa.create_engine(f"crate://{crate_host}")
         self.metadata = sa.MetaData(schema="testdrive")
         self.session = Session(bind=self.engine)
         self.Character = self.setup_entity()

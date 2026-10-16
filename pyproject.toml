@@ -261,7 +261,6 @@ tasks.release = [
 ]
 tasks.test = [
   { cmd = "pytest" },
-  { cmd = "python -m unittest -vvv tests/integration.py" },
 ]
 
 [tool.versioningit]
