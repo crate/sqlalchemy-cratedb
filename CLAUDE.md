@@ -21,7 +21,7 @@ Environment variables that influence bootstrap:
 ```bash
 poe format    # Auto-format code (ruff + black)
 poe lint      # Run linters (ruff, validate-pyproject)
-poe test      # Run pytest + integration tests
+poe test      # Run pytest, including the doctests
 poe check     # lint + test combined
 
 # Run specific tests
@@ -30,10 +30,11 @@ pytest -k SqlAlchemyCompilerTest
 pytest -k test_score
 
 # Run integration/doctests
-python -m unittest -vvv tests/integration.py
+pytest tests/test_documentation.py
 ```
 
-Most tests need the CrateDB node from `tests/docker-compose.yml` up and answering on port 4200 before pytest starts. Tests using the `cratedb_service` fixture run against a second node, which the fixture starts itself through `testcontainers.community.cratedb`. `CRATEDB_VERSION` picks the image tag for both (fixture default: `nightly`).
+Tests require a live CrateDB instance via Docker, started automatically by the `cratedb_service` fixture through `testcontainers.community.cratedb`.
+Select the CrateDB version with `CRATEDB_VERSION`, an image tag (default: `latest`), e.g. `CRATEDB_VERSION=5.10.16 pytest`. `nightly` uses `crate/crate:nightly`, any other tag the official `crate` image.
 
 ## Architecture
 
@@ -60,11 +61,13 @@ Most tests need the CrateDB node from `tests/docker-compose.yml` up and answerin
 ### Testing
 
 Tests in `tests/` follow two patterns:
-- `*_test.py` files: unit/integration tests using pytest with a live CrateDB instance
-- `tests/integration.py`: doctests for documentation examples, run with `unittest`
+- `*_test.py` and `test_*.py` files: pytest tests. Integration tests use the `cratedb_service` fixture; unit tests mock the driver's cursor and run offline
+- `tests/test_documentation.py`: runs the doctests in `docs/*.rst` against the same CrateDB instance
 
-The `conftest.py` provides a session-scoped `cratedb_service` fixture that starts CrateDB via Docker containers.
-
+The `conftest.py` provides:
+- `cratedb_service`: session-scoped, starts one CrateDB container (`crate:$CRATEDB_VERSION`, or `crate/crate:nightly` for `nightly`) with `tests/assets` mounted at `/assets`
+- `crate_host`: the container's `host:port`, used by the doctests
+- `offline_default_server`: autouse, answers the driver's connect-time server version probe for the default address `localhost:4200`.
 ## Code Style
 
 - Line length: 100 characters (ruff + black)

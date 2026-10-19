@@ -60,7 +60,9 @@ class CrateDBTestAdapter:
         image = "crate/crate:nightly" if crate_version == "nightly" else f"crate:{crate_version}"
         self.cratedb = CrateDBContainer(image=image)
 
-    def start(self):
+    def start(self, volumes=()):
+        for host_path, container_path, mode in volumes:
+            self.cratedb.with_volume_mapping(host_path, container_path, mode)
         self.cratedb.start()
         self.dburi = self.cratedb.get_connection_url()
         self.engine = sa.create_engine(self.dburi)
