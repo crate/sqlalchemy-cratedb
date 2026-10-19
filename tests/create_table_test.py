@@ -18,18 +18,13 @@
 # However, if you have executed another commercial license agreement
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
-import pytest
-import sqlalchemy as sa
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
-
 from unittest import TestCase, skipIf
 from unittest.mock import MagicMock, patch
 
+import pytest
+import sqlalchemy as sa
 from crate.client.cursor import Cursor
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.testing import AssertsCompiledSQL
 
 from sqlalchemy_cratedb import Geopoint, ObjectArray, ObjectType

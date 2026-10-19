@@ -7,7 +7,7 @@ from sqlalchemy import types as sqltypes
 
 from sqlalchemy_cratedb import IP, Geopoint, Geoshape, ObjectArray
 from sqlalchemy_cratedb.dialect import ARRAY_SUFFIX, TYPES_MAP, CrateDialect
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_0, SA_VERSION
+from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
 
 UNRESOLVABLE = "unresolvable_cratedb_type"
 
@@ -140,9 +140,6 @@ def test_unresolved_type_refuses_ddl_and_names_the_column_type(data_type):
     assert "column 'c'" in message
 
 
-@pytest.mark.skipif(
-    SA_VERSION < SA_1_4, reason="SQLAlchemy renders a type it has no visitor for from 1.4 onwards"
-)
 def test_unresolved_type_prints_its_crate_type_name():
     type_ = CrateDialect()._resolve_type(UNRESOLVABLE)
     assert UNRESOLVABLE in str(type_)
@@ -169,17 +166,15 @@ def test_unresolved_type_remains_selectable():
     assert "SELECT t.c" in str(table.select().compile(dialect=dialect))
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_reflected_system_table_renders_ddl(cratedb_service):
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     table = sa.Table("summits", sa.MetaData(schema="sys"), autoload_with=engine)
     ddl = str(sa.schema.CreateTable(table).compile(engine))
     assert "coordinates GEO_POINT" in ddl
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_reflected_table_renders_string_lengths_and_ip(cratedb_service):
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     with engine.begin() as connection:
         connection.exec_driver_sql("DROP TABLE IF EXISTS reflected_strings")
         connection.exec_driver_sql(
@@ -192,9 +187,8 @@ def test_reflected_table_renders_string_lengths_and_ip(cratedb_service):
     assert "address IP" in ddl
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_ip_column_stores_ipaddress_objects(cratedb_service):
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     with engine.begin() as connection:
         connection.exec_driver_sql("DROP TABLE IF EXISTS ip_addresses")
         connection.exec_driver_sql("CREATE TABLE ip_addresses (address IP)")

@@ -2,12 +2,7 @@ from decimal import Decimal
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.orm import sessionmaker
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from sqlalchemy_cratedb.dialect import CrateDialect
 
@@ -35,7 +30,7 @@ class Ledger(Base):
 
 @pytest.fixture
 def session(cratedb_service):
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     session = sessionmaker(bind=engine)()
     Base.metadata.drop_all(engine, checkfirst=True)
     Base.metadata.create_all(engine, checkfirst=True)

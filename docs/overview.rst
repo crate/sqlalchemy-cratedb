@@ -17,7 +17,7 @@ The ``sqlalchemy-cratedb`` package provides the :ref:`SQLAlchemy dialect
 installation time, and can be used without further configuration.
 
 The CrateDB SQLAlchemy dialect is validated to work with SQLAlchemy versions
-``1.3``, ``1.4``, and ``2.0``.
+``1.4``, ``2.0``, and ``2.1``.
 
 .. SEEALSO::
 

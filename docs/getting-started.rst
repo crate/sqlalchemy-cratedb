@@ -23,10 +23,7 @@ Import the relevant symbols:
 
     >>> import sqlalchemy as sa
     >>> from sqlalchemy.orm import sessionmaker
-    >>> try:
-    ...     from sqlalchemy.orm import declarative_base
-    ... except ImportError:
-    ...     from sqlalchemy.ext.declarative import declarative_base
+    >>> from sqlalchemy.orm import declarative_base
 
 Establish a connection to the database, see also :ref:`sa:engines_toplevel`
 and :ref:`connect`:
@@ -99,13 +96,13 @@ Timeout Options
 In order to configure TCP timeout options, use the ``timeout`` parameter within
 ``connect_args``,
 
-    >>> timeout_engine = sa.create_engine('crate://localhost/', connect_args={'timeout': 42.42})
+    >>> timeout_engine = sa.create_engine(f"crate://{crate_host}/", connect_args={'timeout': 42.42})
     >>> timeout_engine.raw_connection().driver_connection.client._pool_kw["timeout"]
     42.42
 
 or use the ``timeout`` URL parameter within the database connection URL.
 
-    >>> timeout_engine = sa.create_engine('crate://localhost/?timeout=42.42')
+    >>> timeout_engine = sa.create_engine(f"crate://{crate_host}/?timeout=42.42")
     >>> timeout_engine.raw_connection().driver_connection.client._pool_kw["timeout"]
     42.42
 
@@ -115,13 +112,13 @@ Pool Size
 In order to configure the database connection pool size, use the ``pool_size``
 parameter within ``connect_args``,
 
-    >>> timeout_engine = sa.create_engine('crate://localhost/', connect_args={'pool_size': 20})
+    >>> timeout_engine = sa.create_engine(f"crate://{crate_host}/", connect_args={'pool_size': 20})
     >>> timeout_engine.raw_connection().driver_connection.client._pool_kw["maxsize"]
     20
 
 or use the ``pool_size`` URL parameter within the database connection URL.
 
-    >>> timeout_engine = sa.create_engine('crate://localhost/?pool_size=20')
+    >>> timeout_engine = sa.create_engine(f"crate://{crate_host}/?pool_size=20")
     >>> timeout_engine.raw_connection().driver_connection.client._pool_kw["maxsize"]
     20
 
