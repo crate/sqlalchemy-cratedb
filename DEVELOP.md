@@ -18,7 +18,7 @@ Verify code by running all linters and software tests:
 
     poe check
 
-The test suite starts a CrateDB instance using Docker. Select the CrateDB
+The test suite starts a CrateDB instance using Docker. Select the CrateDB version with a tag of the official `crate` image (default: `latest`), or `nightly` for `crate/crate:nightly`:
 version using the tag of the `crate/crate` image, the default is `latest`:
 
     export CRATEDB_VERSION=6.4.6

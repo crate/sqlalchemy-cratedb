@@ -65,7 +65,7 @@ Tests in `tests/` follow two patterns:
 - `tests/test_documentation.py`: runs the doctests in `docs/*.rst` against the same CrateDB instance
 
 The `conftest.py` provides:
-- `cratedb_service`: session-scoped, starts one CrateDB container (`crate/crate:$CRATEDB_VERSION`) with `tests/assets` mounted at `/assets`
+- `cratedb_service`: session-scoped, starts one CrateDB container (`crate:$CRATEDB_VERSION`, or `crate/crate:nightly` for `nightly`) with `tests/assets` mounted at `/assets`
 - `crate_host`: the container's `host:port`, used by the doctests
 - `offline_default_server`: autouse, answers the driver's connect-time server version probe for the default address `localhost:4200`.
 ## Code Style
