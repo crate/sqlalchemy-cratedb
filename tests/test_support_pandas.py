@@ -43,7 +43,7 @@ def test_table_kwargs_partitioned_by(cratedb_service):
     Validate adding CrateDB dialect table option `PARTITIONED BY` at runtime.
     """
 
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
 
     # Insert records from pandas dataframe.
     with table_kwargs(crate_partitioned_by="time"):
@@ -55,16 +55,16 @@ def test_table_kwargs_partitioned_by(cratedb_service):
         )
 
     # Synchronize writes.
-    cratedb_service.database.refresh_table(TABLE_NAME)
+    cratedb_service.refresh_table(TABLE_NAME)
 
     # Inquire table cardinality.
-    count = cratedb_service.database.count_records(TABLE_NAME)
+    count = cratedb_service.count_records(TABLE_NAME)
 
     # Compare outcome.
     assert count == INSERT_RECORDS
 
     # Validate SQL DDL.
-    ddl = cratedb_service.database.run_sql(f"SHOW CREATE TABLE {TABLE_NAME}")
+    ddl = cratedb_service.run_sql(f"SHOW CREATE TABLE {TABLE_NAME}")
     assert 'PARTITIONED BY ("time")' in ddl[0][0]
 
 
@@ -76,7 +76,7 @@ def test_table_kwargs_translog_durability(cratedb_service):
     Validate adding CrateDB dialect table option `translog.durability` at runtime.
     """
 
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
 
     # Insert records from pandas dataframe.
     with table_kwargs(**{'crate_"translog.durability"': "'async'"}):
@@ -88,16 +88,16 @@ def test_table_kwargs_translog_durability(cratedb_service):
         )
 
     # Synchronize writes.
-    cratedb_service.database.refresh_table(TABLE_NAME)
+    cratedb_service.refresh_table(TABLE_NAME)
 
     # Inquire table cardinality.
-    count = cratedb_service.database.count_records(TABLE_NAME)
+    count = cratedb_service.count_records(TABLE_NAME)
 
     # Compare outcome.
     assert count == INSERT_RECORDS
 
     # Validate SQL DDL.
-    ddl = cratedb_service.database.run_sql(f"SHOW CREATE TABLE {TABLE_NAME}")
+    ddl = cratedb_service.run_sql(f"SHOW CREATE TABLE {TABLE_NAME}")
     assert """"translog.durability" = 'ASYNC'""" in ddl[0][0]
 
 
@@ -108,7 +108,7 @@ def test_table_kwargs_unknown(cratedb_service):
     """
     Validate behaviour when adding an unknown CrateDB dialect table option.
     """
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     with table_kwargs(crate_unknown_option="'bazqux'"):
         with pytest.raises(ProgrammingError) as ex:
             df.to_sql(
@@ -135,14 +135,14 @@ def test_float_special_values(cratedb_service):
     CrateDB stores all of them as NULL, so they all read back as NaN in pandas.
     """
     tablename = "pandas_float_special"
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     float_nan_df.to_sql(
         tablename,
         engine,
         if_exists="replace",
         index=False,
     )
-    cratedb_service.database.run_sql(f"REFRESH TABLE {tablename}")
+    cratedb_service.run_sql(f"REFRESH TABLE {tablename}")
     df_load = pd.read_sql_table(tablename, engine)
     assert df_load["col_1"].isna().all()
 
@@ -157,14 +157,14 @@ def test_float_double(cratedb_service):
     Motto: Do not lose precision when DOUBLE is required.
     """
     tablename = "pandas_double"
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     float_double_df.to_sql(
         tablename,
         engine,
         if_exists="replace",
         index=False,
     )
-    cratedb_service.database.run_sql(f"REFRESH TABLE {tablename}")
+    cratedb_service.run_sql(f"REFRESH TABLE {tablename}")
     df_load = pd.read_sql_table(tablename, engine)
 
     before = float_double_df.sort_values(by="col_1", ignore_index=True)
