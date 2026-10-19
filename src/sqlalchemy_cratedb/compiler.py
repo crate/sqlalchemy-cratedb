@@ -26,10 +26,17 @@ from collections import defaultdict
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql.base import RESERVED_WORDS as POSTGRESQL_RESERVED_WORDS
 from sqlalchemy.dialects.postgresql.base import PGCompiler
-from sqlalchemy.sql import compiler
+from sqlalchemy.sql import compiler, operators
+from sqlalchemy.sql.elements import (
+    BinaryExpression,
+    BindParameter,
+    Grouping,
+    Null,
+    Slice,
+    TypeCoerce,
+)
 from sqlalchemy.types import String
 
-from .sa_version import SA_1_4, SA_VERSION
 from .type.geo import Geopoint, Geoshape
 from .type.object import MutableDict, ObjectTypeImpl
 
@@ -78,23 +85,36 @@ def rewrite_update(clauseelement, multiparams, params):
 def crate_before_execute(conn, clauseelement, multiparams, params, *args, **kwargs):
     is_crate = type(conn.dialect).__name__ == "CrateDialect"
     if is_crate and isinstance(clauseelement, sa.sql.expression.Update):
-        if SA_VERSION >= SA_1_4:
-            if params is None:
-                multiparams = ([],)
-            else:
-                multiparams = ([params],)
-            params = {}
+        if params is None:
+            multiparams = ([],)
+        else:
+            multiparams = ([params],)
+        params = {}
 
         clauseelement, multiparams, params = rewrite_update(clauseelement, multiparams, params)
 
-        if SA_VERSION >= SA_1_4:
-            if multiparams[0]:
-                params = multiparams[0][0]
-            else:
-                params = multiparams[0]
-            multiparams = []
+        if multiparams[0]:
+            params = multiparams[0][0]
+        else:
+            params = multiparams[0]
+        multiparams = []
 
     return clauseelement, multiparams, params
+
+
+def _require_numeric_precision(type_):
+    if isinstance(type_, sa.types.ARRAY):
+        _require_numeric_precision(type_.item_type)
+        return
+    if isinstance(type_, sa.types.TypeDecorator):
+        _require_numeric_precision(type_.impl)
+        return
+    if isinstance(type_, sa.types.Numeric) and not isinstance(type_, sa.types.Float):
+        if type_.precision is None:
+            raise sa.exc.CompileError(
+                "CrateDB stores a NUMERIC column only with a precision, "
+                "as in Numeric(precision=10, scale=2)"
+            )
 
 
 class CrateDDLCompiler(compiler.DDLCompiler):
@@ -106,6 +126,7 @@ class CrateDDLCompiler(compiler.DDLCompiler):
     __clustered_opt_tmpl = " CLUSTERED{clustered_by}{number_of_shards}"
 
     def get_column_specification(self, column, **kwargs):
+        _require_numeric_precision(column.type)
         colspec = (
             self.preparer.format_column(column)
             + " "
@@ -222,8 +243,17 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
     def visit_TEXT(self, type_, **kw):
         return "STRING"
 
+    def visit_CLOB(self, type_, **kw):
+        return "STRING"
+
+    def visit_NCHAR(self, type_, **kw):
+        return self.visit_CHAR(type_, **kw)
+
+    def visit_NVARCHAR(self, type_, **kw):
+        return self.visit_VARCHAR(type_, **kw)
+
     def visit_DECIMAL(self, type_, **kw):
-        return "DOUBLE"
+        return self.visit_NUMERIC(type_, **kw)
 
     def visit_double(self, type_, **kw):
         return "DOUBLE"
@@ -232,7 +262,15 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         return "LONG"
 
     def visit_NUMERIC(self, type_, **kw):
-        return "LONG"
+        """
+        A bare `NUMERIC` is a valid cast target; only columns require the
+        precision, which `CrateDDLCompiler` enforces.
+        """
+        if type_.precision is None:
+            return "NUMERIC"
+        if type_.scale is None:
+            return "NUMERIC({0})".format(type_.precision)
+        return "NUMERIC({0}, {1})".format(type_.precision, type_.scale)
 
     def visit_INTEGER(self, type_, **kw):
         return "INT"
@@ -240,11 +278,11 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
     def visit_SMALLINT(self, type_, **kw):
         return "SHORT"
 
-    def visit_datetime(self, type_, **kw):
+    def visit_DATETIME(self, type_, **kw):
         return self.visit_TIMESTAMP(type_, **kw)
 
-    def visit_date(self, type_, **kw):
-        return "TIMESTAMP"
+    def visit_DATE(self, type_, **kw):
+        return "DATE" if kw.get("cast_target") else "TIMESTAMP"
 
     def visit_TIME(self, type_, **kw):
         """
@@ -258,7 +296,12 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
     def visit_ARRAY(self, type_, **kw):
         if type_.dimensions is not None and type_.dimensions > 1:
             raise NotImplementedError("CrateDB doesn't support multidimensional arrays")
-        return "ARRAY({0})".format(self.process(type_.item_type))
+        return "ARRAY({0})".format(self.process(type_.item_type, **kw))
+
+    def visit_unresolved(self, type_, **kw):
+        raise sa.exc.CompileError(
+            "Unable to represent CrateDB type '{0}' in SQLAlchemy".format(type_.type_name)
+        )
 
     def visit_OBJECT(self, type_, **kw):
         return "OBJECT"
@@ -302,15 +345,117 @@ class CrateTypeCompiler(compiler.GenericTypeCompiler):
         return "OBJECT"
 
 
+def _slice_bound(value):
+    if value is None:
+        return ""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise sa.exc.CompileError(f"CrateDB array slices take integer bounds, not {value!r}")
+    return str(value)
+
+
+class _SubscriptType(sa.types.TypeEngine):
+    """
+    Renders an array index, an array slice, or an object key as a literal.
+
+    With `int_as_key`, an integer renders as an object key.
+    """
+
+    cache_ok = True
+    # Reject `None`, instead of rendering it as `NULL`.
+    should_evaluate_none = True
+
+    def __init__(self, int_as_key=False):
+        self.int_as_key = int_as_key
+
+    def literal_processor(self, dialect):
+        def process(value):
+            if isinstance(value, slice):
+                if value.step is not None:
+                    raise sa.exc.CompileError("CrateDB array slices do not support a step")
+                return "%s:%s" % (_slice_bound(value.start), _slice_bound(value.stop))
+            if isinstance(value, bool) or not isinstance(value, (int, str)):
+                raise sa.exc.CompileError(
+                    f"CrateDB subscripts take an integer index or a string key, not {value!r}"
+                )
+            if isinstance(value, int) and not self.int_as_key:
+                return str(value)
+            return "'%s'" % str(value).replace("'", "''")
+
+        return process
+
+
+def _is_top_level_object(element):
+    """
+    Whether `element` is an object, and not a value taken out of one, which
+    may be an array. CrateDB does not accept an array index on an object.
+    """
+    while isinstance(element, Grouping):
+        element = element.element
+    if isinstance(element, BinaryExpression) and element.operator in (
+        operators.getitem,
+        operators.json_getitem_op,
+    ):
+        return False
+    return isinstance(element.type, sa.types.JSON)
+
+
+def _unwrap_bindparam(element):
+    """
+    Return the bind parameter inside `element`, if it renders as a bare one.
+    """
+    inner = element
+    while isinstance(inner, Grouping):
+        inner = inner.element
+    if isinstance(inner, TypeCoerce):
+        inner = inner.typed_expression
+    return inner if isinstance(inner, BindParameter) else element
+
+
 class CrateCompiler(compiler.SQLCompiler):
+    def visit_typeclause(self, typeclause, **kw):
+        """
+        Mark that a type is being rendered as a cast target.
+        """
+        return super().visit_typeclause(typeclause, cast_target=True, **kw)
+
     visit_on_conflict_do_update = PGCompiler.visit_on_conflict_do_update
     _on_conflict_target = PGCompiler._on_conflict_target
 
+    def _render_subscript(self, binary, **kw):
+        left = self.process(binary.left, **kw)
+        index = _unwrap_bindparam(binary.right)
+        if isinstance(index, Slice):
+            return "%s[%s]" % (left, self._render_slice(index, **kw))
+        if not isinstance(index, BindParameter):
+            # CrateDB accepts bind parameters inside an expression.
+            return "%s[%s]" % (left, self.process(index, **kw))
+
+        # CrateDB does not accept a bind parameter as an array index or object
+        # key, so render it as a literal.
+        type_ = _SubscriptType(int_as_key=_is_top_level_object(binary.left))
+        if not index.required:
+            type_.literal_processor(self.dialect)(index.effective_value)
+        if index.required or getattr(self, "cache_key", None) is not None:
+            kw["literal_execute"] = True
+        else:
+            kw["literal_binds"] = True
+        index = sa.type_coerce(index, type_).typed_expression
+        return "%s[%s]" % (left, self.process(index, **kw))
+
+    def _render_slice(self, slice_, **kw):
+        # CrateDB accepts bind parameters as slice bounds.
+        if not isinstance(slice_.step, Null):
+            raise sa.exc.CompileError("CrateDB array slices do not support a step")
+        return ":".join(
+            "" if isinstance(bound, Null) else self.process(bound, **kw)
+            for bound in (slice_.start, slice_.stop)
+        )
+
     def visit_getitem_binary(self, binary, operator, **kw):
-        return "{0}['{1}']".format(self.process(binary.left, **kw), binary.right.value)
+        return self._render_subscript(binary, **kw)
 
     def visit_json_getitem_op_binary(self, binary, operator, _cast_applied=False, **kw):
-        return "{0}['{1}']".format(self.process(binary.left, **kw), binary.right.value)
+        return self._render_subscript(binary, **kw)
 
     def visit_any(self, element, **kw):
         return "%s%sANY (%s)" % (

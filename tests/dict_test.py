@@ -22,7 +22,7 @@
 from __future__ import absolute_import
 
 import re
-from unittest import TestCase, skipIf
+from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 import sqlalchemy as sa
@@ -40,14 +40,13 @@ except ImportError:
 from crate.client.cursor import Cursor
 
 from sqlalchemy_cratedb import ObjectArray, ObjectType
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_1, SA_VERSION
+from sqlalchemy_cratedb.sa_version import SA_2_1, SA_VERSION
 
 fake_cursor = MagicMock(name="fake_cursor")
 FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 FakeCursor.return_value = fake_cursor
 
 
-@skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 class SqlAlchemyDictTypeTest(TestCase):
     def setUp(self):
         self.engine = sa.create_engine("crate://")
@@ -90,6 +89,53 @@ class SqlAlchemyDictTypeTest(TestCase):
         s = s.where(mytable.c.data["x"] == mytable.c.name)
         self.assertSQL(
             "SELECT mytable.name FROM mytable " + "WHERE mytable.data['x'] = mytable.name", s
+        )
+
+    def test_select_with_dict_column_quote_in_key(self):
+        mytable = self.mytable
+        self.assertSQL(
+            "SELECT mytable.data['it''s'] AS anon_1 FROM mytable", select(mytable.c.data["it's"])
+        )
+
+    def test_select_with_dict_column_injection_in_key(self):
+        mytable = self.mytable
+        s = select(mytable.c.name).where(mytable.c.data["x'] = 1 OR TRUE OR mytable.data['x"] == 1)
+        self.assertSQL(
+            "SELECT mytable.name FROM mytable "
+            "WHERE mytable.data['x''] = 1 OR TRUE OR mytable.data[''x'] = %(param_1)s",
+            s,
+        )
+
+    def test_select_with_dict_column_integer_key(self):
+        # CrateDB does not accept an array index on an object.
+        mytable = self.mytable
+        self.assertSQL("SELECT mytable.data['1'] AS anon_1 FROM mytable", select(mytable.c.data[1]))
+
+    def test_select_with_dict_column_invalid_key(self):
+        mytable = self.mytable
+        with self.assertRaises(sa.exc.CompileError) as cm:
+            select(mytable.c.data[True]).compile(bind=self.engine)
+        self.assertEqual(
+            "CrateDB subscripts take an integer index or a string key, not True", str(cm.exception)
+        )
+
+    def test_select_with_dict_column_nested_index(self):
+        # A value inside an object may be an array.
+        mytable = self.mytable
+        self.assertSQL(
+            "SELECT mytable.data['nums'][2] AS anon_1 FROM mytable",
+            select(mytable.c.data["nums"][2]),
+        )
+
+    def test_select_with_dict_column_nested_slice(self):
+        mytable = self.mytable
+        self.assertSQL(
+            "SELECT mytable.data['nums'][1:2] AS anon_1 FROM mytable",
+            select(mytable.c.data["nums"][1:2]),
+        )
+        self.assertSQL(
+            "SELECT mytable.data['nums'][:2] AS anon_1 FROM mytable",
+            select(mytable.c.data["nums"][:2]),
         )
 
     def test_update_with_dict_column(self):

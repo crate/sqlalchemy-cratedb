@@ -80,7 +80,7 @@ dynamic = [
 dependencies = [
   "crate>=2.2.1,<3",
   "geojson>=2.5,<4",
-  "sqlalchemy>=1,<2.2",
+  "sqlalchemy>=1.4,<2.2",
   "verlib2<26.3",
 ]
 optional-dependencies.all = [
@@ -102,13 +102,14 @@ optional-dependencies.release = [
   "twine<8",
 ]
 optional-dependencies.test = [
-  "cratedb-toolkit[testing]",
   "dask[dataframe]",
+  "httpx",
   "pandas<2.4",
   "pueblo>=0.0.7",
   "pytest<10",
   "pytest-cov<8",
   "pytest-mock<4",
+  "testcontainers>=4.15,<5",
 ]
 optional-dependencies.vector = [
   "numpy",
@@ -260,7 +261,6 @@ tasks.release = [
 ]
 tasks.test = [
   { cmd = "pytest" },
-  { cmd = "python -m unittest -vvv tests/integration.py" },
 ]
 
 [tool.versioningit]

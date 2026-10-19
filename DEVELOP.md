@@ -16,9 +16,13 @@ further commands.
 
 Verify code by running all linters and software tests:
 
-    export CRATEDB_VERSION=latest
-    docker compose -f tests/docker-compose.yml up
     poe check
+
+The test suite starts a CrateDB instance using Docker. Select the CrateDB version with a tag of the official `crate` image (default: `latest`), or `nightly` for `crate/crate:nightly`:
+version using the tag of the `crate/crate` image, the default is `latest`:
+
+    export CRATEDB_VERSION=6.4.6
+    poe test
 
 Run specific tests:
 
@@ -26,7 +30,7 @@ Run specific tests:
     pytest -k test_score
 
     # Integration tests, written as doctests.
-    python -m unittest -vvv tests/integration.py
+    pytest tests/test_documentation.py
 
 Format code:
 

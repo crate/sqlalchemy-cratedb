@@ -63,12 +63,14 @@ CrateDB           SQLAlchemy
 `byte`__          `SmallInteger`__
 `short`__         `SmallInteger`__
 `integer`__       `Integer`__
-`long`__          `NUMERIC`__
+`long`__          `BigInteger`__
+`numeric`__       `Numeric`__
 `float`__         `Float`__
 `float_vector`__  :ref:`floatvector` |nbsp| (extension type)
-`double`__        `DECIMAL`__
+`double`__        `Double`__
 `timestamp`__     `TIMESTAMP`__
 `string`__        `String`__
+`character`__     `CHAR`__
 `array`__         `ARRAY`__
 `object`__        :ref:`object` |nbsp| (extension type)
 `object`__        ``JSON``
@@ -76,6 +78,8 @@ CrateDB           SQLAlchemy
 `array(object)`__ :ref:`objectarray` |nbsp| (extension type)
 `geo_point`__     :ref:`geopoint` |nbsp| (extension type)
 `geo_shape`__     :ref:`geoshape` |nbsp| (extension type)
+`ip`__            ``IP`` |nbsp| (extension type)
+`uuid`__          `UUID`__
 ================= =========================================
 
 
@@ -88,16 +92,20 @@ __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.S
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#numeric-data
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.Integer
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#numeric-data
-__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.NUMERIC
+__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.BigInteger
+__ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#numeric-precision-scale
+__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.Numeric
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#numeric-data
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.Float
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#float-vector
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#numeric-data
-__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.DECIMAL
+__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.Double
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#dates-and-times
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.TIMESTAMP
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#character-data
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.String
+__ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#data-type-character
+__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.CHAR
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#array
 __ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.ARRAY
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#object
@@ -106,6 +114,40 @@ __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.htm
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#array
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#geo-point
 __ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#geo-shape
+__ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#type-ip
+__ https://cratedb.com/docs/crate/reference/en/latest/general/ddl/data-types.html#type-uuid
+__ http://docs.sqlalchemy.org/en/latest/core/type_basics.html#sqlalchemy.types.UUID
+
+
+Reflection resolves a column whose CrateDB type is missing from this map to
+``UnresolvedType``, and emits an ``SAWarning`` naming the type and the column.
+Such a column can still be selected, but rendering it into DDL raises a
+``CompileError``.
+
+.. note::
+
+    ``UUID`` renders CrateDB's ``UUID`` type, supported by CrateDB since 6.2.
+    The portable ``Uuid`` type keeps storing 32 hex digits in a ``CHAR(32)``
+    column.
+
+.. note::
+
+    ``NUMERIC`` and ``DECIMAL`` name the same type, rendered into the DDL as
+    ``NUMERIC(precision, scale)``. CrateDB stores up to 38 digits, and requires
+    the precision, so declaring a column without one raises a compile error
+    rather than emitting DDL the server would reject. Giving a precision but no
+    scale means a scale of zero, as it does in standard SQL, so
+    ``Numeric(10)`` holds whole numbers. Storing the type requires CrateDB 5.9
+    or later.
+
+    Values are written exactly: a ``Decimal`` reaches the database with every
+    digit it was given. Reading is narrower, because the driver reads the
+    numbers in a response as floats, so a returned value carries at most the
+    digits a float holds.
+
+    Reflection recovers a column's type from its name alone, so a reflected
+    ``NUMERIC`` column carries no precision and cannot be rendered back into
+    DDL.
 
 
 .. _TIMESTAMP conversion with time zone: https://cratedb.com/docs/python/en/latest/query.html#timestamp-conversion-with-time-zone

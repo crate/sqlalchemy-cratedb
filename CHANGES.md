@@ -1,5 +1,59 @@
 # Changelog
 
+## Unreleased
+- BREAKING: Dropped support for SQLAlchemy 1.3, which is EOL since 2021.
+  The minimum supported version is SQLAlchemy 1.4
+- Deprecated support for SQLAlchemy 1.4, which is EOL. Importing the dialect
+  with SQLAlchemy 1.4 emits a `FutureWarning`. A future release will
+  require SQLAlchemy 2.0
+
+## 2026/10/19 0.44.0
+- Types: Fixed `sa.Time` raising `Cannot find data type: time`. `Time` columns 
+  are created as `STRING` and hold values in ISO 8601 format.
+- Types: Fixed `DateTime` results failing when the driver's `time_zone`
+  connect argument is set. Timezone-aware `datetime` values converted by the
+  driver now pass through unchanged
+- Dependencies: Replaced `cratedb-toolkit[testing]` with
+  `testcontainers>=4.15,<5` in the `test` extra
+- Types: Fixed `UUID` columns rejecting every insert, since values were bound
+  as 32 hex digits while CrateDB's `UUID` type takes the dashed form. The
+  portable `Uuid` type keeps its `CHAR(32)` storage. Storing `UUID` requires
+  CrateDB 6.2 or later
+- Types: Added `uuid` and `uuid_array` to the reflected type map
+- Types: Fixed `CLOB`, `NCHAR`, `NVARCHAR`, `DATETIME`, and `DATE` compiling to
+  type names CrateDB cannot parse. They now map to `STRING`, `CHAR`, `VARCHAR`,
+  and `TIMESTAMP` respectively, matching their generic lower-case counterparts
+- BREAKING: Types: `cast(x, Date)` now renders `CAST(x AS DATE)` instead of
+  `CAST(x AS TIMESTAMP)`.
+- Types: Mapped `Numeric` and `DECIMAL` to CrateDB's `NUMERIC`, carrying the
+  declared precision and scale into DDL and casts, where they previously
+  compiled to `LONG` and `DOUBLE` and lost them. Declaring such a column
+  without a precision now raises `CompileError`, since CrateDB only stores
+  the type with one. Storing the type requires CrateDB 5.9 or later
+- BREAKING: Types: Bound `Decimal` values now reach the driver unconverted,
+  which serializes them as strings, storing every digit instead of rounding to
+  float. A `LONG` column that an earlier release created from `Numeric` rejects
+  any such value written with a decimal point, `1.00` included, so those
+  columns need migrating to `NUMERIC`
+- Types: Added `numeric` and `numeric_array` to the reflected type map, where
+  they previously resolved to an abstract type that could not be compiled
+- Compiler: Fixed array indexes rendering as object keys, as in `arr['1']`.
+  Added support for array slices, and for columns and expressions as indexes
+- Compiler: Fixed cached statements on `sa.JSON` and `ObjectArray` columns
+  reusing the subscript of an earlier statement, which returned values of
+  another key. Fixed object keys containing a quote
+- BREAKING: Compiler: A statement with a literal subscript on an `sa.JSON`,
+  `ObjectArray` or `ARRAY` column can't run with `executemany()` on a cached
+  engine. For that, use `execution_options(compiled_cache=None)`
+- BREAKING: Compiler: An integer subscript on a nested object renders as an
+  array position. Write the key as a string, as in `obj['n']['1']`
+- Compiler: `bool`, `float` and `None` subscripts raise `CompileError`
+- Types: Added `geo_point`, `geo_shape`, `ip` and `character` to the
+  reflected type map, and arrays of mapped types
+- Types: Reflected `CHAR` and `VARCHAR` columns keep their declared length
+- Types: A reflected column of an unknown type warns and becomes
+  `UnresolvedType`, which raises `CompileError` naming the column in DDL
+
 ## 2026/06/22 0.43.1
 - Compiler: Fixed `AttributeError: 'CrateCompilerSA20' object has no attribute
   'visit_on_conflict_do_update'` by forwarding calls to

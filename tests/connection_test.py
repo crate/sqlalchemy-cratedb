@@ -20,17 +20,28 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 import contextlib
 import warnings
-from unittest import TestCase
+from unittest import TestCase, mock
 
 import pytest
 import sqlalchemy as sa
+from crate.client import __version__ as crate_client_version
+from crate.client.exceptions import ConnectionError as CrateConnectionError
+from crate.client.http import Client
 from sqlalchemy.exc import NoSuchModuleError, SQLAlchemyError
+from verlib2.packaging.version import Version
 
-from sqlalchemy_cratedb import SA_1_4, SA_VERSION
 from tests.util import ExtraAssertions
+
+CRATE_VERSION = Version(crate_client_version)
+CRATE_2_3 = Version("2.3.0")
 
 
 class SqlAlchemyConnectionTest(TestCase, ExtraAssertions):
+    def setUp(self):
+        patcher = mock.patch.object(Client, "server_infos", return_value=(None, None, "6.4.3"))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_connection_server_uri_unknown_sa_plugin(self):
         with self.assertRaises(NoSuchModuleError):
             sa.create_engine("foobar://otherhost:19201")
@@ -41,7 +52,6 @@ class SqlAlchemyConnectionTest(TestCase, ExtraAssertions):
         self.assertEqual(["http://127.0.0.1:4200"], servers)
         engine.dispose()
 
-    @pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Not supported by SQLAlchemy 1.3")
     def test_connection_no_hostname_with_ssl(self):
         engine = sa.create_engine("crate://?sslmode=require")
         servers = engine.raw_connection().driver_connection.client._active_servers
@@ -180,4 +190,22 @@ class SqlAlchemyConnectionTest(TestCase, ExtraAssertions):
             repr(conn.driver_connection),
         )
         conn.close()
+        engine.dispose()
+
+
+@pytest.mark.skipif(
+    CRATE_VERSION < CRATE_2_3,
+    reason="Early connect failure arrived in crate 2.3.0",
+)
+def test_connection_failure_is_raised_early():
+    """
+    Connecting to an unreachable cluster fails immediately.
+    """
+    engine = sa.create_engine("crate://localhost:14200")
+    try:
+        with pytest.raises(sa.exc.OperationalError) as ex:
+            engine.connect()
+        assert isinstance(ex.value.orig, CrateConnectionError)
+        assert "Server not available" in str(ex.value)
+    finally:
         engine.dispose()

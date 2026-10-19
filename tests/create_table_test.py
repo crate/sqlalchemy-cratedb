@@ -18,18 +18,14 @@
 # However, if you have executed another commercial license agreement
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
-import pytest
-import sqlalchemy as sa
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
-
 from unittest import TestCase, skipIf
 from unittest.mock import MagicMock, patch
 
+import pytest
+import sqlalchemy as sa
 from crate.client.cursor import Cursor
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.testing import AssertsCompiledSQL
 
 from sqlalchemy_cratedb import Geopoint, ObjectArray, ObjectType
 from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
@@ -40,9 +36,10 @@ FakeCursor.return_value = fake_cursor
 
 
 @patch("crate.client.connection.Cursor", FakeCursor)
-class SqlAlchemyCreateTableTest(TestCase):
+class SqlAlchemyCreateTableTest(TestCase, AssertsCompiledSQL):
     def setUp(self):
         self.engine = sa.create_engine("crate://")
+        self.__dialect__ = self.engine.dialect
         self.Base = declarative_base()
 
     def test_table_basic_types(self):
@@ -52,27 +49,27 @@ class SqlAlchemyCreateTableTest(TestCase):
             unicode_col = sa.Column(sa.Unicode)
             text_col = sa.Column(sa.Text)
             int_col = sa.Column(sa.Integer)
-            long_col1 = sa.Column(sa.BigInteger)
-            long_col2 = sa.Column(sa.NUMERIC)
+            long_col = sa.Column(sa.BigInteger)
+            numeric_col = sa.Column(sa.NUMERIC(10, 2))
             bool_col = sa.Column(sa.Boolean)
             short_col = sa.Column(sa.SmallInteger)
             datetime_col = sa.Column(sa.DateTime)
             date_col = sa.Column(sa.Date)
             float_col = sa.Column(sa.Float)
-            double_col = sa.Column(sa.DECIMAL)
+            decimal_col = sa.Column(sa.DECIMAL(10, 2))
 
         self.Base.metadata.create_all(bind=self.engine)
         fake_cursor.execute.assert_called_with(
             (
                 "\nCREATE TABLE users (\n\tstring_col STRING NOT NULL, "
                 "\n\tunicode_col STRING, \n\ttext_col STRING, \n\tint_col INT, "
-                "\n\tlong_col1 LONG, \n\tlong_col2 LONG, "
+                "\n\tlong_col LONG, \n\tnumeric_col NUMERIC(10, 2), "
                 "\n\tbool_col BOOLEAN, "
                 "\n\tshort_col SHORT, "
                 "\n\tdatetime_col TIMESTAMP WITHOUT TIME ZONE, "
                 "\n\tdate_col TIMESTAMP, "
                 "\n\tfloat_col FLOAT, "
-                "\n\tdouble_col DOUBLE, "
+                "\n\tdecimal_col NUMERIC(10, 2), "
                 "\n\tPRIMARY KEY (string_col)\n)\n\n"
             ),
             sa.util.immutabledict({}),
@@ -108,6 +105,40 @@ class SqlAlchemyCreateTableTest(TestCase):
             ),
             sa.util.immutabledict({}),
         )
+
+    def test_date_column_is_stored_as_timestamp(self):
+        """
+        A `DATE` column is not storable, so it is emitted as `TIMESTAMP`.
+        """
+
+        class Appointment(self.Base):
+            __tablename__ = "appointment"
+            name = sa.Column(sa.String, primary_key=True)
+            day_lower = sa.Column(sa.Date)
+            day_upper = sa.Column(sa.DATE())
+            days = sa.Column(sa.ARRAY(sa.DATE))
+
+        self.assert_compile(
+            sa.schema.CreateTable(Appointment.__table__),
+            "CREATE TABLE appointment ("
+            "name STRING NOT NULL, "
+            "day_lower TIMESTAMP, "
+            "day_upper TIMESTAMP, "
+            "days ARRAY(TIMESTAMP), "
+            "PRIMARY KEY (name))",
+        )
+
+    def test_date_cast_is_not_rewritten(self):
+        """
+        `CAST(x AS DATE)` keeps its `DATE` target, unlike a `DATE` column.
+        """
+        for type_, expected in (
+            (sa.Date, "CAST(ts AS DATE)"),
+            (sa.DATE, "CAST(ts AS DATE)"),
+            (sa.ARRAY(sa.DATE), "CAST(ts AS ARRAY(DATE))"),
+        ):
+            with self.subTest(type_=type_):
+                self.assert_compile(sa.cast(sa.column("ts"), type_), expected)
 
     def test_column_obj(self):
         class DummyTable(self.Base):
