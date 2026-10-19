@@ -30,7 +30,6 @@ from crate.client.http import Client
 from sqlalchemy.exc import NoSuchModuleError, SQLAlchemyError
 from verlib2.packaging.version import Version
 
-from sqlalchemy_cratedb import SA_1_4, SA_VERSION
 from tests.util import ExtraAssertions
 
 CRATE_VERSION = Version(crate_client_version)
@@ -53,7 +52,6 @@ class SqlAlchemyConnectionTest(TestCase, ExtraAssertions):
         self.assertEqual(["http://127.0.0.1:4200"], servers)
         engine.dispose()
 
-    @pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Not supported by SQLAlchemy 1.3")
     def test_connection_no_hostname_with_ssl(self):
         engine = sa.create_engine("crate://?sslmode=require")
         servers = engine.raw_connection().driver_connection.client._active_servers

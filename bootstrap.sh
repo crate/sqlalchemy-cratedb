@@ -17,7 +17,7 @@
 # set -x
 
 # Default variables.
-SQLALCHEMY_VERSION=${SQLALCHEMY_VERSION:-<2.1}
+SQLALCHEMY_VERSION=${SQLALCHEMY_VERSION:-<2.2}
 
 
 function print_header() {

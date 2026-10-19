@@ -26,18 +26,13 @@ from unittest.mock import MagicMock, patch
 import sqlalchemy as sa
 from crate.client.cursor import Cursor
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import Update, text
 
-from sqlalchemy_cratedb.compiler import crate_before_execute
-from tests.util import ExtraAssertions
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
-
 from sqlalchemy_cratedb import ObjectType
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_0, SA_VERSION
+from sqlalchemy_cratedb.compiler import crate_before_execute
+from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
+from tests.util import ExtraAssertions
 
 from .util import ParametrizedTestCase
 
@@ -116,7 +111,7 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         """
         selectable = self.mytable.select().where(self.mytable.c.name.notilike("%foo%"))
         statement = str(selectable.compile(bind=self.crate_engine))
-        if SA_VERSION < SA_1_4 or not self.crate_engine.dialect.has_ilike_operator():
+        if not self.crate_engine.dialect.has_ilike_operator():
             self.assertEqual(
                 statement,
                 dedent("""
@@ -145,10 +140,6 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
             selectable.compile(bind=self.crate_engine)
         self.assertEqual(str(cmex.exception), "Unsupported feature: ESCAPE is not supported")
 
-    @skipIf(
-        SA_VERSION < SA_1_4,
-        "SQLAlchemy 1.3 and earlier do not support native `NOT ILIKE` compilation",
-    )
     def test_select_with_not_ilike_and_escape(self):
         """
         Verify the compiler fails when using CrateDB's native `ILIKE` method together with `ESCAPE`.
@@ -165,16 +156,10 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         """
         selectable = self.mytable.select().offset(5)
         statement = str(selectable.compile(bind=self.crate_engine))
-        if SA_VERSION >= SA_1_4:
-            self.assertEqual(
-                statement,
-                "SELECT mytable.name, mytable.data \nFROM mytable\n LIMIT ALL OFFSET %(param_1)s",
-            )
-        else:
-            self.assertEqual(
-                statement,
-                "SELECT mytable.name, mytable.data \nFROM mytable \n LIMIT ALL OFFSET %(param_1)s",
-            )
+        self.assertEqual(
+            statement,
+            "SELECT mytable.name, mytable.data \nFROM mytable\n LIMIT ALL OFFSET %(param_1)s",
+        )
 
     def test_select_with_limit(self):
         """
@@ -354,7 +339,6 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
 FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 
 
-@skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 class CompilerTestCase(TestCase):
     """
     A base class for providing mocking infrastructure to validate the DDL compiler.

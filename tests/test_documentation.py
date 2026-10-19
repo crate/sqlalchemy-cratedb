@@ -24,14 +24,13 @@ from __future__ import absolute_import
 import doctest
 import logging
 import os
-import sys
 import unittest
 from pprint import pprint
 
 import pytest
 from crate.client import connect
 
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_0, SA_VERSION
+from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
 
 log = logging.getLogger()
 ch = logging.StreamHandler()
@@ -176,14 +175,7 @@ DOCTEST_FILES = [
             reason="Don't run DataFrame integration tests on SQLAlchemy 1.4 and earlier",
         ),
     ),
-    pytest.param(
-        "docs/inspection-reflection.rst",
-        marks=pytest.mark.skipif(
-            SA_VERSION < SA_1_4 and (3, 10) <= sys.version_info < (3, 12),
-            reason="Don't run reflection integration tests on SQLAlchemy 1.3 "
-            "and earlier and Python 3.10 and 3.11",
-        ),
-    ),
+    "docs/inspection-reflection.rst",
 ]
 
 

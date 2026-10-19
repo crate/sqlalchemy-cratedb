@@ -22,20 +22,14 @@
 from __future__ import absolute_import
 
 import datetime as dt
-from unittest import TestCase, skipIf
+from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from sqlalchemy_cratedb.dialect import DateTime
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
 
 try:
     import zoneinfo
@@ -61,7 +55,6 @@ OUTPUT_DATETIME_NOTZ = dt.datetime(2009, 5, 13, 19, 00, 30, 123000)
 OUTPUT_DATETIME_TZ = dt.datetime(2009, 5, 13, 16, 00, 30, 123000)
 
 
-@skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 @patch("crate.client.connection.Cursor", FakeCursor)
 class SqlAlchemyDateAndDateTimeTest(TestCase):
     def setUp(self):
@@ -119,7 +112,6 @@ def session(cratedb_service):
     return session
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_datetime_notz(session):
     """
     An integration test for `sa.Date` and `sa.DateTime`, not using timezones.
@@ -157,7 +149,6 @@ def test_datetime_notz(session):
     assert result["datetime_tz"].tzinfo is None
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_datetime_tz(session):
     """
     An integration test for `sa.Date` and `sa.DateTime`, now using timezones.
@@ -196,7 +187,6 @@ def test_datetime_tz(session):
     assert result["datetime_tz"].tzinfo is None
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_datetime_date(session):
     """
     Validate assigning a `date` object to a `datetime` column works.
@@ -232,7 +222,6 @@ def test_datetime_date(session):
     assert result["datetime_tz"] == dt.datetime(2009, 5, 13, 0, 0, 0)
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_date_cast_truncates(session):
     """
     Casting to `sa.Date` drops the time of day, server-side.
@@ -249,7 +238,6 @@ def test_date_cast_truncates(session):
     assert hour_of(sa.DateTime) == INPUT_DATETIME_NOTZ.hour
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_datetime_tz_aware_read(session, cratedb_service):
     """
     With the driver's `time_zone` configured, `TIMESTAMP` columns read back as
@@ -282,7 +270,6 @@ def test_datetime_tz_aware_read(session, cratedb_service):
     assert result == dt.datetime(2020, 6, 23, 10, 0, 0, tzinfo=dt.timezone.utc)
 
 
-@pytest.mark.skipif(SA_VERSION < SA_1_4, reason="Test case not supported on SQLAlchemy 1.3")
 def test_time(session):
     """
     An integration test for `sa.Time` and the SQL-standard `sa.TIME`.
