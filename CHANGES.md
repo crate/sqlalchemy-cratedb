@@ -6,6 +6,9 @@
 - Deprecated support for SQLAlchemy 1.4, which is EOL. Importing the dialect
   with SQLAlchemy 1.4 emits a `FutureWarning`. A future release will
   require SQLAlchemy 2.0
+- Fixed an `UPDATE` with several parameter sets failing with "A value is
+  required for bind parameter". This includes an ORM flush that changes two or
+  more rows.
 
 ## 2026/10/19 0.44.0
 - Types: Fixed `sa.Time` raising `Cannot find data type: time`. `Time` columns 
