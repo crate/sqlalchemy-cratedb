@@ -39,6 +39,7 @@ FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 class SqlAlchemyDialectTest(TestCase):
     def execute_wrapper(self, query, *args, **kwargs):
         self.executed_statement = query
+        self.executed_parameters = args[0] if args else None
         return self.fake_cursor
 
     def setUp(self):
@@ -115,12 +116,28 @@ class SqlAlchemyDialectTest(TestCase):
 
         insp = inspect(self.session.bind)
         self.engine.dialect.server_version_info = (2, 0, 0)
-        eq_(insp.get_view_names(schema="doc"), ["v1", "v2"])
+        eq_(insp.get_view_names(schema="foo"), ["v1", "v2"])
         eq_(
             self.executed_statement,
             "SELECT table_name FROM information_schema.views "
+            "WHERE table_schema = ? "
             "ORDER BY table_name ASC, table_schema ASC",
         )
+        eq_(self.executed_parameters, ("foo",))
+
+    def test_get_view_names_default_schema(self):
+        self.fake_cursor.fetchall = MagicMock(return_value=[])
+        insp = inspect(self.session.bind)
+        eq_(insp.get_view_names(), [])
+        eq_(self.executed_parameters, ("doc",))
+
+    def test_get_view_names_url_schema(self):
+        self.fake_cursor.fetchall = MagicMock(return_value=[])
+        engine = sa.create_engine("crate://?schema=foo")
+        with engine.connect() as connection:
+            self.fake_cursor.execute = self.execute_wrapper
+            eq_(inspect(connection).get_view_names(), [])
+        eq_(self.executed_parameters, ("foo",))
 
     def test_has_table(self):
         self.init_mock(return_value=[["foo"], ["bar"]])
