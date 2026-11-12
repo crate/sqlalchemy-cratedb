@@ -417,8 +417,11 @@ class CrateDialect(default.DefaultDialect):
 
     @reflection.cache
     def get_view_names(self, connection, schema=None, **kw):
+        if schema is None:
+            schema = self._get_effective_schema_name(connection)
         cursor = connection.exec_driver_sql(
             "SELECT table_name FROM information_schema.views "
+            "WHERE {0} = ? "
             "ORDER BY table_name ASC, {0} ASC".format(self.schema_column),
             (schema or self.default_schema_name,),
         )
