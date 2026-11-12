@@ -87,12 +87,7 @@ def crate_before_execute(conn, clauseelement, multiparams, params, *args, **kwar
     Rewrite an `UPDATE` with a single parameter set for partial `ObjectType` updates.
     """
     is_crate = type(conn.dialect).__name__ == "CrateDialect"
-    if (
-        not is_crate
-        or not isinstance(clauseelement, sa.sql.expression.Update)
-        or multiparams
-        or params is None
-    ):
+    if not is_crate or not isinstance(clauseelement, sa.sql.expression.Update) or multiparams:
         return clauseelement, multiparams, params
 
     clauseelement, rewritten, _ = rewrite_update(clauseelement, ([params],), {})

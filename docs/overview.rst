@@ -428,7 +428,8 @@ insert two records:
     Behind the scenes, if you update an ``ObjectType`` property, and ``commit`` that
     change, the :ref:`UPDATE <crate-reference:dml-updating-data>` statement sent
     to CrateDB will only include the data necessary to update the changed
-    sub-columns.
+    sub-columns. If a flush updates several rows at once, the dialect sends the
+    whole object for each row.
 
 .. _objectarray:
 
