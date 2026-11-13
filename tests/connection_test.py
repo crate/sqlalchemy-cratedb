@@ -26,6 +26,7 @@ import pytest
 import sqlalchemy as sa
 from crate.client import __version__ as crate_client_version
 from crate.client.exceptions import ConnectionError as CrateConnectionError
+from crate.client.exceptions import IntegrityError, ProgrammingError
 from crate.client.http import Client
 from sqlalchemy.exc import NoSuchModuleError, SQLAlchemyError
 from verlib2.packaging.version import Version
@@ -207,5 +208,76 @@ def test_connection_failure_is_raised_early():
             engine.connect()
         assert isinstance(ex.value.orig, CrateConnectionError)
         assert "Server not available" in str(ex.value)
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    "error, expected",
+    [
+        (CrateConnectionError("No more Servers available, exception from last server: ..."), True),
+        (CrateConnectionError("Server not available, exception: ..."), True),
+        (ProgrammingError("Connection closed"), True),
+        (ProgrammingError("Cursor closed"), False),
+        (ProgrammingError("SQLParseException[line 1:1: mismatched input 'SELEC']"), False),
+        (
+            IntegrityError("DuplicateKeyException[A document with the same primary key exists]"),
+            False,
+        ),
+    ],
+)
+def test_is_disconnect(error, expected):
+    dialect = sa.create_engine("crate://").dialect
+    assert dialect.is_disconnect(error, None, None) is expected
+
+
+SELECT_ONE_RESPONSE = {"cols": ["1"], "rows": [[1]], "rowcount": 1, "duration": 1}
+
+
+def test_pre_ping_replaces_unreachable_connection():
+    engine = sa.create_engine("crate://", pool_pre_ping=True, pool_size=1, max_overflow=0)
+    try:
+        with engine.connect() as conn:
+            stale = conn.connection.driver_connection
+        ping_error = CrateConnectionError("No more Servers available, exception from last server")
+        with mock.patch.object(
+            Client, "sql", autospec=True, side_effect=[ping_error, SELECT_ONE_RESPONSE]
+        ) as sql:
+            with engine.connect() as conn:
+                assert conn.exec_driver_sql("SELECT 1").scalar() == 1
+                assert conn.connection.driver_connection is not stale
+        assert sql.call_count == 2
+    finally:
+        engine.dispose()
+
+
+def test_pre_ping_replaces_closed_connection():
+    engine = sa.create_engine("crate://", pool_pre_ping=True, pool_size=1, max_overflow=0)
+    try:
+        with engine.connect() as conn:
+            stale = conn.connection.driver_connection
+        stale.close()
+        with mock.patch.object(Client, "sql", autospec=True, return_value=SELECT_ONE_RESPONSE):
+            with engine.connect() as conn:
+                assert conn.exec_driver_sql("SELECT 1").scalar() == 1
+                assert conn.connection.driver_connection is not stale
+    finally:
+        engine.dispose()
+
+
+def test_closed_connection_is_invalidated():
+    engine = sa.create_engine("crate://", pool_size=1, max_overflow=0)
+    try:
+        with engine.connect() as conn:
+            stale = conn.connection.driver_connection
+        stale.close()
+        with mock.patch.object(Client, "sql", autospec=True, return_value=SELECT_ONE_RESPONSE):
+            with engine.connect() as conn:
+                with pytest.raises(sa.exc.ProgrammingError, match="Connection closed") as ex:
+                    conn.exec_driver_sql("SELECT 1")
+                assert ex.value.connection_invalidated
+            with engine.connect() as conn:
+                assert conn.exec_driver_sql("SELECT 1").scalar() == 1
+                assert conn.connection.driver_connection is not stale
     finally:
         engine.dispose()
