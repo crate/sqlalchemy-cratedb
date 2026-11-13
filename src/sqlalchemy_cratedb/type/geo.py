@@ -22,7 +22,12 @@ class Geopoint(sqltypes.UserDefinedType):
         return process
 
     def result_processor(self, dialect, coltype):
-        return tuple
+        def process(value):
+            if value is None:
+                return None
+            return tuple(value)
+
+        return process
 
     comparator_factory = Comparator
 
@@ -38,6 +43,11 @@ class Geoshape(sqltypes.UserDefinedType):
         return "GEO_SHAPE"
 
     def result_processor(self, dialect, coltype):
-        return geojson.GeoJSON.to_instance
+        def process(value):
+            if value is None:
+                return None
+            return geojson.GeoJSON.to_instance(value)
+
+        return process
 
     comparator_factory = Comparator
