@@ -24,6 +24,8 @@ import uuid
 import warnings
 from datetime import date, datetime, time
 
+from crate.client.exceptions import ConnectionError as CrateConnectionError
+from crate.client.exceptions import ProgrammingError as CrateProgrammingError
 from sqlalchemy import types as sqltypes
 from sqlalchemy.engine import default, reflection
 from sqlalchemy.exc import SQLAlchemyError
@@ -296,6 +298,13 @@ class CrateDialect(default.DefaultDialect):
         # implementing this as noop seems to cause sqlalchemy to propagate the
         # original exception to the user
         pass
+
+    def is_disconnect(self, e, connection, cursor):
+        if isinstance(e, CrateConnectionError):
+            return True
+        if isinstance(e, CrateProgrammingError):
+            return str(e) == "Connection closed"
+        return False
 
     def connect(self, host=None, port=None, *args, **kwargs):
         server = None
