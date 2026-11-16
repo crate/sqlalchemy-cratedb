@@ -9,6 +9,9 @@
 - Dialect: Fixed an `UPDATE` with several parameter sets failing with "A value
   is required for bind parameter". This includes an ORM flush that changes two
   or more rows.
+- Types: Fixed reading a NULL `GEO_POINT` or `GEO_SHAPE` value raising
+  `TypeError: 'NoneType' object is not iterable`. NULL values now read as
+  `None`
 
 ## 2026/10/19 0.44.0
 - Types: Fixed `sa.Time` raising `Cannot find data type: time`. `Time` columns 
