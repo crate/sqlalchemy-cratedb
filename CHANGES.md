@@ -14,6 +14,9 @@
   connection no longer stays in the pool, and `connection_invalidated` is set
   on the raised error. A statement that runs longer than the client's `timeout`
   is not reported as a disconnect, because the server may still execute it.
+- Types: Fixed reading a NULL `GEO_POINT` or `GEO_SHAPE` value raising
+  `TypeError: 'NoneType' object is not iterable`. NULL values now read as
+  `None`
 
 ## 2026/10/19 0.44.0
 - Types: Fixed `sa.Time` raising `Cannot find data type: time`. `Time` columns 
