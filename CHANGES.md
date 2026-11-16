@@ -12,7 +12,8 @@
 - Dialect: Report the driver's `ConnectionError` and a closed connection as
   disconnects. `pool_pre_ping` now replaces such connections, a closed
   connection no longer stays in the pool, and `connection_invalidated` is set
-  on the raised error.
+  on the raised error. A statement that runs longer than the client's `timeout`
+  is not reported as a disconnect, because the server may still execute it.
 
 ## 2026/10/19 0.44.0
 - Types: Fixed `sa.Time` raising `Cannot find data type: time`. `Time` columns 

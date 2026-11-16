@@ -24,8 +24,6 @@ import uuid
 import warnings
 from datetime import date, datetime, time
 
-from crate.client.exceptions import ConnectionError as CrateConnectionError
-from crate.client.exceptions import ProgrammingError as CrateProgrammingError
 from sqlalchemy import types as sqltypes
 from sqlalchemy.engine import default, reflection
 from sqlalchemy.exc import SQLAlchemyError
@@ -246,6 +244,20 @@ else:
     statement_compiler = CrateCompilerSA14
 
 
+def _is_read_timeout(error):
+    """
+    Whether the driver raised ``error`` because a request exceeded its read timeout.
+    """
+    from urllib3.exceptions import MaxRetryError, ReadTimeoutError
+
+    for inner in (error.__cause__, error.__context__):
+        if isinstance(inner, MaxRetryError):
+            inner = inner.reason
+        if isinstance(inner, ReadTimeoutError):
+            return True
+    return False
+
+
 class CrateDialect(default.DefaultDialect):
     name = "crate"
     driver = "crate-python"
@@ -300,9 +312,10 @@ class CrateDialect(default.DefaultDialect):
         pass
 
     def is_disconnect(self, e, connection, cursor):
-        if isinstance(e, CrateConnectionError):
-            return True
-        if isinstance(e, CrateProgrammingError):
+        exceptions = self.dbapi.exceptions
+        if isinstance(e, exceptions.ConnectionError):
+            return not _is_read_timeout(e)
+        if isinstance(e, exceptions.ProgrammingError):
             return str(e) == "Connection closed"
         return False
 

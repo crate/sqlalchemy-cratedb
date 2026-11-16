@@ -29,6 +29,7 @@ from crate.client.exceptions import ConnectionError as CrateConnectionError
 from crate.client.exceptions import IntegrityError, ProgrammingError
 from crate.client.http import Client
 from sqlalchemy.exc import NoSuchModuleError, SQLAlchemyError
+from urllib3.exceptions import MaxRetryError, NewConnectionError, ReadTimeoutError
 from verlib2.packaging.version import Version
 
 from tests.util import ExtraAssertions
@@ -212,11 +213,40 @@ def test_connection_failure_is_raised_early():
         engine.dispose()
 
 
+def _connection_error(inner, explicit_cause=False):
+    """
+    Build a driver ``ConnectionError`` chained to ``inner`` the way the driver raises it
+    """
+    try:
+        try:
+            raise inner
+        except Exception as ex:
+            if explicit_cause:
+                raise CrateConnectionError("Server not available, exception: ...") from ex
+            # Implicit chaining on purpose: mirrors `Client._drop_server`.
+            raise CrateConnectionError("No more Servers available, exception from last server: ...")  # noqa: B904
+    except CrateConnectionError as error:
+        return error
+
+
+def _read_timeout():
+    return ReadTimeoutError(None, "/_sql", "Read timed out. (read timeout=0.5)")
+
+
+def _connection_refused():
+    return NewConnectionError(None, "Failed to establish a new connection: Connection refused")
+
+
 @pytest.mark.parametrize(
     "error, expected",
     [
         (CrateConnectionError("No more Servers available, exception from last server: ..."), True),
         (CrateConnectionError("Server not available, exception: ..."), True),
+        (_connection_error(_connection_refused()), True),
+        (_connection_error(MaxRetryError(None, "/_sql", _connection_refused())), True),
+        (_connection_error(_read_timeout()), False),
+        (_connection_error(_read_timeout(), explicit_cause=True), False),
+        (_connection_error(MaxRetryError(None, "/_sql", _read_timeout())), False),
         (ProgrammingError("Connection closed"), True),
         (ProgrammingError("Cursor closed"), False),
         (ProgrammingError("SQLParseException[line 1:1: mismatched input 'SELEC']"), False),
@@ -261,6 +291,28 @@ def test_pre_ping_replaces_closed_connection():
             with engine.connect() as conn:
                 assert conn.exec_driver_sql("SELECT 1").scalar() == 1
                 assert conn.connection.driver_connection is not stale
+    finally:
+        engine.dispose()
+
+
+def test_read_timeout_does_not_invalidate_connection():
+    engine = sa.create_engine("crate://", pool_size=1, max_overflow=0)
+    try:
+        with engine.connect() as conn:
+            pooled = conn.connection.driver_connection
+        with mock.patch.object(
+            Client,
+            "sql",
+            autospec=True,
+            side_effect=[_connection_error(_read_timeout()), SELECT_ONE_RESPONSE],
+        ):
+            with engine.connect() as conn:
+                with pytest.raises(sa.exc.OperationalError, match="No more Servers") as ex:
+                    conn.exec_driver_sql("SELECT 1")
+                assert not ex.value.connection_invalidated
+            with engine.connect() as conn:
+                assert conn.exec_driver_sql("SELECT 1").scalar() == 1
+                assert conn.connection.driver_connection is pooled
     finally:
         engine.dispose()
 
