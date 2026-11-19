@@ -26,7 +26,7 @@ from datetime import date, datetime, time
 
 from sqlalchemy import types as sqltypes
 from sqlalchemy.engine import default, reflection
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import NoSuchTableError, SQLAlchemyError
 from sqlalchemy.sql import functions
 from sqlalchemy.util import asbool, to_list, warn
 
@@ -415,7 +415,14 @@ class CrateDialect(default.DefaultDialect):
         return schema in self.get_schema_names(connection, **kw)
 
     def has_table(self, connection, table_name, schema=None, **kw):
-        return table_name in self.get_table_names(connection, schema=schema, **kw)
+        # Like SQLAlchemy 2.0's `Inspector.has_table`, report views as well.
+        cursor = connection.exec_driver_sql(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE {0} = ? AND table_name = ? "
+            "AND table_type IN ('BASE TABLE', 'VIEW')".format(self.schema_column),
+            (self._reflection_schema(connection, schema), table_name),
+        )
+        return table_name in [row[0] for row in cursor.fetchall()]
 
     @reflection.cache
     def get_schema_names(self, connection, **kw):
@@ -441,10 +448,23 @@ class CrateDialect(default.DefaultDialect):
     def get_view_names(self, connection, schema=None, **kw):
         cursor = connection.exec_driver_sql(
             "SELECT table_name FROM information_schema.views "
-            "ORDER BY table_name ASC, {0} ASC".format(self.schema_column),
-            (schema or self.default_schema_name,),
+            "WHERE {0} = ? "
+            "ORDER BY table_name ASC".format(self.schema_column),
+            (self._reflection_schema(connection, schema),),
         )
         return [row[0] for row in cursor.fetchall()]
+
+    @reflection.cache
+    def get_view_definition(self, connection, view_name, schema=None, **kw):
+        cursor = connection.exec_driver_sql(
+            "SELECT view_definition FROM information_schema.views "
+            "WHERE table_name = ? AND {0} = ?".format(self.schema_column),
+            (view_name, self._reflection_schema(connection, schema)),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            raise NoSuchTableError(view_name)
+        return row[0]
 
     @reflection.cache
     def get_columns(self, connection, table_name, schema=None, **kw):
@@ -452,13 +472,14 @@ class CrateDialect(default.DefaultDialect):
             "SELECT column_name, data_type, character_maximum_length "
             "FROM information_schema.columns "
             "WHERE table_name = ? AND {0} = ? "
-            "AND column_name !~ ?".format(self.schema_column)
+            "AND column_name !~ ? "
+            "ORDER BY ordinal_position".format(self.schema_column)
         )
         cursor = connection.exec_driver_sql(
             query,
             (
                 table_name,
-                schema or self.default_schema_name,
+                self._reflection_schema(connection, schema),
                 r"(.*)\[\'(.*)\'\]",
             ),  # regex to filter subscript
         )
@@ -495,7 +516,9 @@ class CrateDialect(default.DefaultDialect):
                 rows = result.fetchone()
                 return set(rows[0] if rows else [])
 
-        pk_result = engine.exec_driver_sql(query, (table_name, schema or self.default_schema_name))
+        pk_result = engine.exec_driver_sql(
+            query, (table_name, self._reflection_schema(engine, schema))
+        )
         pks = result_fun(pk_result)
         return {"constrained_columns": sorted(pks), "name": "PRIMARY KEY"}
 
@@ -529,6 +552,25 @@ class CrateDialect(default.DefaultDialect):
             # we return here, so it's fine to return always `True`
             "nullable": True,
         }
+
+    @staticmethod
+    def _is_nullable(value):
+        """
+        Primary key and `NOT NULL` columns are not nullable. CrateDB up to 6.0
+        reports `information_schema.columns.is_nullable` as a `BOOLEAN`; later
+        versions report the SQL standard's `'YES'` / `'NO'` text, and
+        `bool('NO')` is `True`.
+        """
+        if isinstance(value, str):
+            return value.strip().upper() != "NO"
+        return bool(value)
+
+    def _reflection_schema(self, connection, schema):
+        """
+        The schema to reflect: the explicit argument, else the URL's `schema`
+        query parameter that `get_table_names` lists from, else the default.
+        """
+        return schema or self._get_effective_schema_name(connection) or self.default_schema_name
 
     def _resolve_type(self, type_):
         resolved = self._lookup_type(type_)
