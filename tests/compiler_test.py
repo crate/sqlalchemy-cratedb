@@ -26,19 +26,14 @@ from unittest.mock import MagicMock, patch
 import sqlalchemy as sa
 from crate.client.cursor import Cursor
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import Update, text
 
-from sqlalchemy_cratedb.compiler import crate_before_execute
-from tests.settings import crate_host
-from tests.util import ExtraAssertions
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
-
 from sqlalchemy_cratedb import ObjectType
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_0, SA_VERSION
+from sqlalchemy_cratedb.compiler import crate_before_execute
+from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
+from sqlalchemy_cratedb.type.object import MutableDict
+from tests.util import ExtraAssertions
 
 from .util import ParametrizedTestCase
 
@@ -56,35 +51,53 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         )
 
         self.update = Update(self.mytable).where(text("name=:name"))
-        self.values = [{"name": "crate"}]
-        self.values = (self.values,)
 
     def test_sqlite_update_not_rewritten(self):
         clauseelement, multiparams, params = crate_before_execute(
-            self.sqlite_engine, self.update, self.values, {}
+            self.sqlite_engine, self.update, [], {"name": "crate"}
         )
 
+        self.assertIs(clauseelement, self.update)
         self.assertFalse(hasattr(clauseelement, "_crate_specific"))
 
     def test_crate_update_rewritten(self):
+        """
+        SQLAlchemy passes a single parameter set in `params`.
+        """
         clauseelement, multiparams, params = crate_before_execute(
-            self.crate_engine, self.update, self.values, {}
+            self.crate_engine, self.update, [], {"name": "crate"}
         )
 
         self.assertTrue(hasattr(clauseelement, "_crate_specific"))
+        self.assertEqual(multiparams, [])
+        self.assertEqual(params, {"name": "crate"})
 
-    def test_bulk_update_on_builtin_type(self):
-        """
-        The "before_execute" hook in the compiler doesn't get
-        access to the parameters in case of a bulk update. It
-        should not try to optimize any parameters.
-        """
-        data = ({},)
+    def test_crate_update_rewrites_changed_object_keys(self):
+        data = MutableDict({"x": 1, "y": 2})
+        data["y"] = 3
         clauseelement, multiparams, params = crate_before_execute(
-            self.crate_engine, self.update, data, None
+            self.crate_engine, self.update, [], {"name": "crate", "data": data}
         )
 
+        self.assertTrue(hasattr(clauseelement, "_crate_specific"))
+        self.assertEqual(params, {"name": "crate", "data['y']": 3})
+
+    def test_crate_update_executemany_not_rewritten(self):
+        """
+        SQLAlchemy passes an executemany in `multiparams`. It passes through
+        unchanged, with every parameter set.
+        """
+        data = MutableDict({"x": 1})
+        data["x"] = 2
+        parameter_sets = [{"name": "crate", "data": data}, {"name": "other", "data": data}]
+        clauseelement, multiparams, params = crate_before_execute(
+            self.crate_engine, self.update, parameter_sets, {}
+        )
+
+        self.assertIs(clauseelement, self.update)
         self.assertFalse(hasattr(clauseelement, "_crate_specific"))
+        self.assertIs(multiparams, parameter_sets)
+        self.assertEqual(params, {})
 
     def test_select_with_ilike_no_escape(self):
         """
@@ -117,7 +130,7 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         """
         selectable = self.mytable.select().where(self.mytable.c.name.notilike("%foo%"))
         statement = str(selectable.compile(bind=self.crate_engine))
-        if SA_VERSION < SA_1_4 or not self.crate_engine.dialect.has_ilike_operator():
+        if not self.crate_engine.dialect.has_ilike_operator():
             self.assertEqual(
                 statement,
                 dedent("""
@@ -146,10 +159,6 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
             selectable.compile(bind=self.crate_engine)
         self.assertEqual(str(cmex.exception), "Unsupported feature: ESCAPE is not supported")
 
-    @skipIf(
-        SA_VERSION < SA_1_4,
-        "SQLAlchemy 1.3 and earlier do not support native `NOT ILIKE` compilation",
-    )
     def test_select_with_not_ilike_and_escape(self):
         """
         Verify the compiler fails when using CrateDB's native `ILIKE` method together with `ESCAPE`.
@@ -166,16 +175,10 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         """
         selectable = self.mytable.select().offset(5)
         statement = str(selectable.compile(bind=self.crate_engine))
-        if SA_VERSION >= SA_1_4:
-            self.assertEqual(
-                statement,
-                "SELECT mytable.name, mytable.data \nFROM mytable\n LIMIT ALL OFFSET %(param_1)s",
-            )
-        else:
-            self.assertEqual(
-                statement,
-                "SELECT mytable.name, mytable.data \nFROM mytable \n LIMIT ALL OFFSET %(param_1)s",
-            )
+        self.assertEqual(
+            statement,
+            "SELECT mytable.name, mytable.data \nFROM mytable\n LIMIT ALL OFFSET %(param_1)s",
+        )
 
     def test_select_with_limit(self):
         """
@@ -355,14 +358,13 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
 FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 
 
-@skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 class CompilerTestCase(TestCase):
     """
     A base class for providing mocking infrastructure to validate the DDL compiler.
     """
 
     def setUp(self):
-        self.engine = sa.create_engine(f"crate://{crate_host}")
+        self.engine = sa.create_engine("crate://")
         self.metadata = sa.MetaData(schema="testdrive")
         self.session = sa.orm.Session(bind=self.engine)
         self.setup_mock()

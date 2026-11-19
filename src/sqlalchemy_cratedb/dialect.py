@@ -20,6 +20,7 @@
 # software solely pursuant to the terms of the relevant commercial agreement.
 
 import logging
+import uuid
 import warnings
 from datetime import date, datetime, time
 
@@ -27,16 +28,18 @@ from sqlalchemy import types as sqltypes
 from sqlalchemy.engine import default, reflection
 from sqlalchemy.exc import NoSuchTableError, SQLAlchemyError
 from sqlalchemy.sql import functions
-from sqlalchemy.util import asbool, to_list
+from sqlalchemy.util import asbool, to_list, warn
 
 from .compiler import (
     CrateDDLCompiler,
     CrateIdentifierPreparer,
     CrateTypeCompiler,
 )
-from .sa_version import SA_1_4, SA_2_0, SA_VERSION
-from .type import FloatVector, ObjectArray, ObjectType
+from .sa_version import SA_2_0, SA_VERSION
+from .type import IP, FloatVector, Geopoint, Geoshape, ObjectArray, ObjectType, UnresolvedType
 from .util import SSLMode
+
+ARRAY_SUFFIX = "_array"
 
 
 class Double(sqltypes.Float):
@@ -57,7 +60,8 @@ TYPES_MAP = {
     "timestamp with time zone": sqltypes.TIMESTAMP(timezone=True),
     "timestamp without time zone": sqltypes.TIMESTAMP(timezone=False),
     "object": ObjectType,
-    "object_array": ObjectArray,  # TODO: Can this also be improved to use `sqltypes.ARRAY`?
+    # `ObjectArray` tracks mutation of its objects, which a derived `ARRAY` would lose.
+    "object_array": ObjectArray,
     "integer": sqltypes.INTEGER,
     "long": sqltypes.BIGINT,
     "bigint": sqltypes.BIGINT,
@@ -69,37 +73,20 @@ TYPES_MAP = {
     "text": sqltypes.VARCHAR,
     "numeric": sqltypes.NUMERIC,
     "float_vector": FloatVector,
+    "geo_point": Geopoint,
+    "geo_shape": Geoshape,
+    "ip": IP,
+    "character": sqltypes.CHAR,
 }
-
-# For SQLAlchemy >= 1.4.
-try:
-    from sqlalchemy.types import ARRAY
-
-    TYPES_MAP["integer_array"] = ARRAY(sqltypes.INTEGER)
-    TYPES_MAP["boolean_array"] = ARRAY(sqltypes.BOOLEAN)
-    TYPES_MAP["short_array"] = ARRAY(sqltypes.SMALLINT)
-    TYPES_MAP["smallint_array"] = ARRAY(sqltypes.SMALLINT)
-    TYPES_MAP["timestamp_array"] = ARRAY(sqltypes.TIMESTAMP(timezone=False))
-    TYPES_MAP["timestamp with time zone_array"] = ARRAY(sqltypes.TIMESTAMP(timezone=True))
-    TYPES_MAP["long_array"] = ARRAY(sqltypes.BIGINT)
-    TYPES_MAP["bigint_array"] = ARRAY(sqltypes.BIGINT)
-    TYPES_MAP["float_array"] = ARRAY(sqltypes.FLOAT)
-    TYPES_MAP["real_array"] = ARRAY(sqltypes.REAL)
-    TYPES_MAP["string_array"] = ARRAY(sqltypes.VARCHAR)
-    TYPES_MAP["text_array"] = ARRAY(sqltypes.VARCHAR)
-    TYPES_MAP["numeric_array"] = ARRAY(sqltypes.NUMERIC)
-except Exception:  # noqa: S110
-    pass
 
 # For SQLAlchemy >= 2.0.
 try:
     from sqlalchemy.types import DOUBLE, DOUBLE_PRECISION
 
     TYPES_MAP["double"] = DOUBLE
-    TYPES_MAP["double_array"] = ARRAY(DOUBLE)
     TYPES_MAP["double precision"] = DOUBLE_PRECISION
-    TYPES_MAP["double precision_array"] = ARRAY(DOUBLE_PRECISION)
-except Exception:  # noqa: S110
+    TYPES_MAP["uuid"] = sqltypes.UUID
+except ImportError:
     pass
 
 
@@ -224,17 +211,51 @@ colspecs = {
 }
 
 if SA_VERSION >= SA_2_0:
+
+    class UUID(sqltypes.UUID):
+        """
+        CrateDB's `UUID` column accepts the dashed form only, while SQLAlchemy binds
+        the 32-digit form for any dialect without native UUID support.
+        """
+
+        def bind_processor(self, dialect):
+            def process(value):
+                if value is None:
+                    return None
+                return str(value if isinstance(value, uuid.UUID) else uuid.UUID(value))
+
+            return process
+
+        def literal_processor(self, dialect):
+            def process(value):
+                return "'{0}'".format(value if isinstance(value, uuid.UUID) else uuid.UUID(value))
+
+            return process
+
+    colspecs[sqltypes.UUID] = UUID
+
+if SA_VERSION >= SA_2_0:
     from .compat.core20 import CrateCompilerSA20
 
     statement_compiler = CrateCompilerSA20
-elif SA_VERSION >= SA_1_4:
+else:
     from .compat.core14 import CrateCompilerSA14
 
     statement_compiler = CrateCompilerSA14
-else:
-    from .compat.core10 import CrateCompilerSA10
 
-    statement_compiler = CrateCompilerSA10
+
+def _is_read_timeout(error):
+    """
+    Whether the driver raised ``error`` because a request exceeded its read timeout.
+    """
+    from urllib3.exceptions import MaxRetryError, ReadTimeoutError
+
+    for inner in (error.__cause__, error.__context__):
+        if isinstance(inner, MaxRetryError):
+            inner = inner.reason
+        if isinstance(inner, ReadTimeoutError):
+            return True
+    return False
 
 
 class CrateDialect(default.DefaultDialect):
@@ -289,6 +310,14 @@ class CrateDialect(default.DefaultDialect):
         # implementing this as noop seems to cause sqlalchemy to propagate the
         # original exception to the user
         pass
+
+    def is_disconnect(self, e, connection, cursor):
+        exceptions = self.dbapi.exceptions
+        if isinstance(e, exceptions.ConnectionError):
+            return not _is_read_timeout(e)
+        if isinstance(e, exceptions.ProgrammingError):
+            return str(e) == "Connection closed"
+        return False
 
     def connect(self, host=None, port=None, *args, **kwargs):
         server = None
@@ -440,7 +469,7 @@ class CrateDialect(default.DefaultDialect):
     @reflection.cache
     def get_columns(self, connection, table_name, schema=None, **kw):
         query = (
-            "SELECT column_name, data_type, is_nullable "
+            "SELECT column_name, data_type, character_maximum_length "
             "FROM information_schema.columns "
             "WHERE table_name = ? AND {0} = ? "
             "AND column_name !~ ? "
@@ -509,10 +538,19 @@ class CrateDialect(default.DefaultDialect):
         return "table_schema"
 
     def _create_column_info(self, row):
+        name, data_type, length = row
+        type_ = self._resolve_type(data_type)
+        if isinstance(type_, UnresolvedType):
+            warn("Did not recognize type '{0}' of column '{1}'".format(data_type, name))
+        if length is not None and isinstance(type_, type) and issubclass(type_, sqltypes.String):
+            type_ = type_(length)
         return {
-            "name": row[0],
-            "type": self._resolve_type(row[1]),
-            "nullable": self._is_nullable(row[2]),
+            "name": name,
+            "type": type_,
+            # In Crate every column is nullable except PK
+            # Primary Key Constraints are not nullable anyway, no matter what
+            # we return here, so it's fine to return always `True`
+            "nullable": True,
         }
 
     @staticmethod
@@ -535,7 +573,26 @@ class CrateDialect(default.DefaultDialect):
         return schema or self._get_effective_schema_name(connection) or self.default_schema_name
 
     def _resolve_type(self, type_):
-        return TYPES_MAP.get(type_, sqltypes.UserDefinedType)
+        resolved = self._lookup_type(type_)
+        if resolved is None:
+            return UnresolvedType(type_)
+        return resolved
+
+    def _lookup_type(self, type_):
+        resolved = TYPES_MAP.get(type_)
+        if resolved is not None:
+            return resolved
+        if not type_.endswith(ARRAY_SUFFIX):
+            return None
+        element_name = type_[: -len(ARRAY_SUFFIX)]
+        # The type compiler refuses `dimensions`, so a nested array could not be created again.
+        if not element_name or element_name.endswith(ARRAY_SUFFIX):
+            return None
+        element_type = self._lookup_type(element_name)
+        # CrateDB reports no length for array elements, and a bare `CHAR` holds one character.
+        if element_type is None or element_type is sqltypes.CHAR:
+            return None
+        return sqltypes.ARRAY(element_type)
 
     def has_ilike_operator(self):
         """

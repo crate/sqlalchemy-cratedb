@@ -10,7 +10,7 @@ About
 *****
 
 The :ref:`CrateDB dialect <using-sqlalchemy>` for `SQLAlchemy`_ provides adapters
-for `CrateDB`_ and SQLAlchemy. The supported versions are 1.3, 1.4, and 2.0.
+for `CrateDB`_ and SQLAlchemy. The supported versions are 1.4, 2.0, and 2.1.
 The package is available from `PyPI`_ at `sqlalchemy-cratedb`_.
 
 The connector can be used to connect to both `CrateDB`_ and `CrateDB

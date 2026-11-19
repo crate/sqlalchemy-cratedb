@@ -19,20 +19,12 @@
 # with Crate these terms will supersede the license and you may use the
 # software solely pursuant to the terms of the relevant commercial agreement.
 from datetime import datetime
-from unittest import TestCase, skipIf
+from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
-
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
-
 from crate.client.cursor import Cursor
+from sqlalchemy.orm import Session, declarative_base
 
 fake_cursor = MagicMock(name="fake_cursor")
 fake_cursor.rowcount = 1
@@ -40,7 +32,6 @@ FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 FakeCursor.return_value = fake_cursor
 
 
-@skipIf(SA_VERSION < SA_1_4, "SQLAlchemy 1.3 suddenly has problems with these test cases")
 class SqlAlchemyInsertFromSelectTest(TestCase):
     def assertSQL(self, expected_str, actual_expr):
         self.assertEqual(expected_str, str(actual_expr).replace("\n", ""))

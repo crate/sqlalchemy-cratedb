@@ -42,9 +42,6 @@ jobs:
       - name: Acquire sources
         uses: actions/checkout@v7
 
-      - name: Run CrateDB
-        run: docker compose -f tests/docker-compose.yml up -d
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v7
         with:

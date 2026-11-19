@@ -26,16 +26,11 @@ from unittest.mock import MagicMock, patch
 import sqlalchemy as sa
 from crate.client.cursor import Cursor
 from sqlalchemy import inspect
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, declarative_base
+from sqlalchemy.testing import eq_, in_, is_true
 
 from sqlalchemy_cratedb import ObjectType
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_0, SA_VERSION
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.testing import eq_, in_, is_true
+from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
 
 FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 
@@ -176,7 +171,6 @@ class SqlAlchemyDialectTest(TestCase):
             [("id", False), ("code", False), ("x", True)],
         )
 
-    @skipIf(SA_VERSION < SA_1_4, "Inspector.has_table only available on SQLAlchemy>=1.4")
     def test_has_table(self):
         self.init_mock(return_value=[["foo"], ["bar"]])
         insp = inspect(self.session.bind)

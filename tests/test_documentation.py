@@ -24,14 +24,13 @@ from __future__ import absolute_import
 import doctest
 import logging
 import os
-import sys
 import unittest
 from pprint import pprint
 
+import pytest
 from crate.client import connect
 
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_2_0, SA_VERSION
-from tests.settings import crate_host
+from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
 
 log = logging.getLogger()
 ch = logging.StreamHandler()
@@ -49,8 +48,8 @@ def docs_path(*parts):
     return os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), *parts))
 
 
-def provision_database():
-    drop_tables()
+def provision_database(crate_host):
+    drop_tables(crate_host)
 
     with connect(crate_host) as conn:
         cursor = conn.cursor()
@@ -62,20 +61,14 @@ def provision_database():
             cursor.execute(stmt)
             assert cursor.fetchall()[0][0] == 1
 
-        # `/assets` is located within the Docker container used for running CrateDB.
-        # docker compose -f tests/docker-compose.yml up
+        # `/assets` is mounted into the CrateDB container, see `tests/conftest.py`.
         data_path = "/assets/locations.jsonl"
 
-        # load testing data into crate
         cursor.execute("COPY locations FROM ?", (data_path,))
-        # refresh location table so imported data is visible immediately
         cursor.execute("REFRESH TABLE locations")
-        # create blob table
         cursor.execute(
             "CREATE BLOB TABLE myfiles CLUSTERED INTO 1 SHARDS " + "WITH (number_of_replicas=0)"
         )
-
-        # create users
         cursor.execute("CREATE USER me WITH (password = 'my_secret_pw')")
         cursor.execute("CREATE USER trusted_me")
 
@@ -109,10 +102,10 @@ def provision_database():
             embedding FLOAT_VECTOR(3)
         )""",
     ]
-    _execute_statements(ddl_statements)
+    _execute_statements(crate_host, ddl_statements)
 
 
-def drop_tables():
+def drop_tables(crate_host):
     """
     Drop all tables, views, and users created by the test suite.
     """
@@ -131,10 +124,10 @@ def drop_tables():
         "DROP USER IF EXISTS me",
         "DROP USER IF EXISTS trusted_me",
     ]
-    _execute_statements(ddl_statements)
+    _execute_statements(crate_host, ddl_statements)
 
 
-def _execute_statements(statements, on_error="raise"):
+def _execute_statements(crate_host, statements, on_error="raise"):
     with connect(crate_host) as conn:
         cursor = conn.cursor()
         for stmt in statements:
@@ -159,59 +152,49 @@ def _execute_statement(cursor, stmt, on_error="raise"):
 
 
 def setUp(test):
-    provision_database()
+    provision_database(test.globs["crate_host"])
 
-    test.globs["crate_host"] = crate_host
     test.globs["pprint"] = pprint
     test.globs["print"] = cprint
 
 
 def tearDown(test):
-    pass
+    # The CrateDB instance is shared with the rest of the test suite.
+    drop_tables(test.globs["crate_host"])
 
 
-def create_test_suite():
-    suite = unittest.TestSuite()
-    flags = doctest.NORMALIZE_WHITESPACE | doctest.ELLIPSIS
+DOCTEST_FILES = [
+    "docs/getting-started.rst",
+    "docs/crud.rst",
+    "docs/working-with-types.rst",
+    "docs/advanced-querying.rst",
+    pytest.param(
+        "docs/dataframe.rst",
+        marks=pytest.mark.skipif(
+            SA_VERSION < SA_2_0,
+            reason="Don't run DataFrame integration tests on SQLAlchemy 1.4 and earlier",
+        ),
+    ),
+    "docs/inspection-reflection.rst",
+]
 
-    sqlalchemy_integration_tests = [
-        "docs/getting-started.rst",
-        "docs/crud.rst",
-        "docs/working-with-types.rst",
-        "docs/advanced-querying.rst",
-    ]
 
-    # Don't run DataFrame integration tests on SQLAlchemy 1.4 and earlier.
-    skip_dataframe = SA_VERSION < SA_2_0
-    if not skip_dataframe:
-        sqlalchemy_integration_tests += [
-            "docs/dataframe.rst",
-        ]
-
-    # Don't run reflection integration tests on SQLAlchemy 1.3 and earlier and Python 3.10 and 3.11.
-    skip_reflection = SA_VERSION < SA_1_4 and (3, 10) <= sys.version_info < (3, 12)
-    if not skip_reflection:
-        sqlalchemy_integration_tests += [
-            "docs/inspection-reflection.rst",
-        ]
-
-    s = doctest.DocFileSuite(
-        *sqlalchemy_integration_tests,
+@pytest.mark.parametrize("filename", DOCTEST_FILES)
+def test_documentation(crate_host, filename):
+    """
+    Run the doctests of a documentation page against the session's CrateDB instance.
+    """
+    suite = doctest.DocFileSuite(
+        docs_path(filename),
         module_relative=False,
         setUp=setUp,
         tearDown=tearDown,
-        optionflags=flags,
+        globs={"crate_host": crate_host},
+        optionflags=doctest.NORMALIZE_WHITESPACE | doctest.ELLIPSIS,
         encoding="utf-8",
     )
-    suite.addTest(s)
-
-    return suite
-
-
-def load_tests(loader, tests, pattern):
-    """
-    Provide test suite to test discovery.
-
-    https://docs.python.org/3/library/unittest.html#load-tests-protocol
-    """
-    return create_test_suite()
+    result = unittest.TestResult()
+    suite.run(result)
+    problems = result.failures + result.errors
+    if problems:
+        pytest.fail("\n".join(traceback for _, traceback in problems), pytrace=False)

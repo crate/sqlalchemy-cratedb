@@ -17,7 +17,7 @@ The ``sqlalchemy-cratedb`` package provides the :ref:`SQLAlchemy dialect
 installation time, and can be used without further configuration.
 
 The CrateDB SQLAlchemy dialect is validated to work with SQLAlchemy versions
-``1.3``, ``1.4``, and ``2.0``.
+``1.4``, ``2.0``, and ``2.1``.
 
 .. SEEALSO::
 
@@ -428,7 +428,8 @@ insert two records:
     Behind the scenes, if you update an ``ObjectType`` property, and ``commit`` that
     change, the :ref:`UPDATE <crate-reference:dml-updating-data>` statement sent
     to CrateDB will only include the data necessary to update the changed
-    sub-columns.
+    sub-columns. If a flush updates several rows at once, the dialect sends the
+    whole object for each row.
 
 .. _objectarray:
 

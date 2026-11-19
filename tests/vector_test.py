@@ -27,30 +27,16 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.orm import Session, sessionmaker
+from crate.client.cursor import Cursor
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.sql import select
 
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    from sqlalchemy.ext.declarative import declarative_base
-
-from crate.client.cursor import Cursor
-
 from sqlalchemy_cratedb import FloatVector, knn_match
-from sqlalchemy_cratedb.sa_version import SA_1_4, SA_VERSION
 from sqlalchemy_cratedb.type.vector import from_db, to_db
 
 fake_cursor = MagicMock(name="fake_cursor")
 FakeCursor = MagicMock(name="FakeCursor", spec=Cursor)
 FakeCursor.return_value = fake_cursor
-
-
-if SA_VERSION < SA_1_4:
-    pytest.skip(
-        reason="The FloatVector type is not supported on SQLAlchemy 1.3 and earlier",
-        allow_module_level=True,
-    )
 
 
 @patch("crate.client.connection.Cursor", FakeCursor)
@@ -215,7 +201,7 @@ def test_float_vector_integration(cratedb_service):
     """
     np = pytest.importorskip("numpy")
 
-    engine = cratedb_service.database.engine
+    engine = cratedb_service.engine
     session = sessionmaker(bind=engine)()
     Base = declarative_base()
 
