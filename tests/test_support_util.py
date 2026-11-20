@@ -1,6 +1,19 @@
-import pytest
+import asyncio
+from unittest import mock
 
-from sqlalchemy_cratedb.support import quote_relation_name
+import pytest
+import sqlalchemy as sa
+from sqlalchemy.orm import declarative_base
+
+from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
+from sqlalchemy_cratedb.support import arefresh_table, quote_relation_name, refresh_table
+
+Base = declarative_base()
+
+
+class Reading(Base):
+    __tablename__ = "sensor_readings"
+    id = sa.Column(sa.String, primary_key=True)
 
 
 def test_quote_relation_name_once():
@@ -49,3 +62,28 @@ def test_quote_relation_name_with_invalid_fqn():
     """
     with pytest.raises(ValueError):
         quote_relation_name("too-many.my-db.my-schema.my-table")
+
+
+@pytest.mark.skipif(SA_VERSION < SA_2_0, reason="Tested with the SQLAlchemy 2.0 asyncio API")
+@pytest.mark.parametrize(
+    "target, sql",
+    [
+        ("doc.sensor_readings", "REFRESH TABLE doc.sensor_readings"),
+        (Reading, "REFRESH TABLE sensor_readings"),
+        (
+            sa.Table("sensor_readings", sa.MetaData(), schema="iot"),
+            'REFRESH TABLE "iot"."sensor_readings"',
+        ),
+    ],
+)
+def test_arefresh_table(target, sql):
+    from sqlalchemy.ext.asyncio import AsyncConnection
+
+    connection = mock.Mock(spec=sa.engine.Connection)
+    refresh_table(connection, target)
+    async_connection = mock.AsyncMock(spec=AsyncConnection)
+    asyncio.run(arefresh_table(async_connection, target))
+
+    statement = async_connection.execute.await_args.args[0]
+    assert str(statement) == sql
+    assert str(connection.execute.call_args.args[0]) == sql

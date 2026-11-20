@@ -159,11 +159,12 @@ def _refresh_after_dml_async(target) -> bool:
         refresh_after_dml_session(target.sync_session)
     elif isinstance(target, async_sessionmaker):
         sync_session_class = target.kw.get("sync_session_class", target.class_.sync_session_class)
-        refreshing_session_class = type(
-            "RefreshingSession", (sync_session_class,), {"__module__": __name__}
-        )
-        target.configure(sync_session_class=refreshing_session_class)
-        refresh_after_dml_session(refreshing_session_class)
+        if not getattr(sync_session_class, "_crate_refresh_after_dml", False):
+            refreshing_session_class = type(
+                "RefreshingSession", (sync_session_class,), {"_crate_refresh_after_dml": True}
+            )
+            target.configure(sync_session_class=refreshing_session_class)
+            refresh_after_dml_session(refreshing_session_class)
     else:
         return False
     return True
