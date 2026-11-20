@@ -22,7 +22,19 @@ def refresh_table(
     """
     Invoke a `REFRESH TABLE` statement.
     """
+    connection.execute(_refresh_table_statement(target))
 
+
+async def arefresh_table(
+    connection, target: t.Union[str, "DeclarativeBase", "sa.sql.selectable.TableClause"]
+):
+    """
+    Invoke a `REFRESH TABLE` statement on an `AsyncConnection` or `AsyncSession`.
+    """
+    await connection.execute(_refresh_table_statement(target))
+
+
+def _refresh_table_statement(target):
     if isinstance(target, sa.sql.selectable.TableClause):
         full_table_name = f'"{target.name}"'
         if target.schema is not None:
@@ -32,8 +44,7 @@ def refresh_table(
     else:
         full_table_name = target
 
-    sql = f"REFRESH TABLE {full_table_name}"
-    connection.execute(sa.text(sql))
+    return sa.text(f"REFRESH TABLE {full_table_name}")
 
 
 def refresh_dirty(session, flush_context=None):

@@ -103,6 +103,7 @@ optional-dependencies.release = [
 ]
 optional-dependencies.test = [
   "dask[dataframe]",
+  "greenlet",
   "httpx",
   "pandas<2.4",
   "pueblo>=0.0.7",
