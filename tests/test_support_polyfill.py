@@ -1,4 +1,5 @@
 import datetime as dt
+import sys
 
 import pytest
 import sqlalchemy as sa
@@ -217,5 +218,14 @@ def test_refresh_after_dml_async_sessionmaker_twice(async_engine):
 
 
 def test_refresh_after_dml_unknown_type():
+    with pytest.raises(TypeError, match="Unknown type"):
+        refresh_after_dml(sa.MetaData())
+
+
+def test_refresh_after_dml_unknown_type_without_asyncio(monkeypatch):
+    """
+    Without `greenlet`, importing `sqlalchemy.ext.asyncio` fails on SQLAlchemy 2.1.
+    """
+    monkeypatch.setitem(sys.modules, "sqlalchemy.ext.asyncio", None)
     with pytest.raises(TypeError, match="Unknown type"):
         refresh_after_dml(sa.MetaData())

@@ -151,7 +151,10 @@ def _refresh_after_dml_async(target) -> bool:
     if SA_VERSION < SA_2_0:
         return False
 
-    from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+    try:
+        from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+    except ImportError:
+        return False
 
     if isinstance(target, AsyncEngine):
         refresh_after_dml_engine(target.sync_engine)
