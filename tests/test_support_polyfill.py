@@ -205,6 +205,23 @@ def test_refresh_after_dml_async_sessionmaker_keeps_sync_session_class(async_eng
 
 
 @requires_asyncio_types
+def test_refresh_after_dml_async_sessionmaker_with_sync_sessionmaker(async_engine):
+    """
+    `sync_session_class` may be any callable that returns a `Session`.
+    """
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    sync_factory = sa.orm.sessionmaker(info={"tenant": "eu-central"})
+    factory = async_sessionmaker(async_engine, sync_session_class=sync_factory)
+    refresh_after_dml(factory)
+    refresh_after_dml(factory)
+    session = factory().sync_session
+    assert session.info == {"tenant": "eu-central"}
+    assert list(session.dispatch.after_flush).count(refresh_dirty) == 1
+    assert not refreshes(sync_factory())
+
+
+@requires_asyncio_types
 def test_refresh_after_dml_async_sessionmaker_twice(async_engine):
     """
     Calling it again on the same factory does not refresh twice per flush.
