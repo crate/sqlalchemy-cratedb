@@ -4,6 +4,7 @@ import pytest
 import sqlalchemy as sa
 
 
+@pytest.mark.http_only  # The `error_trace` option of crate-python.
 def test_statement_with_error_trace(cratedb_service):
     """
     Verify that the `error_trace` option works correctly.

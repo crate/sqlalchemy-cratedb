@@ -238,6 +238,7 @@ def test_date_cast_truncates(session):
     assert hour_of(sa.DateTime) == INPUT_DATETIME_NOTZ.hour
 
 
+@pytest.mark.http_only  # The `time_zone` option of crate-python.
 def test_datetime_tz_aware_read(session, cratedb_service):
     """
     With the driver's `time_zone` configured, `TIMESTAMP` columns read back as
