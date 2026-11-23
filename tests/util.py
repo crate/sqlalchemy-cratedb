@@ -1,7 +1,11 @@
+import os
 import unittest
 
 import sqlalchemy as sa
 from testcontainers.community.cratedb import CrateDBContainer
+
+# The driver of the integration tests: "http" for `crate://`, "psycopg" for `crate+psycopg://`.
+TEST_DRIVER = os.environ.get("CRATEDB_DRIVER") or "http"
 
 
 class ExtraAssertions:
@@ -64,7 +68,12 @@ class CrateDBTestAdapter:
         for host_path, container_path, mode in volumes:
             self.cratedb.with_volume_mapping(host_path, container_path, mode)
         self.cratedb.start()
-        self.dburi = self.cratedb.get_connection_url()
+        self.http_dburi = self.cratedb.get_connection_url()
+        self.psycopg_dburi = "crate+psycopg://crate@{host}:{port}/doc".format(
+            host=self.cratedb.get_container_host_ip(),
+            port=self.cratedb.get_exposed_port(5432),
+        )
+        self.dburi = self.psycopg_dburi if TEST_DRIVER == "psycopg" else self.http_dburi
         self.engine = sa.create_engine(self.dburi)
 
     def stop(self):
