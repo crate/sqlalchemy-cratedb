@@ -359,6 +359,35 @@ def test_native_uuid_values_match_http(engine, http):
         metadata.drop_all(http)
 
 
+def test_numeric_keeps_precision(engine):
+    """
+    psycopg returns `NUMERIC` as an exact `Decimal`.
+    """
+    metadata = sa.MetaData()
+    table = sa.Table(
+        "psycopg_balances",
+        metadata,
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("balance", sa.Numeric(20, 2)),
+        sa.Column("balance_float", sa.Numeric(20, 2, asdecimal=False)),
+    )
+    balance = decimal.Decimal("9007199254740993.25")
+    with engine.connect() as connection:
+        metadata.drop_all(connection, checkfirst=True)
+        metadata.create_all(connection)
+        try:
+            connection.execute(
+                table.insert(), {"id": 1, "balance": balance, "balance_float": balance}
+            )
+            connection.execute(sa.text("REFRESH TABLE psycopg_balances"))
+            row = connection.execute(sa.select(table.c.balance, table.c.balance_float)).one()
+            assert row.balance == balance
+            assert type(row.balance_float) is float
+            assert row.balance_float == float(balance)
+        finally:
+            metadata.drop_all(connection)
+
+
 @pytest.fixture
 def readings(http):
     http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_readings")

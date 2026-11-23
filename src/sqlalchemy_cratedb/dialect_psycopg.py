@@ -150,6 +150,7 @@ class CrateDialect_psycopg(CrateDialect):
     driver = "psycopg"
     default_paramstyle = "pyformat"
     supports_statement_cache = True
+    supports_native_decimal = True
     colspecs = colspecs
 
     # [W15] CrateDB bug: many errors are sent with the generic SQLSTATE XX000.
