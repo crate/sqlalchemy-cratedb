@@ -6,6 +6,7 @@
 - Deprecated support for SQLAlchemy 1.4, which is EOL. Importing the dialect
   with SQLAlchemy 1.4 emits a `FutureWarning`. A future release will
   require SQLAlchemy 2.0
+- Dialect: Fixed `get_view_names()` listing the views of every schema
 - Dialect: Fixed an `UPDATE` with several parameter sets failing with "A value
   is required for bind parameter". This includes an ORM flush that changes two
   or more rows.
