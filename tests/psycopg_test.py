@@ -274,8 +274,6 @@ def test_values_match_http(engine, http):
         sa.Column("active", sa.Boolean),
         sa.Column("device_id", sa.Uuid),
         sa.Column("device_name", sa.Uuid(as_uuid=False)),
-        sa.Column("firmware_id", sa.UUID),
-        sa.Column("firmware_name", sa.UUID(as_uuid=False)),
         sa.Column("tags", sa.ARRAY(sa.String)),
         sa.Column("payload", ObjectType),
         sa.Column("events", ObjectArray),
@@ -293,8 +291,6 @@ def test_values_match_http(engine, http):
         "active": True,
         "device_id": uuid.UUID("6f0c7b6e-6a3e-4e53-8c0b-0d6c7a1b2c3d"),
         "device_name": "0b6c4d5e-8f9a-4b1c-9d2e-3f4a5b6c7d8e",
-        "firmware_id": uuid.UUID("3d2c1b0a-9f8e-4d7c-8b6a-5f4e3d2c1b0a"),
-        "firmware_name": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
         "tags": ["indoor", "calibrated"],
         "payload": {"unit": "celsius", "calibration": {"offset": 0.5}, "history": [20, 21]},
         "events": [{"kind": "reboot", "codes": [3, 7]}, {"kind": "update"}],
@@ -325,6 +321,40 @@ def test_values_match_http(engine, http):
         assert ours[0].payload == row["payload"]
         assert ours[0].events == row["events"]
         assert tuple(ours[1]) == (2,) + (None,) * (len(row) - 1)
+    finally:
+        metadata.drop_all(http)
+
+
+def test_native_uuid_values_match_http(engine, http):
+    if http.dialect.server_version_info < (6, 2):
+        pytest.skip("CrateDB < 6.2 has no UUID type")
+    metadata = sa.MetaData()
+    table = sa.Table(
+        "psycopg_uuids",
+        metadata,
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("firmware_id", sa.UUID),
+        sa.Column("firmware_name", sa.UUID(as_uuid=False)),
+    )
+    row = {
+        "id": 1,
+        "firmware_id": uuid.UUID("3d2c1b0a-9f8e-4d7c-8b6a-5f4e3d2c1b0a"),
+        "firmware_name": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    }
+    with engine.connect() as connection:
+        metadata.drop_all(connection, checkfirst=True)
+        metadata.create_all(connection)
+        connection.execute(
+            table.insert(), [row, {"id": 2, "firmware_id": None, "firmware_name": None}]
+        )
+        connection.execute(sa.text("REFRESH TABLE psycopg_uuids"))
+        ours = connection.execute(sa.select(table).order_by(table.c.id)).all()
+    try:
+        theirs = http.execute(sa.select(table).order_by(table.c.id)).all()
+        assert ours == theirs
+        assert [type(value) for value in ours[0]] == [type(value) for value in theirs[0]]
+        assert tuple(ours[0]) == tuple(row.values())
+        assert tuple(ours[1]) == (2, None, None)
     finally:
         metadata.drop_all(http)
 
