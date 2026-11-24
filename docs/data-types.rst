@@ -145,9 +145,10 @@ Such a column can still be selected, but rendering it into DDL raises a
     numbers in a response as floats, so a returned value carries at most the
     digits a float holds.
 
-    Reflection recovers a column's type from its name alone, so a reflected
-    ``NUMERIC`` column carries no precision and cannot be rendered back into
-    DDL.
+    Reflection recovers a ``NUMERIC`` column's precision and scale on CrateDB
+    6.4.6 and later. On older servers, which report no scale, and for arrays of
+    ``NUMERIC``, which report neither, a reflected column carries no precision
+    and cannot be rendered back into DDL.
 
 
 .. _TIMESTAMP conversion with time zone: https://cratedb.com/docs/python/en/latest/query.html#timestamp-conversion-with-time-zone

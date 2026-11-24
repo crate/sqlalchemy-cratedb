@@ -27,6 +27,13 @@ def render_ddl(data_type):
     return str(sa.schema.CreateTable(table).compile(dialect=dialect))
 
 
+def render_row_ddl(row):
+    dialect = CrateDialect()
+    column = dialect._create_column_info(row)
+    table = sa.Table("t", sa.MetaData(), sa.Column(column["name"], column["type"]))
+    return str(sa.schema.CreateTable(table).compile(dialect=dialect))
+
+
 @pytest.mark.parametrize(
     ("data_type", "rendered"),
     [
@@ -49,16 +56,53 @@ def test_reflected_geo_column_resolves_to_the_geo_type():
 @pytest.mark.parametrize(
     ("row", "rendered"),
     [
-        (("c", "character", 5), "c CHAR(5)"),
-        (("c", "text", 10), "c VARCHAR(10)"),
-        (("c", "text", None), "c VARCHAR"),
+        (("c", "character", 5, None, None), "c CHAR(5)"),
+        (("c", "text", 10, None, None), "c VARCHAR(10)"),
+        (("c", "text", None, None, None), "c VARCHAR"),
     ],
 )
 def test_reflected_string_column_keeps_its_length(row, rendered):
-    column = CrateDialect()._create_column_info(row)
-    table = sa.Table("t", sa.MetaData(), sa.Column(column["name"], column["type"]))
-    ddl = str(sa.schema.CreateTable(table).compile(dialect=CrateDialect()))
-    assert "\t{0}\n".format(rendered) in ddl
+    assert "\t{0}\n".format(rendered) in render_row_ddl(row)
+
+
+@pytest.mark.parametrize(
+    ("row", "rendered"),
+    [
+        (("c", "numeric", None, 10, 2), "c NUMERIC(10, 2)"),
+        # CrateDB reports a declared `NUMERIC(5)` with a scale of zero.
+        (("c", "numeric", None, 5, 0), "c NUMERIC(5, 0)"),
+    ],
+)
+def test_reflected_numeric_column_renders_its_precision_and_scale(row, rendered):
+    assert "\t{0}\n".format(rendered) in render_row_ddl(row)
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        # CrateDB before 6.4.6 reports no scale. An unknown scale is not zero:
+        # `NUMERIC(10)` would drop the decimals of a table created from it.
+        ("c", "numeric", None, 10, None),
+        ("c", "numeric", None, None, None),
+    ],
+)
+def test_reflected_numeric_column_without_both_values_has_no_precision(row):
+    # Unlike its neighbours, this test checks the rendered type, not the DDL from
+    # `render_row_ddl`. A bare `NUMERIC` has no valid DDL: CrateDB refuses to store a
+    # NUMERIC column without a precision, so `CrateDDLCompiler` raises `CompileError`
+    # before rendering any text. Asserting that error would test the existing guard,
+    # not this reflection. Rendering the DDL with another dialect, which lacks the
+    # guard, would test DDL this dialect never emits. The type compiler accepts a bare
+    # `NUMERIC`, a valid cast target, so it shows what reflection produced: the exact
+    # match rules out `NUMERIC(10)` and `NUMERIC(10, 0)`.
+    dialect = CrateDialect()
+    column = dialect._create_column_info(row)
+    assert dialect.type_compiler.process(sqltypes.to_instance(column["type"])) == "NUMERIC"
+
+
+def test_reflected_integer_column_ignores_its_reported_precision():
+    # The precision of an integer is its bit width, fixed by the type.
+    assert "\tc INT\n" in render_row_ddl(("c", "integer", None, 32, 0))
 
 
 @pytest.mark.parametrize(
@@ -150,7 +194,7 @@ def test_unresolved_type_prints_its_crate_type_name():
 
 def test_reflected_unknown_type_warns_with_the_column_name():
     with pytest.warns(sa.exc.SAWarning, match="type '{0}' of column 'c'".format(UNRESOLVABLE)):
-        column = CrateDialect()._create_column_info(("c", UNRESOLVABLE, None))
+        column = CrateDialect()._create_column_info(("c", UNRESOLVABLE, None, None, None))
     assert isinstance(column["type"], sqltypes.NullType)
 
 
@@ -185,6 +229,33 @@ def test_reflected_table_renders_string_lengths_and_ip(cratedb_service):
     assert "code CHAR(5)" in ddl
     assert "name VARCHAR(10)" in ddl
     assert "address IP" in ddl
+
+
+def test_reflected_table_renders_numeric_precision_and_scale(cratedb_service):
+    engine = cratedb_service.engine
+    with engine.begin() as connection:
+        connection.exec_driver_sql("DROP TABLE IF EXISTS reflected_numerics")
+        connection.exec_driver_sql(
+            "CREATE TABLE reflected_numerics (amount NUMERIC(10, 2), rate NUMERIC(5))"
+        )
+        connection.exec_driver_sql("INSERT INTO reflected_numerics (amount) VALUES (1.25)")
+        connection.exec_driver_sql("REFRESH TABLE reflected_numerics")
+    table = sa.Table("reflected_numerics", sa.MetaData(), autoload_with=engine)
+    with engine.connect() as connection:
+        amount = connection.execute(sa.select(table.c.amount)).scalar()
+        server_version_info = connection.dialect.server_version_info
+
+    if server_version_info >= (6, 4, 6):
+        ddl = str(sa.schema.CreateTable(table).compile(engine))
+        assert "amount NUMERIC(10, 2)" in ddl
+        assert "rate NUMERIC(5, 0)" in ddl
+        assert str(amount) == "1.25"
+    else:
+        # Older servers report no scale, so the columns carry no precision. Such a
+        # table has no valid DDL; see the unit test for reflection without both values.
+        type_compiler = engine.dialect.type_compiler
+        assert type_compiler.process(table.c.amount.type) == "NUMERIC"
+        assert type_compiler.process(table.c.rate.type) == "NUMERIC"
 
 
 def test_ip_column_stores_ipaddress_objects(cratedb_service):

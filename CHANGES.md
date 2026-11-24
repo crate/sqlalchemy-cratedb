@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- Dialect: Reflect the precision and scale of `NUMERIC` columns, so a
+  reflected table can be created again and reads its values at the column's
+  scale. Requires CrateDB 6.4.6 or later; arrays of `NUMERIC` still reflect
+  without them
+
 ## 2026/11/24 0.45.0
 - BREAKING: Dropped support for SQLAlchemy 1.3, which is EOL since 2021.
   The minimum supported version is SQLAlchemy 1.4
