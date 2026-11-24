@@ -452,7 +452,8 @@ class CrateDialect(default.DefaultDialect):
     @reflection.cache
     def get_columns(self, connection, table_name, schema=None, **kw):
         query = (
-            "SELECT column_name, data_type, character_maximum_length "
+            "SELECT column_name, data_type, character_maximum_length, "
+            "numeric_precision, numeric_scale "
             "FROM information_schema.columns "
             "WHERE table_name = ? AND {0} = ? "
             "AND column_name !~ ?".format(self.schema_column)
@@ -518,12 +519,16 @@ class CrateDialect(default.DefaultDialect):
         return "table_schema"
 
     def _create_column_info(self, row):
-        name, data_type, length = row
+        name, data_type, length, precision, scale = row
         type_ = self._resolve_type(data_type)
         if isinstance(type_, UnresolvedType):
             warn("Did not recognize type '{0}' of column '{1}'".format(data_type, name))
         if length is not None and isinstance(type_, type) and issubclass(type_, sqltypes.String):
             type_ = type_(length)
+        # Only a NUMERIC column declares its precision; other types report a fixed bit width.
+        # CrateDB before 6.4.6 reports no scale, and an unknown scale is not zero.
+        if data_type == "numeric" and precision is not None and scale is not None:
+            type_ = type_(precision, scale)
         return {
             "name": name,
             "type": type_,
