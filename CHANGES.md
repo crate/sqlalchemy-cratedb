@@ -1,11 +1,23 @@
 # Changelog
 
-## Unreleased
+## 2026/11/24 0.45.0
 - BREAKING: Dropped support for SQLAlchemy 1.3, which is EOL since 2021.
   The minimum supported version is SQLAlchemy 1.4
 - Deprecated support for SQLAlchemy 1.4, which is EOL. Importing the dialect
   with SQLAlchemy 1.4 emits a `FutureWarning`. A future release will
   require SQLAlchemy 2.0
+- Dialect: Fixed `get_view_names()` listing the views of every schema
+- Dialect: Fixed an `UPDATE` with several parameter sets failing with "A value
+  is required for bind parameter". This includes an ORM flush that changes two
+  or more rows.
+- Dialect: Report the driver's `ConnectionError` and a closed connection as
+  disconnects. `pool_pre_ping` now replaces such connections, a closed
+  connection no longer stays in the pool, and `connection_invalidated` is set
+  on the raised error. A statement that runs longer than the client's `timeout`
+  is not reported as a disconnect, because the server may still execute it.
+- Types: Fixed reading a NULL `GEO_POINT` or `GEO_SHAPE` value raising
+  `TypeError: 'NoneType' object is not iterable`. NULL values now read as
+  `None`
 
 ## 2026/10/19 0.44.0
 - Types: Fixed `sa.Time` raising `Cannot find data type: time`. `Time` columns 

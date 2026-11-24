@@ -32,6 +32,7 @@ from sqlalchemy.sql import Update, text
 from sqlalchemy_cratedb import ObjectType
 from sqlalchemy_cratedb.compiler import crate_before_execute
 from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
+from sqlalchemy_cratedb.type.object import MutableDict
 from tests.util import ExtraAssertions
 
 from .util import ParametrizedTestCase
@@ -50,35 +51,53 @@ class SqlAlchemyCompilerTest(ParametrizedTestCase, ExtraAssertions):
         )
 
         self.update = Update(self.mytable).where(text("name=:name"))
-        self.values = [{"name": "crate"}]
-        self.values = (self.values,)
 
     def test_sqlite_update_not_rewritten(self):
         clauseelement, multiparams, params = crate_before_execute(
-            self.sqlite_engine, self.update, self.values, {}
+            self.sqlite_engine, self.update, [], {"name": "crate"}
         )
 
+        self.assertIs(clauseelement, self.update)
         self.assertFalse(hasattr(clauseelement, "_crate_specific"))
 
     def test_crate_update_rewritten(self):
+        """
+        SQLAlchemy passes a single parameter set in `params`.
+        """
         clauseelement, multiparams, params = crate_before_execute(
-            self.crate_engine, self.update, self.values, {}
+            self.crate_engine, self.update, [], {"name": "crate"}
         )
 
         self.assertTrue(hasattr(clauseelement, "_crate_specific"))
+        self.assertEqual(multiparams, [])
+        self.assertEqual(params, {"name": "crate"})
 
-    def test_bulk_update_on_builtin_type(self):
-        """
-        The "before_execute" hook in the compiler doesn't get
-        access to the parameters in case of a bulk update. It
-        should not try to optimize any parameters.
-        """
-        data = ({},)
+    def test_crate_update_rewrites_changed_object_keys(self):
+        data = MutableDict({"x": 1, "y": 2})
+        data["y"] = 3
         clauseelement, multiparams, params = crate_before_execute(
-            self.crate_engine, self.update, data, None
+            self.crate_engine, self.update, [], {"name": "crate", "data": data}
         )
 
+        self.assertTrue(hasattr(clauseelement, "_crate_specific"))
+        self.assertEqual(params, {"name": "crate", "data['y']": 3})
+
+    def test_crate_update_executemany_not_rewritten(self):
+        """
+        SQLAlchemy passes an executemany in `multiparams`. It passes through
+        unchanged, with every parameter set.
+        """
+        data = MutableDict({"x": 1})
+        data["x"] = 2
+        parameter_sets = [{"name": "crate", "data": data}, {"name": "other", "data": data}]
+        clauseelement, multiparams, params = crate_before_execute(
+            self.crate_engine, self.update, parameter_sets, {}
+        )
+
+        self.assertIs(clauseelement, self.update)
         self.assertFalse(hasattr(clauseelement, "_crate_specific"))
+        self.assertIs(multiparams, parameter_sets)
+        self.assertEqual(params, {})
 
     def test_select_with_ilike_no_escape(self):
         """
