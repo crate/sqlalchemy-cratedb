@@ -174,6 +174,11 @@ session = sessionmaker(bind=engine)()
 refresh_after_dml(session)
 ```
 
+With SQLAlchemy 2.0 and later, it also accepts an `AsyncEngine`, an
+`AsyncSession` or an `async_sessionmaker`. For an `async_sessionmaker`, only
+the sessions it creates run `REFRESH TABLE`. To refresh a single table from
+async code, use `await arefresh_table(connection, table)`.
+
 :::{warning}
 Refreshing the table after each DML operation can cause serious performance
 degradations, and should only be used on low-volume, low-traffic data,

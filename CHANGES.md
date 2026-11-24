@@ -18,6 +18,9 @@
 - Types: Fixed reading a NULL `GEO_POINT` or `GEO_SHAPE` value raising
   `TypeError: 'NoneType' object is not iterable`. NULL values now read as
   `None`
+- Support: `refresh_after_dml()` accepts an `AsyncEngine`, an `AsyncSession`
+  or an `async_sessionmaker`, with SQLAlchemy 2.0 and later. Added
+  `arefresh_table()`, the awaitable counterpart of `refresh_table()`
 
 ## 2026/10/19 0.44.0
 - Types: Fixed `sa.Time` raising `Cannot find data type: time`. `Time` columns 

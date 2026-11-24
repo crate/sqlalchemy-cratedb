@@ -3,7 +3,11 @@ import typing as t
 import sqlalchemy as sa
 from sqlalchemy.event import listen
 
+from sqlalchemy_cratedb.sa_version import SA_2_0, SA_VERSION
 from sqlalchemy_cratedb.support.util import refresh_dirty, refresh_table
+
+if t.TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 
 def patch_autoincrement_timestamp():
@@ -120,13 +124,50 @@ def refresh_after_dml_engine(engine: sa.engine.Engine):
     sa.event.listen(engine, "after_execute", receive_after_execute)
 
 
-def refresh_after_dml(engine_or_session: t.Union[sa.engine.Engine, sa.orm.Session]):
+def refresh_after_dml(
+    engine_or_session: t.Union[
+        sa.engine.Engine,
+        sa.orm.Session,
+        "AsyncEngine",
+        "AsyncSession",
+        "async_sessionmaker",
+    ],
+):
     """
     Run `REFRESH TABLE` after each DML operation (INSERT, UPDATE, DELETE).
+
+    With SQLAlchemy 2.0 and later, it also accepts an `AsyncEngine`, an
+    `AsyncSession` or an `async_sessionmaker`.
     """
     if isinstance(engine_or_session, sa.engine.Engine):
         refresh_after_dml_engine(engine_or_session)
     elif isinstance(engine_or_session, (sa.orm.Session, sa.orm.scoping.scoped_session)):
         refresh_after_dml_session(engine_or_session)
-    else:
+    elif not _refresh_after_dml_async(engine_or_session):
         raise TypeError(f"Unknown type: {type(engine_or_session)}")
+
+
+def _refresh_after_dml_async(target) -> bool:
+    if SA_VERSION < SA_2_0:
+        return False
+
+    try:
+        from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+    except ImportError:
+        return False
+
+    if isinstance(target, AsyncEngine):
+        refresh_after_dml_engine(target.sync_engine)
+    elif isinstance(target, AsyncSession):
+        refresh_after_dml_session(target.sync_session)
+    elif isinstance(target, async_sessionmaker):
+        sync_session_class = target.kw.get("sync_session_class", target.class_.sync_session_class)
+        if not getattr(sync_session_class, "_crate_refresh_after_dml", False):
+            refreshing_session_class = type(
+                "RefreshingSession", (sync_session_class,), {"_crate_refresh_after_dml": True}
+            )
+            target.configure(sync_session_class=refreshing_session_class)
+            refresh_after_dml_session(refreshing_session_class)
+    else:
+        return False
+    return True
