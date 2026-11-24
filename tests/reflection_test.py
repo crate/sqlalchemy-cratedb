@@ -27,6 +27,13 @@ def render_ddl(data_type):
     return str(sa.schema.CreateTable(table).compile(dialect=dialect))
 
 
+def render_row_ddl(row):
+    dialect = CrateDialect()
+    column = dialect._create_column_info(row)
+    table = sa.Table("t", sa.MetaData(), sa.Column(column["name"], column["type"]))
+    return str(sa.schema.CreateTable(table).compile(dialect=dialect))
+
+
 @pytest.mark.parametrize(
     ("data_type", "rendered"),
     [
@@ -55,47 +62,47 @@ def test_reflected_geo_column_resolves_to_the_geo_type():
     ],
 )
 def test_reflected_string_column_keeps_its_length(row, rendered):
-    column = CrateDialect()._create_column_info(row)
-    table = sa.Table("t", sa.MetaData(), sa.Column(column["name"], column["type"]))
-    ddl = str(sa.schema.CreateTable(table).compile(dialect=CrateDialect()))
-    assert "\t{0}\n".format(rendered) in ddl
+    assert "\t{0}\n".format(rendered) in render_row_ddl(row)
 
 
 @pytest.mark.parametrize(
-    ("precision", "scale"),
+    ("row", "rendered"),
     [
-        (10, 2),
+        (("c", "numeric", None, 10, 2), "c NUMERIC(10, 2)"),
         # CrateDB reports a declared `NUMERIC(5)` with a scale of zero.
-        (5, 0),
+        (("c", "numeric", None, 5, 0), "c NUMERIC(5, 0)"),
     ],
 )
-def test_reflected_numeric_column_keeps_its_precision_and_scale(precision, scale):
-    column = CrateDialect()._create_column_info(("c", "numeric", None, precision, scale))
-    type_ = sqltypes.to_instance(column["type"])
-    assert isinstance(type_, sqltypes.NUMERIC)
-    assert (type_.precision, type_.scale) == (precision, scale)
+def test_reflected_numeric_column_renders_its_precision_and_scale(row, rendered):
+    assert "\t{0}\n".format(rendered) in render_row_ddl(row)
 
 
 @pytest.mark.parametrize(
-    ("precision", "scale"),
+    "row",
     [
         # CrateDB before 6.4.6 reports no scale. An unknown scale is not zero:
         # `NUMERIC(10)` would drop the decimals of a table created from it.
-        (10, None),
-        (None, None),
+        ("c", "numeric", None, 10, None),
+        ("c", "numeric", None, None, None),
     ],
 )
-def test_reflected_numeric_column_without_both_values_has_no_precision(precision, scale):
-    column = CrateDialect()._create_column_info(("c", "numeric", None, precision, scale))
-    type_ = sqltypes.to_instance(column["type"])
-    assert isinstance(type_, sqltypes.NUMERIC)
-    assert (type_.precision, type_.scale) == (None, None)
+def test_reflected_numeric_column_without_both_values_has_no_precision(row):
+    # Unlike its neighbours, this test checks the rendered type, not the DDL from
+    # `render_row_ddl`. A bare `NUMERIC` has no valid DDL: CrateDB refuses to store a
+    # NUMERIC column without a precision, so `CrateDDLCompiler` raises `CompileError`
+    # before rendering any text. Asserting that error would test the existing guard,
+    # not this reflection. Rendering the DDL with another dialect, which lacks the
+    # guard, would test DDL this dialect never emits. The type compiler accepts a bare
+    # `NUMERIC`, a valid cast target, so it shows what reflection produced: the exact
+    # match rules out `NUMERIC(10)` and `NUMERIC(10, 0)`.
+    dialect = CrateDialect()
+    column = dialect._create_column_info(row)
+    assert dialect.type_compiler.process(sqltypes.to_instance(column["type"])) == "NUMERIC"
 
 
 def test_reflected_integer_column_ignores_its_reported_precision():
     # The precision of an integer is its bit width, fixed by the type.
-    column = CrateDialect()._create_column_info(("c", "integer", None, 32, 0))
-    assert column["type"] is sqltypes.INTEGER
+    assert "\tc INT\n" in render_row_ddl(("c", "integer", None, 32, 0))
 
 
 @pytest.mark.parametrize(
@@ -244,9 +251,11 @@ def test_reflected_table_renders_numeric_precision_and_scale(cratedb_service):
         assert "rate NUMERIC(5, 0)" in ddl
         assert str(amount) == "1.25"
     else:
-        # Older servers report no scale, so the columns carry no precision.
-        assert table.c.amount.type.precision is None
-        assert table.c.rate.type.precision is None
+        # Older servers report no scale, so the columns carry no precision. Such a
+        # table has no valid DDL; see the unit test for reflection without both values.
+        type_compiler = engine.dialect.type_compiler
+        assert type_compiler.process(table.c.amount.type) == "NUMERIC"
+        assert type_compiler.process(table.c.rate.type) == "NUMERIC"
 
 
 def test_ip_column_stores_ipaddress_objects(cratedb_service):
