@@ -52,6 +52,13 @@ def insert_bulk(pd_table, conn, keys, data_iter):
     [3] https://github.com/pandas-dev/pandas/blob/v2.0.1/pandas/io/sql.py#L1011-L1027
     """  # noqa: E501
 
+    if conn.dialect.driver != "crate-python":
+        raise NotImplementedError(
+            "`insert_bulk` needs the HTTP driver (`crate://`), "
+            f"the `{conn.dialect.name}+{conn.dialect.driver}` dialect does not support it. "
+            'Use `to_sql(..., method="multi")` instead.'
+        )
+
     # Compile SQL statement and materialize batch.
     sql = str(pd_table.table.insert().compile(bind=conn))
     data = list(data_iter)

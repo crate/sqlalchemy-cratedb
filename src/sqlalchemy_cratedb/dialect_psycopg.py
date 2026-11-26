@@ -1,26 +1,7 @@
-# -*- coding: utf-8; -*-
-#
-# Licensed to CRATE Technology GmbH ("Crate") under one or more contributor
-# license agreements.  See the NOTICE file distributed with this work for
-# additional information regarding copyright ownership.  Crate licenses
-# this file to you under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.  You may
-# obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
-# License for the specific language governing permissions and limitations
-# under the License.
-#
-# However, if you have executed another commercial license agreement
-# with Crate these terms will supersede the license and you may use the
-# software solely pursuant to the terms of the relevant commercial agreement.
-
 import datetime as dt
+import os
 import re
+import sys
 import uuid
 
 import sqlalchemy as sa
@@ -112,7 +93,7 @@ colspecs = {
 
 class _QmarkConnection:
     """
-    [W1] The reflection queries of `CrateDialect` use `?` placeholders, which
+    The reflection queries of `CrateDialect` use `?` placeholders, which
     psycopg does not know. Remove once they use SQLAlchemy binds.
     """
 
@@ -146,6 +127,35 @@ def _parse_prepare_threshold(value):
     return int(value)
 
 
+def _libpq_root_cert_configured():
+    """
+    Whether libpq finds a CA set of its own: `PGSSLROOTCERT`, or the default
+    `~/.postgresql/root.crt` (`%APPDATA%\\postgresql\\root.crt` on Windows).
+    """
+    if os.environ.get("PGSSLROOTCERT"):
+        return True
+    if sys.platform == "win32":
+        directory = os.path.join(os.environ.get("APPDATA", ""), "postgresql")
+    else:
+        directory = os.path.join(os.path.expanduser("~"), ".postgresql")
+    return os.path.exists(os.path.join(directory, "root.crt"))
+
+
+def _json_dumper():
+    """
+    A JSON dumper that converts values like `crate://` does: `datetime` and
+    `date` to epoch milliseconds, `time` to ISO 8601, `Decimal` and `UUID` to
+    strings.
+    """
+    from crate.client.http import json_dumps
+    from psycopg.types.json import JsonDumper
+
+    class CrateJsonDumper(JsonDumper):
+        _dumps = staticmethod(json_dumps)
+
+    return CrateJsonDumper
+
+
 class CrateDialect_psycopg(CrateDialect):
     driver = "psycopg"
     default_paramstyle = "pyformat"
@@ -153,7 +163,7 @@ class CrateDialect_psycopg(CrateDialect):
     supports_native_decimal = True
     colspecs = colspecs
 
-    # [W15] CrateDB bug: many errors are sent with the generic SQLSTATE XX000.
+    # CrateDB bug: many errors are sent with the generic SQLSTATE XX000.
     # crate/crate#17489
     dbapi_exception_translation_map = {"InternalError_": "ProgrammingError"}
 
@@ -181,12 +191,16 @@ class CrateDialect_psycopg(CrateDialect):
         opts.setdefault("user", "crate")
         opts.setdefault("dbname", "doc")
         opts["autocommit"] = True
-        # [W3] CrateDB bug: a prepared `DROP TABLE` fails once the table is recreated.
+        # CrateDB bug: a prepared `DROP TABLE` fails once the table is recreated.
         # crate/crate#20311
         opts["prepare_threshold"] = _parse_prepare_threshold(opts.get("prepare_threshold"))
         opts.setdefault("connect_timeout", 10)
 
-        if opts.get("sslmode") in ("verify-ca", "verify-full") and "sslrootcert" not in opts:
+        if (
+            opts.get("sslmode") in ("verify-ca", "verify-full")
+            and "sslrootcert" not in opts
+            and not _libpq_root_cert_configured()
+        ):
             try:
                 import certifi
             except ImportError:
@@ -199,11 +213,11 @@ class CrateDialect_psycopg(CrateDialect):
         return default.DefaultDialect.connect(self, *cargs, **cparams)
 
     def on_connect(self):
-        from psycopg.types.json import JsonDumper
+        json_dumper = _json_dumper()
 
         def setup(dbapi_connection):
             self.set_isolation_level(dbapi_connection, "AUTOCOMMIT")
-            self.get_driver_connection(dbapi_connection).adapters.register_dumper(dict, JsonDumper)
+            self.get_driver_connection(dbapi_connection).adapters.register_dumper(dict, json_dumper)
 
         return setup
 
@@ -219,7 +233,7 @@ class CrateDialect_psycopg(CrateDialect):
         return False
 
     def do_executemany(self, cursor, statement, parameters, context=None):
-        # [W4] CrateDB bug: in psycopg's `executemany()`, a failed row is answered
+        # CrateDB bug: in psycopg's `executemany()`, a failed row is answered
         # with an update count psycopg cannot read, and the row is lost silently.
         # crate/crate#20593
         rowcount = 0
