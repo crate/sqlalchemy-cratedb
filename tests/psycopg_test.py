@@ -3,6 +3,7 @@ import decimal
 import importlib
 import subprocess
 import sys
+import types
 import uuid
 
 import pytest
@@ -111,8 +112,19 @@ def test_connect_args_schema_is_not_sent_to_psycopg():
     assert "schema" not in connect_args("crate+psycopg://crate@localhost/doc?schema=sensors")
 
 
+@pytest.fixture
+def no_libpq_root_cert(monkeypatch, tmp_path):
+    """
+    A home directory without `.postgresql/root.crt`, and no `PGSSLROOTCERT`.
+    """
+    monkeypatch.delenv("PGSSLROOTCERT", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("APPDATA", str(tmp_path))
+    return tmp_path
+
+
 @pytest.mark.parametrize("sslmode", ["verify-ca", "verify-full"])
-def test_connect_args_certificate_checks_use_certifi(sslmode):
+def test_connect_args_certificate_checks_use_certifi(sslmode, no_libpq_root_cert):
     certifi = pytest.importorskip("certifi")
     url = f"crate+psycopg://crate@localhost/doc?sslmode={sslmode}"
     assert connect_args(url)["sslrootcert"] == certifi.where()
@@ -121,8 +133,38 @@ def test_connect_args_certificate_checks_use_certifi(sslmode):
     )
 
 
-def test_connect_args_certifi_only_for_certificate_checks():
+def test_connect_args_certifi_only_for_certificate_checks(no_libpq_root_cert):
     assert "sslrootcert" not in connect_args("crate+psycopg://crate@localhost/doc?sslmode=require")
+
+
+def test_connect_args_certifi_not_over_pgsslrootcert(monkeypatch, no_libpq_root_cert):
+    """
+    libpq reads `PGSSLROOTCERT` only when `sslrootcert` is not given.
+    """
+    pytest.importorskip("certifi")
+    monkeypatch.setenv("PGSSLROOTCERT", "/etc/ssl/cratedb-ca.pem")
+    url = "crate+psycopg://crate@localhost/doc?sslmode=verify-full"
+    assert "sslrootcert" not in connect_args(url)
+
+
+def test_connect_args_certifi_not_over_default_root_cert(no_libpq_root_cert):
+    """
+    libpq reads `~/.postgresql/root.crt` only when `sslrootcert` is not given.
+    """
+    pytest.importorskip("certifi")
+    directory = no_libpq_root_cert / ("postgresql" if sys.platform == "win32" else ".postgresql")
+    directory.mkdir()
+    (directory / "root.crt").write_text("")
+    url = "crate+psycopg://crate@localhost/doc?sslmode=verify-full"
+    assert "sslrootcert" not in connect_args(url)
+
+
+def test_insert_bulk_needs_the_http_driver():
+    from sqlalchemy_cratedb.support import insert_bulk
+
+    conn = types.SimpleNamespace(dialect=sa.create_engine("crate+psycopg://").dialect)
+    with pytest.raises(NotImplementedError, match='method="multi"'):
+        insert_bulk(None, conn, [], iter([]))
 
 
 @pytest.mark.parametrize("dialect_cls", [CrateDialect_psycopg, CrateDialectAsync_psycopg])
@@ -276,6 +318,7 @@ def test_values_match_http(engine, http):
         sa.Column("device_name", sa.Uuid(as_uuid=False)),
         sa.Column("tags", sa.ARRAY(sa.String)),
         sa.Column("payload", ObjectType),
+        sa.Column("converted", ObjectType),
         sa.Column("events", ObjectArray),
         sa.Column("location", Geopoint),
     )
@@ -293,6 +336,14 @@ def test_values_match_http(engine, http):
         "device_name": "0b6c4d5e-8f9a-4b1c-9d2e-3f4a5b6c7d8e",
         "tags": ["indoor", "calibrated"],
         "payload": {"unit": "celsius", "calibration": {"offset": 0.5}, "history": [20, 21]},
+        "converted": {
+            "at": dt.datetime(2026, 10, 26, 12, 30, 1, 123000),
+            "at_tz": dt.datetime(2026, 10, 26, 23, 30, tzinfo=dt.timezone(dt.timedelta(hours=-2))),
+            "day": dt.date(2026, 10, 26),
+            "clock": dt.time(12, 30),
+            "amount": decimal.Decimal("1.50"),
+            "device": uuid.UUID("6f0c7b6e-6a3e-4e53-8c0b-0d6c7a1b2c3d"),
+        },
         "events": [{"kind": "reboot", "codes": [3, 7]}, {"kind": "update"}],
         "location": (10.95667, 47.18917),
     }
@@ -319,6 +370,14 @@ def test_values_match_http(engine, http):
         assert ours[0].device_id == row["device_id"]
         assert ours[0].device_name == row["device_name"]
         assert ours[0].payload == row["payload"]
+        assert ours[0].converted == {
+            "at": 1793017801123,
+            "at_tz": 1793064600000,
+            "day": 1792972800000,
+            "clock": "12:30:00",
+            "amount": "1.50",
+            "device": "6f0c7b6e-6a3e-4e53-8c0b-0d6c7a1b2c3d",
+        }
         assert ours[0].events == row["events"]
         assert tuple(ours[1]) == (2,) + (None,) * (len(row) - 1)
     finally:
