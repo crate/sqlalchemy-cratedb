@@ -26,6 +26,13 @@ from .dialect import UUID, CrateDialect, Date, DateTime  # noqa: E402
 from .dialect import colspecs as crate_colspecs  # noqa: E402
 from .type.geo import Geopoint  # noqa: E402
 
+try:
+    from sqlalchemy.util.concurrency import await_
+except ImportError:  # SQLAlchemy 2.0
+    from sqlalchemy.util.concurrency import await_only as await_
+
+EXECUTEMANY_MODES = ("bulk", "loop")
+
 
 class _Date_psycopg(Date):
     def result_processor(self, dialect, coltype):
@@ -109,6 +116,49 @@ class _QmarkConnection:
         return getattr(self._connection, name)
 
 
+def _pipeline_sync(connection, statement, parameters):
+    cursors = []
+    try:
+        with connection.pipeline() as pipeline:
+            for row in parameters:
+                cursor = connection.cursor()
+                cursors.append(cursor)
+                cursor.execute(statement, row)
+            pipeline.sync()
+        return [cursor.rowcount for cursor in cursors]
+    finally:
+        for cursor in cursors:
+            cursor.close()
+
+
+async def _pipeline_async(connection, statement, parameters):
+    cursors = []
+    try:
+        async with connection.pipeline() as pipeline:
+            for row in parameters:
+                cursor = connection.cursor()
+                cursors.append(cursor)
+                await cursor.execute(statement, row)
+            await pipeline.sync()
+        return [cursor.rowcount for cursor in cursors]
+    finally:
+        for cursor in cursors:
+            await cursor.close()
+
+
+def _set_batch_result(context, counts):
+    """
+    Store the per-row counts of a batch as `crate://` does: `last_result` holds
+    `{"rowcount": n}` per row, -2 for a failed row, and `rowcount` is the sum of
+    the other rows, or -1 if every row failed.
+    """
+    if context is None:
+        return
+    context.last_result = [{"rowcount": n if n >= 0 else -2} for n in counts]
+    succeeded = [n for n in counts if n >= 0]
+    context._rowcount = sum(succeeded) if succeeded else -1
+
+
 def _import_psycopg():
     import psycopg
 
@@ -166,6 +216,17 @@ class CrateDialect_psycopg(CrateDialect):
     # CrateDB bug: many errors are sent with the generic SQLSTATE XX000.
     # crate/crate#17489
     dbapi_exception_translation_map = {"InternalError_": "ProgrammingError"}
+
+    _insert_bulk_unnest = True
+
+    def __init__(self, executemany_mode="bulk", **kwargs):
+        super().__init__(**kwargs)
+        if executemany_mode not in EXECUTEMANY_MODES:
+            raise ValueError(
+                f"executemany_mode={executemany_mode!r} is not supported, "
+                f"use one of {', '.join(repr(mode) for mode in EXECUTEMANY_MODES)}"
+            )
+        self.executemany_mode = executemany_mode
 
     @classmethod
     def import_dbapi(cls):
@@ -233,15 +294,34 @@ class CrateDialect_psycopg(CrateDialect):
         return False
 
     def do_executemany(self, cursor, statement, parameters, context=None):
-        # CrateDB bug: in psycopg's `executemany()`, a failed row is answered
-        # with an update count psycopg cannot read, and the row is lost silently.
-        # crate/crate#20593
-        rowcount = 0
-        for row in parameters:
-            cursor.execute(statement, row)
-            rowcount += max(cursor.rowcount, 0)
-        if context is not None:
-            context._rowcount = rowcount
+        # psycopg's own `executemany()` is never used. CrateDB bugs:
+        # - a failed row is answered with an update count psycopg cannot read,
+        #   and the row is lost silently. crate/crate#20593
+        # - with `returning=True`, psycopg sends `Flush`, which CrateDB does not
+        #   answer after a bind error, and the connection hangs. crate/crate#20633
+        if self.executemany_mode == "loop":
+            # One statement per row, so a key that matches nothing counts 0, not
+            # -2 as in a bulk operation.
+            counts = []
+            for row in parameters:
+                cursor.execute(statement, row)
+                counts.append(cursor.rowcount)
+        else:
+            counts = self._executemany_pipeline(cursor, statement, parameters)
+        _set_batch_result(context, counts)
+
+    def _executemany_pipeline(self, cursor, statement, parameters):
+        """
+        Send every row in one pipeline with a single `Sync`, and read the
+        count of each row. CrateDB runs the rows as one bulk operation, as
+        `bulk_parameters` on `crate://`: a failed row does not stop the others,
+        and psycopg reports its count as -1. pgwire does not send the error
+        message of a failed row.
+        """
+        if self.is_async:
+            connection = cursor._cursor.connection
+            return await_(_pipeline_async(connection, statement, parameters))
+        return _pipeline_sync(cursor.connection, statement, parameters)
 
     def _get_default_schema_name(self, connection):
         return connection.exec_driver_sql("SELECT current_schema()").scalar()
