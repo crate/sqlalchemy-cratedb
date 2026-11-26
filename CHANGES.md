@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- Dialect: Added the experimental `crate+psycopg://` dialect over the PostgreSQL 
+  wire protocol with psycopg 3. It works with `create_engine()` and 
+  `create_async_engine()`, and needs SQLAlchemy 2.0.44 or later.
+
 ## 2026/11/24 0.45.0
 - BREAKING: Dropped support for SQLAlchemy 1.3, which is EOL since 2021.
   The minimum supported version is SQLAlchemy 1.4
@@ -21,9 +26,6 @@
 - Support: `refresh_after_dml()` accepts an `AsyncEngine`, an `AsyncSession`
   or an `async_sessionmaker`, with SQLAlchemy 2.0 and later. Added
   `arefresh_table()`, the awaitable counterpart of `refresh_table()`
-- Dialect: Added the experimental `crate+psycopg://` dialect over the PostgreSQL 
-  wire protocol with psycopg 3. It works with `create_engine()` and 
-  `create_async_engine()`, and needs SQLAlchemy 2.0.44 or later.
 
 ## 2026/10/19 0.44.0
 - Types: Fixed `sa.Time` raising `Cannot find data type: time`. `Time` columns 
