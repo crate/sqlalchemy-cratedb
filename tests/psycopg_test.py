@@ -670,7 +670,8 @@ def test_insert_bulk_writes_the_same_rows_as_http(engine, http):
         assert all("UNNEST" in statement and not many for statement, many in statements)
         assert len(rows) == 100
         assert rows[42][:4] == (42, "n42", 21.0, True)
-        assert rows == write(http, "psycopg_bulk_http")
+        expected = write(http, "psycopg_bulk_http")
+        assert rows == expected
     finally:
         http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk")
         http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_http")
@@ -730,7 +731,8 @@ def test_insert_bulk_with_list_columns(engine, http, case):
         # One statement per chunk.
         assert statements == [False, False]
         assert len(rows) == 3
-        assert rows == write(http)
+        expected = write(http)
+        assert rows == expected
     finally:
         http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_lists")
 
@@ -788,7 +790,8 @@ def test_insert_bulk_nulls_in_every_type(engine, http, chunksize):
             rows = write(connection)
         assert [row[0] for row in rows] == [1, 2, 3]
         assert rows[1][1:] == (None,) * len(values)
-        assert rows == write(http)
+        expected = write(http)
+        assert rows == expected
     finally:
         http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_types")
 
@@ -849,6 +852,49 @@ def test_insert_bulk_quotes_column_names(engine, http):
         assert sorted(rows, key=repr) == sorted(expected, key=repr)
     finally:
         http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_names")
+
+
+MIXED_TYPES = {
+    # name: (column DDL, values of one object column)
+    "int and float": ("DOUBLE", [1, 1.5, None]),
+    "str and int": ("TEXT", ["a", 1, None]),
+    "bool and int": ("BOOLEAN", [True, 0, None]),
+}
+
+
+@pytest.mark.parametrize("case", MIXED_TYPES)
+def test_insert_bulk_with_mixed_types(engine, http, case):
+    """
+    psycopg cannot send values of different Python types as one array, so such
+    a chunk is sent as row objects, and writes what.
+    """
+    pd = pytest.importorskip("pandas")
+    from sqlalchemy_cratedb import insert_bulk
+
+    ddl, values = MIXED_TYPES[case]
+    frame = pd.DataFrame({"id": [1, 2, 3], "x": pd.Series(values, dtype=object)})
+
+    def write(connection):
+        http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_mixed")
+        http.exec_driver_sql(f"CREATE TABLE psycopg_bulk_mixed (id INT, x {ddl})")
+        frame.to_sql(
+            "psycopg_bulk_mixed",
+            con=connection,
+            index=False,
+            if_exists="append",
+            method=insert_bulk,
+        )
+        http.exec_driver_sql("REFRESH TABLE psycopg_bulk_mixed")
+        return http.exec_driver_sql("SELECT * FROM psycopg_bulk_mixed ORDER BY id").all()
+
+    try:
+        with engine.connect() as connection:
+            rows = write(connection)
+        expected = write(http)
+        assert len(rows) == 3
+        assert rows == expected
+    finally:
+        http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_mixed")
 
 
 def test_insert_bulk_with_numpy_arrays(engine, http):

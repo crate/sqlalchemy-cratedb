@@ -119,12 +119,11 @@ class _QmarkConnection:
 def _pipeline_sync(connection, statement, parameters):
     cursors = []
     try:
-        with connection.pipeline() as pipeline:
+        with connection.pipeline():
             for row in parameters:
                 cursor = connection.cursor()
                 cursors.append(cursor)
                 cursor.execute(statement, row)
-            pipeline.sync()
         return [cursor.rowcount for cursor in cursors]
     finally:
         for cursor in cursors:
@@ -134,12 +133,11 @@ def _pipeline_sync(connection, statement, parameters):
 async def _pipeline_async(connection, statement, parameters):
     cursors = []
     try:
-        async with connection.pipeline() as pipeline:
+        async with connection.pipeline():
             for row in parameters:
                 cursor = connection.cursor()
                 cursors.append(cursor)
                 await cursor.execute(statement, row)
-            await pipeline.sync()
         return [cursor.rowcount for cursor in cursors]
     finally:
         for cursor in cursors:

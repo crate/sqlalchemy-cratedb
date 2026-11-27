@@ -79,6 +79,10 @@ def _is_list_value(value):
     return isinstance(value, (list, tuple)) or getattr(value, "ndim", 0) > 0
 
 
+def _value_types(column):
+    return {type(value) for value in column if value is not None}
+
+
 def _escape_percent(sql):
     return sql.replace("%", "%%")
 
@@ -96,7 +100,9 @@ def _insert_bulk_unnest(pd_table, conn, keys, data_iter):
     `ARRAY`, `FLOAT_VECTOR` or `GEO_POINT` columns, is sent as one array of row
     objects instead. Without a cast, CrateDB converts each field to the type of
     its column. So is a chunk with a column of only NULLs, whose real type may
-    not be the one pandas gives it, like `TEXT` for an object column::
+    not be the one pandas gives it, like `TEXT` for an object column, and a chunk
+    with a column of mixed Python types, like `1` and `1.5`, which psycopg cannot
+    send as one array::
 
         INSERT INTO t (a, b) SELECT r['a'], r['b'] FROM UNNEST(%s::ARRAY(OBJECT)) AS u (r)
     """
@@ -113,7 +119,7 @@ def _insert_bulk_unnest(pd_table, conn, keys, data_iter):
     )
 
     if any(_is_list_value(value) for row in rows for value in row) or any(
-        all(value is None for value in column) for column in zip(*rows)
+        len(_value_types(column)) != 1 for column in zip(*rows)
     ):
         return _insert_row_objects(conn, target, keys, rows)
 
