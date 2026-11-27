@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from crate.client.http import Client
 
-from tests.util import CrateDBTestAdapter
+from tests.util import TEST_DRIVER, CrateDBTestAdapter
 
 # Use different schemas for storing the subsystem database tables, and the
 # test/example data, so that they do not accidentally touch the default `doc`
@@ -18,6 +18,15 @@ CRATEDB_VERSION = os.environ.get("CRATEDB_VERSION", "latest")
 ASSETS_PATH = Path(__file__).parent / "assets"
 OFFLINE_SERVER_VERSION = "6.5.0"
 DEFAULT_SERVERS = {"http://127.0.0.1:4200", "http://localhost:4200"}
+
+
+def pytest_collection_modifyitems(config, items):
+    if TEST_DRIVER == "http":
+        return
+    skip = pytest.mark.skip(reason=f"Behavior of the HTTP driver, CRATEDB_DRIVER={TEST_DRIVER}")
+    for item in items:
+        if "http_only" in item.keywords:
+            item.add_marker(skip)
 
 
 @pytest.fixture(scope="session")

@@ -16,6 +16,7 @@ jobs:
     Python: ${{ matrix.python-version }} (prerelease: ${{ matrix.pip-allow-prerelease }})
     SQLAlchemy: ${{ matrix.sqla-version }}
     CrateDB: ${{ matrix.cratedb-version }}
+    Driver: ${{ matrix.driver }}
     "
     runs-on: ${{ matrix.os }}
     strategy:
@@ -25,23 +26,58 @@ jobs:
         cratedb-version: ['latest']
         sqla-version: ['<1.5', '<2.1', '<2.2']
         pip-allow-prerelease: ['false']
+        driver: ['http']
 
         include:
+          # The test suite on `crate+psycopg://`.
+          - os: 'ubuntu-22.04'
+            python-version: '3.10'
+            cratedb-version: 'latest'
+            sqla-version: '<2.1'
+            pip-allow-prerelease: 'false'
+            driver: 'psycopg'
+          - os: 'ubuntu-22.04'
+            python-version: '3.14'
+            cratedb-version: 'latest'
+            sqla-version: '<2.1'
+            pip-allow-prerelease: 'false'
+            driver: 'psycopg'
+          - os: 'ubuntu-22.04'
+            python-version: '3.14'
+            cratedb-version: 'latest'
+            sqla-version: '<2.2'
+            pip-allow-prerelease: 'false'
+            driver: 'psycopg'
           - os: 'ubuntu-22.04'
             python-version: '3.14'
             cratedb-version: '5.10.16'
             sqla-version: '<2.2'
             pip-allow-prerelease: 'false'
+            driver: 'psycopg'
           - os: 'ubuntu-22.04'
             python-version: '3.14'
             cratedb-version: 'nightly'
             sqla-version: '<2.2'
             pip-allow-prerelease: 'false'
+            driver: 'psycopg'
+          - os: 'ubuntu-22.04'
+            python-version: '3.14'
+            cratedb-version: '5.10.16'
+            sqla-version: '<2.2'
+            pip-allow-prerelease: 'false'
+            driver: 'http'
+          - os: 'ubuntu-22.04'
+            python-version: '3.14'
+            cratedb-version: 'nightly'
+            sqla-version: '<2.2'
+            pip-allow-prerelease: 'false'
+            driver: 'http'
           - os: 'ubuntu-latest'
             python-version: '3.14'
             cratedb-version: 'latest'
             sqla-version: 'latest'
             pip-allow-prerelease: 'true'
+            driver: 'http'
 
       fail-fast: false
 
@@ -49,6 +85,7 @@ jobs:
 
     env:
       CRATEDB_VERSION: ${{ matrix.cratedb-version }}
+      CRATEDB_DRIVER: ${{ matrix.driver }}
       SQLALCHEMY_VERSION: ${{ matrix.sqla-version }}
       PIP_ALLOW_PRERELEASE: ${{ matrix.pip-allow-prerelease }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

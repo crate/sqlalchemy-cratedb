@@ -104,6 +104,7 @@ def test_table_kwargs_translog_durability(cratedb_service):
 @pytest.mark.skipif(
     SA_VERSION < SA_2_0, reason="Feature not supported on SQLAlchemy 1.4 and earlier"
 )
+@pytest.mark.http_only  # The message names the exception class, which only HTTP sends.
 def test_table_kwargs_unknown(cratedb_service):
     """
     Validate behaviour when adding an unknown CrateDB dialect table option.
@@ -128,6 +129,7 @@ def test_table_kwargs_unknown(cratedb_service):
 @pytest.mark.skipif(
     SA_VERSION < SA_2_0, reason="Feature not supported on SQLAlchemy 1.4 and earlier"
 )
+@pytest.mark.http_only  # HTTP sends JSON, so NaN and Inf arrive as NULL.
 def test_float_special_values(cratedb_service):
     """
     Validate CrateDB's handling of special float values: NaN, Inf, -Inf.

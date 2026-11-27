@@ -93,6 +93,11 @@ optional-dependencies.develop = [
   "ruff<0.16",
   "validate-pyproject<1",
 ]
+optional-dependencies.psycopg = [
+  "certifi",
+  "psycopg[binary]>=3.3.9,<4",
+  "sqlalchemy[asyncio]>=2.0.44,<2.2",
+]
 optional-dependencies.doc = [
   "crate-docs-theme>=0.26.5",
   "sphinx>=3.5,<10",
@@ -106,8 +111,10 @@ optional-dependencies.test = [
   "greenlet",
   "httpx",
   "pandas<2.4",
+  "psycopg[binary]>=3.3.9,<4",
   "pueblo>=0.0.7",
   "pytest<10",
+  "pytest-asyncio<2",
   "pytest-cov<8",
   "pytest-mock<4",
   "testcontainers>=4.15,<5",
@@ -120,6 +127,8 @@ urls.documentation = "https://cratedb.com/docs/sqlalchemy-cratedb/"
 urls.homepage = "https://cratedb.com/docs/sqlalchemy-cratedb/"
 urls.repository = "https://github.com/crate/sqlalchemy-cratedb"
 entry-points."sqlalchemy.dialects".crate = "sqlalchemy_cratedb:dialect"
+entry-points."sqlalchemy.dialects"."crate.psycopg" = "sqlalchemy_cratedb.dialect_psycopg:CrateDialect_psycopg"
+entry-points."sqlalchemy.dialects"."crate.psycopg_async" = "sqlalchemy_cratedb.dialect_psycopg:CrateDialectAsync_psycopg"
 
 [tool.black]
 line-length = 100
@@ -212,7 +221,11 @@ ini_options.addopts = """
   -rfEXs -p pytester --strict-markers --verbosity=3
   --cov --cov-report=term-missing --cov-report=xml
   """
-ini_options.markers = []
+ini_options.markers = [
+  "http_only: checks behavior of the HTTP driver, skipped with CRATEDB_DRIVER=psycopg",
+]
+ini_options.asyncio_mode = "strict"
+ini_options.asyncio_default_fixture_loop_scope = "function"
 ini_options.xfail_strict = true
 ini_options.log_format = "%(asctime)-15s [%(name)-36s] %(levelname)-8s: %(message)s"
 ini_options.log_level = "DEBUG"

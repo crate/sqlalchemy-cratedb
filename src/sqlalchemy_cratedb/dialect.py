@@ -26,7 +26,7 @@ from datetime import date, datetime, time
 
 from sqlalchemy import types as sqltypes
 from sqlalchemy.engine import default, reflection
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import ArgumentError, SQLAlchemyError
 from sqlalchemy.sql import functions
 from sqlalchemy.util import asbool, to_list, warn
 
@@ -410,6 +410,15 @@ class CrateDialect(default.DefaultDialect):
     @classmethod
     def dbapi(cls):
         return cls.import_dbapi()
+
+    @classmethod
+    def get_async_dialect_cls(cls, url):
+        raise ArgumentError(
+            f"The {url.drivername}:// dialect has no asyncio support. "
+            "Use crate+psycopg://, which speaks the PostgreSQL wire protocol on port 5432: "
+            "create_async_engine('crate+psycopg://crate@localhost:5432/doc'). "
+            "Install it with `pip install 'sqlalchemy-cratedb[psycopg]'`."
+        )
 
     def has_schema(self, connection, schema, **kw):
         return schema in self.get_schema_names(connection, **kw)
