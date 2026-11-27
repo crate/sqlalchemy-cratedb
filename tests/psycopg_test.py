@@ -3,7 +3,6 @@ import decimal
 import importlib
 import subprocess
 import sys
-import types
 import uuid
 
 import pytest
@@ -159,12 +158,20 @@ def test_connect_args_certifi_not_over_default_root_cert(no_libpq_root_cert):
     assert "sslrootcert" not in connect_args(url)
 
 
-def test_insert_bulk_needs_the_http_driver():
-    from sqlalchemy_cratedb.support import insert_bulk
+def test_executemany_mode_defaults_to_bulk():
+    assert sa.create_engine("crate+psycopg://").dialect.executemany_mode == "bulk"
+    engine = sa.create_engine("crate+psycopg://", executemany_mode="loop")
+    assert engine.dialect.executemany_mode == "loop"
 
-    conn = types.SimpleNamespace(dialect=sa.create_engine("crate+psycopg://").dialect)
-    with pytest.raises(NotImplementedError, match='method="multi"'):
-        insert_bulk(None, conn, [], iter([]))
+
+def test_unknown_executemany_mode_is_refused():
+    with pytest.raises(ValueError, match="executemany_mode='values' is not supported"):
+        sa.create_engine("crate+psycopg://", executemany_mode="values")
+
+
+def test_insert_bulk_path_per_dialect():
+    assert CrateDialect_psycopg._insert_bulk_unnest is True
+    assert sa.create_engine("crate://").dialect._insert_bulk_unnest is False
 
 
 @pytest.mark.parametrize("dialect_cls", [CrateDialect_psycopg, CrateDialectAsync_psycopg])
@@ -471,28 +478,401 @@ def test_sql_errors(engine, readings):
         assert connection.execute(sa.text("SELECT 2")).scalar_one() == 2
 
 
-def test_executemany_runs_one_statement_per_row(engine, http, readings):
-    with engine.connect() as connection:
-        connection.execute(sa.insert(readings), [{"id": i, "value": i * 10} for i in range(5)])
-        connection.execute(sa.text("REFRESH TABLE psycopg_readings"))
+INSERT_READING = sa.text("INSERT INTO psycopg_readings (id, value) VALUES (:id, :value)")
+UPDATE_READING = sa.text("UPDATE psycopg_readings SET value = :value WHERE id = :id")
 
-        update = sa.update(readings).where(readings.c.id == sa.bindparam("b_id"))
-        update = update.values(value=sa.bindparam("b_value"))
-        result = connection.execute(
+BATCHES = {
+    "duplicate key": (
+        INSERT_READING,
+        [{"id": 3, "value": 30}, {"id": 1, "value": 99}, {"id": 4, "value": 40}],
+    ),
+    "missing primary key": (
+        UPDATE_READING,
+        [{"id": 0, "value": 5}, {"id": 99, "value": 1}, {"id": 2, "value": 25}],
+    ),
+    "check constraint": (
+        UPDATE_READING,
+        [{"id": 0, "value": 5}, {"id": 1, "value": -1}, {"id": 2, "value": 25}],
+    ),
+    "value that does not cast": (
+        UPDATE_READING,
+        [{"id": 0, "value": 5}, {"id": 1, "value": "abc"}, {"id": 2, "value": 25}],
+    ),
+}
+
+
+def run_batch(connection, http, statement, parameters):
+    """
+    Run a batch on three stored readings, and return the outcome and the stored rows.
+    """
+    http.exec_driver_sql("DELETE FROM psycopg_readings")
+    http.exec_driver_sql("INSERT INTO psycopg_readings (id, value) VALUES (0, 0), (1, 10), (2, 20)")
+    http.exec_driver_sql("REFRESH TABLE psycopg_readings")
+    try:
+        result = connection.execute(statement, parameters)
+    except sa.exc.DBAPIError as e:
+        outcome = type(e)
+    else:
+        counts = [row["rowcount"] for row in result.context.last_result]
+        outcome = (counts, result.rowcount)
+    # The connection is still usable.
+    assert connection.execute(sa.text("SELECT 1")).scalar_one() == 1
+    http.exec_driver_sql("REFRESH TABLE psycopg_readings")
+    rows = http.exec_driver_sql("SELECT id, value FROM psycopg_readings ORDER BY id").all()
+    return outcome, rows
+
+
+@pytest.mark.parametrize("batch", BATCHES)
+def test_executemany_reports_each_row_as_http_does(engine, http, readings, batch):
+    """
+    A failed row is -2 in `last_result` and the other rows are written, as with
+    `bulk_parameters` on `crate://`. A value that does not cast rejects the whole
+    batch on both. Only the error message of a failed row is missing.
+    """
+    statement, parameters = BATCHES[batch]
+    expected = run_batch(http, http, statement, parameters)
+    with engine.connect() as connection:
+        assert run_batch(connection, http, statement, parameters) == expected
+
+
+def test_executemany_results(engine, http, readings):
+    statement, parameters = BATCHES["check constraint"]
+    with engine.connect() as connection:
+        outcome, rows = run_batch(connection, http, statement, parameters)
+    assert outcome == ([1, -2, 1], 2)
+    assert rows == [(0, 5), (1, 10), (2, 25)]
+
+    statement, parameters = BATCHES["value that does not cast"]
+    with engine.connect() as connection:
+        outcome, rows = run_batch(connection, http, statement, parameters)
+    assert outcome is sa.exc.ProgrammingError
+    assert rows == [(0, 0), (1, 10), (2, 20)]
+
+
+def test_executemany_rowcount_when_every_row_fails(engine, http, readings):
+    parameters = [{"id": 0, "value": -1}, {"id": 1, "value": -1}]
+    with engine.connect() as connection:
+        outcome, _ = run_batch(connection, http, UPDATE_READING, parameters)
+    assert outcome == run_batch(http, http, UPDATE_READING, parameters)[0] == ([-2, -2], -1)
+
+
+def test_executemany_does_not_use_psycopg_executemany(engine, http, readings, monkeypatch):
+    def executemany(*args, **kwargs):
+        raise AssertionError("psycopg's executemany() must not be called")
+
+    monkeypatch.setattr(psycopg.Cursor, "executemany", executemany)
+    statement, parameters = BATCHES["missing primary key"]
+    with engine.connect() as connection:
+        outcome, _ = run_batch(connection, http, statement, parameters)
+    assert outcome == ([1, -2, 1], 2)
+
+
+def test_executemany_loop_stops_at_the_failed_row(cratedb_service, http, readings):
+    engine = sa.create_engine(cratedb_service.psycopg_dburi, executemany_mode="loop")
+    parameters = [
+        {"id": 0, "value": 5},
+        {"id": 99, "value": 1},
+        {"id": 1, "value": -1},
+        {"id": 2, "value": 25},
+    ]
+    try:
+        with engine.connect() as connection:
+            outcome, _ = run_batch(connection, http, UPDATE_READING, parameters[:2])
+            # One statement per row: a key that matches nothing updates 0 rows.
+            assert outcome == ([1, 0], 1)
+            outcome, rows = run_batch(connection, http, UPDATE_READING, parameters)
+    finally:
+        engine.dispose()
+    assert outcome is sa.exc.ProgrammingError
+    # The rows before the failed one are written, the rows after it are not sent.
+    assert rows == [(0, 5), (1, 10), (2, 20)]
+
+
+def test_executemany_core_update(engine, http, readings):
+    """
+    An `update()` with several parameter sets keeps every set.
+    """
+    update = sa.update(readings).where(readings.c.id == sa.bindparam("b_id"))
+    update = update.values(value=sa.bindparam("b_value"))
+    with engine.connect() as connection:
+        outcome, rows = run_batch(
+            connection,
+            http,
             update,
             [{"b_id": 1, "b_value": 15}, {"b_id": 99, "b_value": 0}, {"b_id": 2, "b_value": 25}],
         )
-        assert result.rowcount == 2
+    assert outcome == ([1, -2, 1], 2)
+    assert rows == [(0, 0), (1, 15), (2, 25)]
 
-        with pytest.raises(sa.exc.ProgrammingError, match=r"CHECK \(\"value\" >= 0\)"):
-            connection.execute(
-                update,
-                [{"b_id": 3, "b_value": 35}, {"b_id": 4, "b_value": -1}, {"b_id": 0, "b_value": 5}],
+
+def test_orm_flush_of_several_rows(engine, http):
+    from sqlalchemy.orm import Session, declarative_base
+
+    Base = declarative_base()
+
+    class Sensor(Base):
+        __tablename__ = "psycopg_sensors"
+        id = sa.Column(sa.Integer, primary_key=True)
+        name = sa.Column(sa.String)
+
+    Base.metadata.drop_all(engine, checkfirst=True)
+    Base.metadata.create_all(engine)
+    try:
+        with Session(engine) as session:
+            session.add_all([Sensor(id=i, name=f"s{i}") for i in range(10)])
+            session.commit()
+            session.execute(sa.text("REFRESH TABLE psycopg_sensors"))
+            for sensor in session.scalars(sa.select(Sensor)):
+                sensor.name = sensor.name.upper()
+            session.commit()
+        http.exec_driver_sql("REFRESH TABLE psycopg_sensors")
+        names = http.exec_driver_sql("SELECT name FROM psycopg_sensors ORDER BY id").scalars()
+        assert list(names) == [f"S{i}" for i in range(10)]
+    finally:
+        Base.metadata.drop_all(http)
+
+
+def bulk_frame(pd):
+    return pd.DataFrame(
+        {
+            "id": range(100),
+            "name": [f"n{i}" for i in range(100)],
+            "value": [i / 2 for i in range(100)],
+            "flag": [i % 2 == 0 for i in range(100)],
+            "ts": pd.date_range("2026-01-01", periods=100, freq="s"),
+        }
+    )
+
+
+def test_insert_bulk_writes_the_same_rows_as_http(engine, http):
+    pd = pytest.importorskip("pandas")
+    from sqlalchemy_cratedb import insert_bulk
+
+    def write(connection, name):
+        bulk_frame(pd).to_sql(
+            name, con=connection, index=False, if_exists="replace", chunksize=30, method=insert_bulk
+        )
+        http.exec_driver_sql(f"REFRESH TABLE {name}")
+        return http.exec_driver_sql(f"SELECT * FROM {name} ORDER BY id").all()  # noqa: S608
+
+    statements = []
+
+    def record(conn, cursor, statement, parameters, context, executemany):
+        if statement.startswith("INSERT"):
+            statements.append((statement, executemany))
+
+    sa.event.listen(engine, "before_cursor_execute", record)
+    try:
+        with engine.connect() as connection:
+            rows = write(connection, "psycopg_bulk")
+        # One `UNNEST` statement per chunk of scalars.
+        assert len(statements) == 4
+        assert all("UNNEST" in statement and not many for statement, many in statements)
+        assert len(rows) == 100
+        assert rows[42][:4] == (42, "n42", 21.0, True)
+        assert rows == write(http, "psycopg_bulk_http")
+    finally:
+        http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk")
+        http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_http")
+
+
+LIST_COLUMNS = {
+    # name: (DDL of an existing table or None, values, dtype)
+    "int array": ("ARRAY(INT)", [[1, 2], [3], None], None),
+    "text array": (None, [["x"], ["y", "z"], []], {"x": sa.ARRAY(sa.String)}),
+    "object array": (None, [[{"k": 1}], [{"k": 2}, {"k": 3}], None], {"x": ObjectArray}),
+    "float vector": ("FLOAT_VECTOR(2)", [[0.5, 0.25], [1.0, 2.0], None], None),
+    "geo point": ("GEO_POINT", [[9.5, 47.25], [10.0, 50.0], None], None),
+    "object": ("OBJECT(DYNAMIC)", [{"a": 1}, {"b": "x"}, None], None),
+}
+
+
+@pytest.mark.parametrize("case", LIST_COLUMNS)
+def test_insert_bulk_with_list_columns(engine, http, case):
+    """
+    `UNNEST` flattens an array of arrays: a chunk with list values, or with a
+    column of only NULLs, is sent as one array of row objects, and writes what
+    `crate://` writes. Appending to an existing table without `dtype`, as
+    cratedb-toolkit does, works as well.
+    """
+    pd = pytest.importorskip("pandas")
+    from sqlalchemy_cratedb import insert_bulk
+
+    ddl, values, dtype = LIST_COLUMNS[case]
+    frame = pd.DataFrame({"id": [1, 2, 3], "x": values})
+
+    def write(connection):
+        http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_lists")
+        if ddl:
+            http.exec_driver_sql(f"CREATE TABLE psycopg_bulk_lists (id INT, x {ddl})")
+        frame.to_sql(
+            "psycopg_bulk_lists",
+            con=connection,
+            index=False,
+            if_exists="append",
+            chunksize=2,
+            method=insert_bulk,
+            dtype=dtype,
+        )
+        http.exec_driver_sql("REFRESH TABLE psycopg_bulk_lists")
+        return http.exec_driver_sql("SELECT * FROM psycopg_bulk_lists ORDER BY id").all()
+
+    statements = []
+
+    def record(conn, cursor, statement, parameters, context, executemany):
+        if statement.startswith("INSERT"):
+            statements.append(executemany)
+
+    sa.event.listen(engine, "before_cursor_execute", record)
+    try:
+        with engine.connect() as connection:
+            rows = write(connection)
+        # One statement per chunk.
+        assert statements == [False, False]
+        assert len(rows) == 3
+        assert rows == write(http)
+    finally:
+        http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_lists")
+
+
+INSERT_BULK_TYPES = {
+    "a": ("BIGINT", 9007199254740993),
+    "b": ("DOUBLE", 1.5),
+    "c": ("BOOLEAN", True),
+    "d": ("TEXT", "x"),
+    "e": ("TIMESTAMP WITH TIME ZONE", dt.datetime(2026, 1, 1, 10, tzinfo=dt.timezone.utc)),
+    "f": ("TIMESTAMP WITHOUT TIME ZONE", dt.datetime(2026, 1, 1, 10)),
+    "g": ("NUMERIC(10, 2)", decimal.Decimal("12.34")),
+    "h": ("IP", "10.0.0.1"),
+    "i": ("GEO_POINT", [9.5, 47.25]),
+    "j": ("GEO_SHAPE", {"type": "Point", "coordinates": [1.0, 2.0]}),
+    "k": ("OBJECT(DYNAMIC)", {"a": {"b": [1, None]}}),
+    "l": ("ARRAY(OBJECT)", [{"k": 1}]),
+    "m": ("ARRAY(TEXT)", ["y", None]),
+    "n": ("FLOAT_VECTOR(2)", [0.5, 0.25]),
+    "o": ("ARRAY(ARRAY(INTEGER))", [[1], [2, 3]]),
+}
+
+
+@pytest.mark.parametrize("chunksize", [1, 2], ids=["one row per chunk", "rows mixed"])
+def test_insert_bulk_nulls_in_every_type(engine, http, chunksize):
+    """
+    A field that holds NULL is written as NULL, not skipped with its row.
+    """
+    pd = pytest.importorskip("pandas")
+    from sqlalchemy_cratedb import insert_bulk
+
+    ddl = ", ".join(f"{name} {type_}" for name, (type_, _) in INSERT_BULK_TYPES.items())
+    values = {name: value for name, (_, value) in INSERT_BULK_TYPES.items()}
+    frame = pd.DataFrame(
+        [{"id": 1, **values}, {"id": 2, **dict.fromkeys(values)}, {"id": 3, **values}],
+        dtype=object,
+    )
+
+    def write(connection):
+        http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_types")
+        http.exec_driver_sql(f"CREATE TABLE psycopg_bulk_types (id INT, {ddl})")
+        frame.to_sql(
+            "psycopg_bulk_types",
+            con=connection,
+            index=False,
+            if_exists="append",
+            chunksize=chunksize,
+            method=insert_bulk,
+        )
+        http.exec_driver_sql("REFRESH TABLE psycopg_bulk_types")
+        return http.exec_driver_sql("SELECT * FROM psycopg_bulk_types ORDER BY id").all()
+
+    try:
+        with engine.connect() as connection:
+            rows = write(connection)
+        assert [row[0] for row in rows] == [1, 2, 3]
+        assert rows[1][1:] == (None,) * len(values)
+        assert rows == write(http)
+    finally:
+        http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_types")
+
+
+@pytest.mark.parametrize("setting", ["true", "false"])
+def test_insert_bulk_restores_the_session_setting(engine, http, setting):
+    pd = pytest.importorskip("pandas")
+    from sqlalchemy_cratedb import insert_bulk
+
+    frame = pd.DataFrame({"id": [1, 2], "v": [[1, 2], None]})
+    http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_setting")
+    http.exec_driver_sql("CREATE TABLE psycopg_bulk_setting (id INT, v ARRAY(INTEGER))")
+    try:
+        with engine.connect() as connection:
+            connection.exec_driver_sql(f"SET SESSION error_on_unknown_object_key = {setting}")
+            frame.to_sql(
+                "psycopg_bulk_setting",
+                con=connection,
+                index=False,
+                if_exists="append",
+                method=insert_bulk,
             )
-    http.exec_driver_sql("REFRESH TABLE psycopg_readings")
-    values = http.exec_driver_sql("SELECT id, value FROM psycopg_readings ORDER BY id").all()
-    # The rows before the failed one are written, the rows after it are not sent.
-    assert values == [(0, 0), (1, 15), (2, 25), (3, 35), (4, 40)]
+            show = connection.exec_driver_sql("SHOW error_on_unknown_object_key").scalar()
+            assert show == setting
+        http.exec_driver_sql("REFRESH TABLE psycopg_bulk_setting")
+        assert http.exec_driver_sql("SELECT count(*) FROM psycopg_bulk_setting").scalar() == 2
+    finally:
+        http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_setting")
+
+
+def test_insert_bulk_quotes_column_names(engine, http):
+    pd = pytest.importorskip("pandas")
+    from sqlalchemy_cratedb import insert_bulk
+
+    frame = pd.DataFrame({"id": [1, 2], "it's 100%": [[1], None], "Name": ["a", "b"]})
+    try:
+        with engine.connect() as connection:
+            frame.to_sql(
+                "psycopg_bulk_names",
+                con=connection,
+                index=False,
+                if_exists="replace",
+                method=insert_bulk,
+                dtype={"it's 100%": sa.ARRAY(sa.Integer)},
+            )
+            frame.iloc[:, [0, 2]].to_sql(
+                "psycopg_bulk_names",
+                con=connection,
+                index=False,
+                if_exists="append",
+                method=insert_bulk,
+            )
+        http.exec_driver_sql("REFRESH TABLE psycopg_bulk_names")
+        rows = http.exec_driver_sql(
+            'SELECT id, "it\'s 100%", "Name" FROM psycopg_bulk_names ORDER BY id, "Name"'
+        ).all()
+        expected = [(1, [1], "a"), (1, None, "a"), (2, None, "b"), (2, None, "b")]
+        assert sorted(rows, key=repr) == sorted(expected, key=repr)
+    finally:
+        http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_names")
+
+
+def test_insert_bulk_with_numpy_arrays(engine, http):
+    pd = pytest.importorskip("pandas")
+    np = pytest.importorskip("numpy")
+    from sqlalchemy_cratedb import insert_bulk
+
+    http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_numpy")
+    http.exec_driver_sql("CREATE TABLE psycopg_bulk_numpy (id INT, v FLOAT_VECTOR(2))")
+    frame = pd.DataFrame({"id": [1, 2], "v": [np.array([0.5, 0.25]), np.array([1.0, 2.0])]})
+    try:
+        with engine.connect() as connection:
+            frame.to_sql(
+                "psycopg_bulk_numpy",
+                con=connection,
+                index=False,
+                if_exists="append",
+                method=insert_bulk,
+            )
+        http.exec_driver_sql("REFRESH TABLE psycopg_bulk_numpy")
+        rows = http.exec_driver_sql("SELECT * FROM psycopg_bulk_numpy ORDER BY id").all()
+        assert rows == [(1, [0.5, 0.25]), (2, [1.0, 2.0])]
+    finally:
+        http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_bulk_numpy")
 
 
 def test_reflection_matches_http(engine, http):
