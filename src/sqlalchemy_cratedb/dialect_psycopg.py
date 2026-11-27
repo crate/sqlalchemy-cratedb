@@ -1,4 +1,5 @@
 import datetime as dt
+import functools
 import os
 import re
 import sys
@@ -8,9 +9,11 @@ import sqlalchemy as sa
 from sqlalchemy import types as sqltypes
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.engine import default
+from sqlalchemy.exc import ArgumentError
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 from verlib2 import Version
 
+from . import _psycopg_timeout
 from .sa_version import SA_VERSION
 
 MIN_SQLALCHEMY_VERSION = Version("2.0.44")
@@ -127,6 +130,21 @@ def _parse_prepare_threshold(value):
     return int(value)
 
 
+def _parse_client_timeout(value):
+    """
+    `client_timeout` in seconds. `None` and 0 leave it off.
+    """
+    if value is None:
+        return None
+    try:
+        seconds = float(value)
+    except ValueError:
+        raise ArgumentError(f"client_timeout must be a number of seconds, got {value!r}") from None
+    if seconds < 0:
+        raise ArgumentError(f"client_timeout must not be negative, got {value!r}")
+    return seconds or None
+
+
 def _libpq_root_cert_configured():
     """
     Whether libpq finds a CA set of its own: `PGSSLROOTCERT`, or the default
@@ -195,6 +213,15 @@ class CrateDialect_psycopg(CrateDialect):
         # crate/crate#20311
         opts["prepare_threshold"] = _parse_prepare_threshold(opts.get("prepare_threshold"))
         opts.setdefault("connect_timeout", 10)
+
+        client_timeout = _parse_client_timeout(opts.pop("client_timeout", None))
+        if client_timeout is not None:
+            if not self.is_async:
+                raise ArgumentError(
+                    "client_timeout is only available with create_async_engine(). "
+                    "With create_engine(), use connect_timeout, and tcp_user_timeout on Linux."
+                )
+            opts["client_timeout"] = client_timeout
 
         if (
             opts.get("sslmode") in ("verify-ca", "verify-full")
@@ -270,12 +297,28 @@ class CrateDialectAsync_psycopg(CrateDialect_psycopg):
     supports_statement_cache = True
     poolclass = AsyncAdaptedQueuePool
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._host_cooldown = _psycopg_timeout.HostCooldown()
+
     @classmethod
     def import_dbapi(cls):
         from sqlalchemy.dialects.postgresql.psycopg import PGDialectAsync_psycopg
 
         _import_psycopg()
         return PGDialectAsync_psycopg.import_dbapi()
+
+    def create_connect_args(self, url):
+        cargs, opts = super().create_connect_args(url)
+
+        client_timeout = opts.pop("client_timeout", None)
+        if client_timeout:
+            opts["async_creator_fn"] = functools.partial(
+                _psycopg_timeout.connect,
+                client_timeout=client_timeout,
+                host_cooldown=self._host_cooldown,
+            )
+        return cargs, opts
 
     def get_driver_connection(self, connection):
         return connection._connection
