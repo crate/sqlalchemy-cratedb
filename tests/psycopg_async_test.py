@@ -5,6 +5,7 @@ The psycopg dialect, asyncio: `create_async_engine("crate+psycopg://...")`.
 import asyncio
 import datetime as dt
 import decimal
+import time
 import uuid
 import warnings
 
@@ -27,7 +28,7 @@ from sqlalchemy.ext.asyncio import (  # noqa: E402
 )
 from sqlalchemy.orm import declarative_base  # noqa: E402
 
-from sqlalchemy_cratedb import Geopoint, ObjectType  # noqa: E402
+from sqlalchemy_cratedb import Geopoint, ObjectType, _psycopg_timeout  # noqa: E402
 from sqlalchemy_cratedb.dialect_psycopg import CrateDialectAsync_psycopg  # noqa: E402
 from sqlalchemy_cratedb.support import arefresh_table, refresh_after_dml  # noqa: E402
 
@@ -336,3 +337,191 @@ async def test_no_statement_cache_warning(engine):
         warnings.simplefilter("error", sa.exc.SAWarning)
         async with engine.connect() as connection:
             await connection.execute(sa.select(sa.literal(1)))
+
+
+def async_connect_args(url):
+    return create_async_engine(url).dialect.create_connect_args(sa.engine.make_url(url))[1]
+
+
+def test_client_timeout_connects_through_the_guarded_class():
+    opts = async_connect_args("crate+psycopg://crate@localhost/doc?client_timeout=2.5")
+    assert "client_timeout" not in opts
+    creator = opts["async_creator_fn"]
+    assert creator.func is _psycopg_timeout.connect
+    assert creator.keywords["client_timeout"] == 2.5
+
+
+@pytest.mark.parametrize("value", ["", "0"])
+def test_client_timeout_is_off_by_default(value):
+    query = f"?client_timeout={value}" if value else ""
+    assert "async_creator_fn" not in async_connect_args(f"crate+psycopg://{query}")
+
+
+@pytest.mark.parametrize("value", ["-1", "soon"])
+def test_client_timeout_invalid_values_are_refused(value):
+    with pytest.raises(sa.exc.ArgumentError, match="client_timeout"):
+        async_connect_args(f"crate+psycopg://?client_timeout={value}")
+
+
+def test_host_cooldown_skips_marked_hosts():
+    cooldown = _psycopg_timeout.HostCooldown()
+    opts = {"host": "node1,node2,node3", "port": "5432,5433,", "dbname": "doc"}
+    cooldown.mark("node2", 5433)
+    assert cooldown.filter(opts) == {"host": "node1,node3", "port": "5432,", "dbname": "doc"}
+    cooldown.mark("node3", 5432)
+    assert cooldown.filter(opts) == {"host": "node1", "port": "5432", "dbname": "doc"}
+
+
+def test_host_cooldown_never_leaves_zero_hosts():
+    cooldown = _psycopg_timeout.HostCooldown()
+    opts = {"host": "node1,node2", "port": "5432"}
+    cooldown.mark("node1", 5432)
+    cooldown.mark("node2", 5432)
+    assert cooldown.filter(opts) is opts
+    single = {"host": "node1", "port": 5432}
+    assert cooldown.filter(single) is single
+
+
+def test_host_cooldown_expires(monkeypatch):
+    cooldown = _psycopg_timeout.HostCooldown(seconds=30)
+    opts = {"host": "node1,node2"}
+    cooldown.mark("node1", 5432)
+    assert cooldown.filter(opts)["host"] == "node2"
+    now = time.monotonic()
+    monkeypatch.setattr(_psycopg_timeout.time, "monotonic", lambda: now + 31)
+    assert cooldown.filter(opts) is opts
+
+
+def test_host_cooldown_leaves_mismatched_ports_alone():
+    cooldown = _psycopg_timeout.HostCooldown()
+    opts = {"host": "node1,node2,node3", "port": "5432,5433"}
+    cooldown.mark("node1", 5432)
+    assert cooldown.filter(opts) is opts
+
+
+SLOW = "SELECT sum(x) FROM generate_series(1, {bound}) x"
+
+
+@pytest.fixture
+def slow_query(http):
+    """
+    A statement that runs for many seconds. Its server job is killed afterwards.
+    """
+    bound = 2_000_000_000 - uuid.uuid4().int % 1_000_000
+    marker = f"generate_series(1, {bound})"
+    jobs = (
+        f"SELECT id FROM sys.jobs WHERE stmt LIKE '%{marker}%' "  # noqa: S608
+        "AND stmt NOT LIKE '%sys.jobs%'"
+    )
+
+    class SlowQuery:
+        statement = sa.text(SLOW.format(bound=bound))
+
+        @staticmethod
+        def running():
+            return len(http.exec_driver_sql(jobs).fetchall())
+
+    yield SlowQuery
+    for (job_id,) in http.exec_driver_sql(jobs).fetchall():
+        http.exec_driver_sql(f"KILL '{job_id}'")
+
+
+@pytest.mark.asyncio
+async def test_client_timeout_cuts_a_statement(cratedb_service, slow_query):
+    """
+    `client_timeout` ends a statement on the client, the pool replaces the
+    connection, and the next statement runs on a new one.
+    """
+    url = sa.engine.make_url(cratedb_service.psycopg_dburi).update_query_dict(
+        {"client_timeout": "1"}
+    )
+    engine = create_async_engine(url, pool_size=1, max_overflow=0)
+    try:
+        started = time.monotonic()
+        with pytest.raises(sa.exc.OperationalError, match=r"client_timeout \(1.0 s\) expired") as e:
+            async with engine.connect() as connection:
+                await connection.execute(slow_query.statement)
+        elapsed = time.monotonic() - started
+        assert e.value.connection_invalidated
+        assert isinstance(e.value.orig, _psycopg_timeout.client_timeout_error())
+        assert 1.0 <= elapsed < 2.5
+
+        async with engine.connect() as connection:
+            assert (await connection.execute(sa.text("SELECT 42"))).scalar_one() == 42
+        # The host is noted, so that a reconnect to a cluster prefers the other hosts.
+        assert list(engine.dialect._host_cooldown._until) == [(url.host, str(url.port))]
+    finally:
+        started = time.monotonic()
+        await engine.dispose()
+        assert time.monotonic() - started < 1.0
+
+
+@pytest.mark.asyncio
+async def test_client_timeout_lets_fast_statements_pass(cratedb_service):
+    url = sa.engine.make_url(cratedb_service.psycopg_dburi).update_query_dict(
+        {"client_timeout": "5"}
+    )
+    engine = create_async_engine(url)
+    try:
+        async with engine.connect() as connection:
+            for _ in range(3):
+                assert (await connection.execute(sa.text("SELECT 1"))).scalar_one() == 1
+    finally:
+        await engine.dispose()
+    assert engine.dialect._host_cooldown._until == {}
+
+
+@pytest.mark.asyncio
+async def test_without_client_timeout_nothing_is_cut(engine, slow_query):
+    async with engine.connect() as connection:
+        raw = await connection.get_raw_connection()
+        # psycopg's own class: the dialect only replaces it when a timeout is set.
+        assert type(raw.driver_connection) is psycopg.AsyncConnection
+        task = asyncio.ensure_future(connection.execute(slow_query.statement))
+        await asyncio.sleep(2.0)
+        assert not task.done()
+        assert slow_query.running() == 1
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    assert engine.dialect._host_cooldown._until == {}
+
+
+@pytest.mark.asyncio
+async def test_cancelled_task_raises_cancelled_error_and_stops_the_job(engine, slow_query):
+    """
+    Cancelling the task ends the statement on the server. CrateDB reports the
+    cancellation with SQLSTATE XX000 instead of 57014; psycopg handles that from
+    3.3.9 on by closing the connection.
+    """
+
+    async def slow():
+        async with engine.connect() as connection:
+            await connection.execute(slow_query.statement)
+
+    task = asyncio.create_task(slow())
+    await asyncio.sleep(1.5)
+    assert slow_query.running() == 1
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    await asyncio.sleep(1.0)
+    assert slow_query.running() == 0
+    async with engine.connect() as connection:
+        assert (await connection.execute(sa.text("SELECT 42"))).scalar_one() == 42
+
+
+@pytest.mark.asyncio
+async def test_asyncio_timeout_raises_timeout_error(engine, slow_query):
+    async def slow():
+        async with engine.connect() as connection:
+            await connection.execute(slow_query.statement)
+
+    with pytest.raises(asyncio.TimeoutError):
+        if hasattr(asyncio, "timeout"):
+            async with asyncio.timeout(1.0):
+                await slow()
+        else:
+            await asyncio.wait_for(slow(), timeout=1.0)
+    async with engine.connect() as connection:
+        assert (await connection.execute(sa.text("SELECT 42"))).scalar_one() == 42
