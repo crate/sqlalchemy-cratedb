@@ -159,6 +159,15 @@ def test_connect_args_certifi_not_over_default_root_cert(no_libpq_root_cert):
     assert "sslrootcert" not in connect_args(url)
 
 
+def test_client_timeout_is_async_only():
+    with pytest.raises(sa.exc.ArgumentError, match="create_async_engine.*tcp_user_timeout"):
+        connect_args("crate+psycopg://crate@localhost/doc?client_timeout=5")
+
+
+def test_client_timeout_zero_is_off():
+    assert "client_timeout" not in connect_args("crate+psycopg://?client_timeout=0")
+
+
 def test_insert_bulk_needs_the_http_driver():
     from sqlalchemy_cratedb.support import insert_bulk
 
