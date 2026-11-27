@@ -4,6 +4,12 @@
 - Dialect: Added the experimental `crate+psycopg://` dialect over the PostgreSQL 
   wire protocol with psycopg 3. It works with `create_engine()` and 
   `create_async_engine()`, and needs SQLAlchemy 2.0.44 or later.
+- Dialect: Added the `client_timeout=<seconds>` URL option to `crate+psycopg://`
+  with `create_async_engine()`. A statement that waits longer is ended on the
+  client: its connection is closed and replaced in the pool, and new connections
+  leave that host out for 30 seconds while other hosts remain. The statement
+  may keep running on the server after `client_timeout` expires. Off by default.
+  It does not apply with a custom `async_creator=`.
 
 ## 2026/11/24 0.45.0
 - BREAKING: Dropped support for SQLAlchemy 1.3, which is EOL since 2021.
