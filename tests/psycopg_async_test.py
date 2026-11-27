@@ -5,7 +5,10 @@ The psycopg dialect, asyncio: `create_async_engine("crate+psycopg://...")`.
 import asyncio
 import datetime as dt
 import decimal
+import os
+import socket
 import time
+import types
 import uuid
 import warnings
 
@@ -397,6 +400,58 @@ def test_host_cooldown_leaves_mismatched_ports_alone():
     opts = {"host": "node1,node2,node3", "port": "5432,5433"}
     cooldown.mark("node1", 5432)
     assert cooldown.filter(opts) is opts
+
+
+def test_host_cooldown_host_without_port_matches_any_port():
+    cooldown = _psycopg_timeout.HostCooldown()
+    cooldown.mark("node1", 5544)
+    assert cooldown.filter({"host": "node1,node2"}) == {"host": "node2"}
+    assert cooldown.filter({"host": "node1,node2", "port": ","}) == {"host": "node2", "port": ""}
+
+
+def test_host_cooldown_explicit_ports_match_exactly():
+    cooldown = _psycopg_timeout.HostCooldown()
+    opts = {"host": "localhost,localhost,localhost", "port": "5432,5433,5434"}
+    cooldown.mark("localhost", 5433)
+    assert cooldown.filter(opts) == {"host": "localhost,localhost", "port": "5432,5434"}
+
+
+def test_host_cooldown_filters_hostaddr_in_step():
+    """psycopg refuses `host` and `hostaddr` lists of different lengths."""
+    cooldown = _psycopg_timeout.HostCooldown()
+    opts = {"host": "node1,node2,node3", "hostaddr": "192.0.2.1,192.0.2.2,192.0.2.3"}
+    cooldown.mark("node2", 5432)
+    assert cooldown.filter(opts) == {"host": "node1,node3", "hostaddr": "192.0.2.1,192.0.2.3"}
+
+
+def test_host_cooldown_leaves_mismatched_hostaddr_alone():
+    cooldown = _psycopg_timeout.HostCooldown()
+    opts = {"host": "node1,node2", "hostaddr": "192.0.2.1"}
+    cooldown.mark("node1", 5432)
+    assert cooldown.filter(opts) is opts
+
+
+def test_shut_down_socket_keeps_libpq_ownership():
+    """The peer sees EOF, and the descriptor stays open for libpq to close."""
+    ours, peer = socket.socketpair()
+    try:
+        connection = types.SimpleNamespace(pgconn=types.SimpleNamespace(socket=ours.fileno()))
+        _psycopg_timeout._shut_down_socket(connection)
+        assert peer.recv(1) == b""
+        assert ours.fileno() != -1
+        os.fstat(ours.fileno())
+    finally:
+        ours.close()
+        peer.close()
+
+
+def test_shut_down_socket_ignores_a_closed_connection():
+    class ClosedPGconn:
+        @property
+        def socket(self):
+            raise psycopg.OperationalError("the connection is closed")
+
+    _psycopg_timeout._shut_down_socket(types.SimpleNamespace(pgconn=ClosedPGconn()))
 
 
 SLOW = "SELECT sum(x) FROM generate_series(1, {bound}) x"

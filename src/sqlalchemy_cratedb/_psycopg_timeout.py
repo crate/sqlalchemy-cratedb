@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import os
 import socket
 import time
 from typing import Callable, Dict, Optional, Tuple
@@ -32,7 +31,7 @@ def _shut_down_socket(driver_connection):
     import psycopg
 
     try:
-        sock = socket.socket(fileno=os.dup(driver_connection.pgconn.socket))
+        sock = socket.socket(fileno=driver_connection.pgconn.socket)
     except (OSError, psycopg.Error):
         return
     try:
@@ -40,7 +39,7 @@ def _shut_down_socket(driver_connection):
     except OSError:
         pass
     finally:
-        sock.close()
+        sock.detach()
 
 
 async def _guarded(driver_connection, coroutine, timeout):
@@ -110,9 +109,20 @@ class HostCooldown:
     def mark(self, host, port):
         self._until[(str(host), str(port))] = time.monotonic() + self.seconds
 
+    def _cooling(self, now):
+        return {key for key, until in self._until.items() if until > now}
+
+    @staticmethod
+    def _is_cooling(cooling, host, port):
+        """
+        `mark()` records the port actually connected to.
+        """
+        return any(host == h and (not port or port == p) for h, p in cooling)
+
     def filter(self, kwargs):
         """
-        Drop cooling hosts from libpq's comma-separated `host` and `port` lists.
+        Drop cooling hosts from libpq's comma-separated `host`, `port` and
+        `hostaddr` lists.
         Never drops all of them.
         """
         hosts = str(kwargs.get("host") or "").split(",")
@@ -121,21 +131,23 @@ class HostCooldown:
         ports = str(kwargs.get("port") or "").split(",")
         if len(ports) == 1:
             ports = ports * len(hosts)
-        if len(ports) != len(hosts):
+        hostaddrs = str(kwargs["hostaddr"]).split(",") if kwargs.get("hostaddr") else None
+        if len(ports) != len(hosts) or (hostaddrs is not None and len(hostaddrs) != len(hosts)):
             return kwargs
-        now = time.monotonic()
+        cooling = self._cooling(time.monotonic())
         keep = [
-            (host, port)
-            for host, port in zip(hosts, ports)
-            if self._until.get((host, port or "5432"), 0.0) <= now
+            index
+            for index, (host, port) in enumerate(zip(hosts, ports))
+            if not self._is_cooling(cooling, host, port)
         ]
         if not keep or len(keep) == len(hosts):
             return kwargs
-        return {
-            **kwargs,
-            "host": ",".join(host for host, _ in keep),
-            "port": ",".join(port for _, port in keep),
-        }
+        filtered = {**kwargs, "host": ",".join(hosts[index] for index in keep)}
+        if kwargs.get("port") is not None:
+            filtered["port"] = ",".join(ports[index] for index in keep)
+        if hostaddrs is not None:
+            filtered["hostaddr"] = ",".join(hostaddrs[index] for index in keep)
+        return filtered
 
 
 async def connect(*args, client_timeout, host_cooldown, **kwargs):
