@@ -31,8 +31,8 @@ The `insert_bulk` utility provides efficient bulk data transfers when using
 dataframe libraries like pandas and Dask. {ref}`dataframe` dedicates a whole
 page to corresponding topics, about choosing the right chunk sizes, concurrency
 settings, and beyond.
-It needs the HTTP driver (`crate://`). With `crate+psycopg://`, use
-`method="multi"` instead.
+With `crate+psycopg://`, which has no bulk operations endpoint, it inserts
+each chunk with one `INSERT ... SELECT ... FROM UNNEST(...)` statement.
 
 :::{rubric} Synopsis
 :::
