@@ -192,6 +192,123 @@ async def test_dml_rowcount(engine):
             await connection.execute(sa.text("DROP TABLE psycopg_async_rowcount"))
 
 
+@pytest.fixture
+def batch_table(http):
+    http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_async_batch")
+    http.exec_driver_sql(
+        "CREATE TABLE psycopg_async_batch (id INT PRIMARY KEY, value INT CHECK (value >= 0))"
+    )
+    yield "psycopg_async_batch"
+    http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_async_batch")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("executemany_mode", ["bulk", "loop"])
+async def test_executemany_matches_sync(cratedb_service, http, batch_table, executemany_mode):
+    """
+    The async dialect reports each row of a batch as the sync one does, and a
+    value that does not cast raises instead of hanging.
+    """
+    insert = sa.text("INSERT INTO psycopg_async_batch (id, value) VALUES (:id, :value)")
+    batches = [
+        (insert, [{"id": 3, "value": 30}, {"id": 1, "value": 99}, {"id": 4, "value": 40}]),
+        (
+            sa.text("UPDATE psycopg_async_batch SET value = :value WHERE id = :id"),
+            [{"id": 0, "value": 5}, {"id": 1, "value": -1}, {"id": 99, "value": 1}],
+        ),
+        (
+            sa.text("UPDATE psycopg_async_batch SET value = :value WHERE id = :id"),
+            [{"id": 0, "value": 5}, {"id": 1, "value": "abc"}, {"id": 2, "value": 25}],
+        ),
+    ]
+
+    def reset():
+        http.exec_driver_sql("DELETE FROM psycopg_async_batch")
+        http.exec_driver_sql(
+            "INSERT INTO psycopg_async_batch (id, value) VALUES (0, 0), (1, 10), (2, 20)"
+        )
+        http.exec_driver_sql("REFRESH TABLE psycopg_async_batch")
+
+    def stored():
+        http.exec_driver_sql("REFRESH TABLE psycopg_async_batch")
+        return http.exec_driver_sql("SELECT * FROM psycopg_async_batch ORDER BY id").all()
+
+    def outcome(connection, statement, parameters):
+        try:
+            result = connection.execute(statement, parameters)
+        except sa.exc.DBAPIError as e:
+            return type(e)
+        return [row["rowcount"] for row in result.context.last_result], result.rowcount
+
+    sync_engine = sa.create_engine(cratedb_service.psycopg_dburi, executemany_mode=executemany_mode)
+    async_engine = create_async_engine(
+        cratedb_service.psycopg_dburi, executemany_mode=executemany_mode
+    )
+    try:
+        for statement, parameters in batches:
+            reset()
+            with sync_engine.connect() as connection:
+                expected = outcome(connection, statement, parameters), stored()
+            reset()
+            async with async_engine.connect() as connection:
+                try:
+                    result = await asyncio.wait_for(connection.execute(statement, parameters), 30)
+                except sa.exc.DBAPIError as e:
+                    actual = type(e)
+                else:
+                    actual = (
+                        [row["rowcount"] for row in result.context.last_result],
+                        result.rowcount,
+                    )
+                assert (await connection.execute(sa.text("SELECT 1"))).scalar_one() == 1
+            assert (actual, stored()) == expected
+    finally:
+        sync_engine.dispose()
+        await async_engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_executemany_marks_a_failed_row(engine, http, batch_table):
+    http.exec_driver_sql(
+        "INSERT INTO psycopg_async_batch (id, value) VALUES (0, 0), (1, 10), (2, 20)"
+    )
+    http.exec_driver_sql("REFRESH TABLE psycopg_async_batch")
+    async with engine.connect() as connection:
+        result = await connection.execute(
+            sa.text("UPDATE psycopg_async_batch SET value = :value WHERE id = :id"),
+            [{"id": 0, "value": 5}, {"id": 1, "value": -1}, {"id": 2, "value": 25}],
+        )
+    assert [row["rowcount"] for row in result.context.last_result] == [1, -2, 1]
+    assert result.rowcount == 2
+
+
+@pytest.mark.asyncio
+async def test_insert_bulk_via_run_sync(engine, http):
+    pd = pytest.importorskip("pandas")
+    from sqlalchemy_cratedb import insert_bulk
+
+    df = pd.DataFrame({"id": range(100), "name": [f"n{i}" for i in range(100)]})
+
+    def to_sql(connection):
+        df.to_sql(
+            "psycopg_async_bulk",
+            con=connection,
+            index=False,
+            if_exists="replace",
+            chunksize=30,
+            method=insert_bulk,
+        )
+
+    try:
+        async with engine.connect() as connection:
+            await connection.run_sync(to_sql)
+        http.exec_driver_sql("REFRESH TABLE psycopg_async_bulk")
+        rows = http.exec_driver_sql("SELECT count(*), max(name) FROM psycopg_async_bulk").one()
+        assert rows == (100, "n99")
+    finally:
+        http.exec_driver_sql("DROP TABLE IF EXISTS psycopg_async_bulk")
+
+
 @pytest.mark.asyncio
 async def test_values_match_sync(engine, cratedb_service):
     metadata = sa.MetaData()

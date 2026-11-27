@@ -4,6 +4,11 @@
 - Dialect: Added the experimental `crate+psycopg://` dialect over the PostgreSQL 
   wire protocol with psycopg 3. It works with `create_engine()` and 
   `create_async_engine()`, and needs SQLAlchemy 2.0.44 or later.
+- Dialect: `crate+psycopg://` sends all rows of an `executemany` in one
+  pipeline. As on `crate://`, a failed row does not stop the others and is
+  reported as `-2` in `result.context.last_result`.
+- Support: `insert_bulk` works on `crate+psycopg://`, with one
+  `INSERT ... SELECT ... FROM UNNEST(...)` statement per chunk.
 
 ## 2026/11/24 0.45.0
 - BREAKING: Dropped support for SQLAlchemy 1.3, which is EOL since 2021.

@@ -276,6 +276,10 @@ class CrateDialect(default.DefaultDialect):
     insert_returning = True
     update_returning = True
 
+    # `insert_bulk` uses `bulk_parameters` of the HTTP driver; dialects without
+    # it insert each chunk with `UNNEST` instead.
+    _insert_bulk_unnest = False
+
     def __init__(self, **kwargs):
         default.DefaultDialect.__init__(self, **kwargs)
 
